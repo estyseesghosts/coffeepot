@@ -1,0 +1,23 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  docs:
+    name: Links, anchors and Sources sections
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/check_docs.py
+
+  benchmarks:
+    name: Build CTR benchmarks
+    runs-on: ubuntu-latest
+    # The image tracks the current devkitPro release, which may be newer than
+    # the versions recorded in ctr/source-versions.md.
+    container: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tools/build_benchmarks.sh

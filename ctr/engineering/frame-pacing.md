@@ -1,0 +1,121 @@
+# Frame pacing on the 3DS
+
+Frame pacing is about *when* frames appear, not only how many: a game that shows a new picture at a steady 30 per second feels smoother than one that alternates between 60 and 40. On the 3DS both screens refresh at about 60 Hz, the GPU works asynchronously from the CPU, and **[citro3d](../glossary.md#libctru)** decides when to wait for each. This page explains the timing model, how to structure the main loop so CPU and GPU overlap, how to lock to 60 or 30 fps, how to keep game speed independent of rendering speed, and how to detect missed frames.
+
+Measuring where frame time goes is on [performance](performance.md); buffer ownership rules are on [memory and cache](memory-and-cache.md#buffer-lifetime).
+
+## Before you start
+
+- Checked against citro3d 1.7.1 and libctru 2.7.1 source. The loop structures below use real API names but are fragments; nothing on this page has been timed on hardware.
+
+## The timing model
+
+Four things happen at their own pace:
+
+1. **The CPU** runs your loop: input, game logic, recording GPU commands.
+2. **The GPU** runs the recorded command list after `C3D_FrameEnd`, then the display transfers that copy each render target to its screen's framebuffer.
+3. **The displays** scan out a framebuffer about 60 times per second and signal a **[V-blank](../../glossary.md#vblank)** interrupt between frames, one per screen (`GSPGPU_EVENT_VBlank0` top, `VBlank1` bottom).
+4. **Audio** is consumed by the DSP in 160-sample frames of about 4.9 ms, independent of all of the above ([audio](audio.md)).
+
+citro3d ties them together [documented: citro3d `renderqueue.c`]:
+
+- `C3D_FrameBegin` waits until the GPU has finished **the previous frame's whole queue** (draws and transfers). With `C3D_FRAME_SYNCDRAW` it first waits for a V-blank on *both* screens (`C3D_FrameSync`). With `C3D_FRAME_NONBLOCK` it returns `false` instead of waiting for the GPU.
+- `C3D_FrameEnd` submits the frame and returns at once.
+- When the queue finishes, a callback swaps the screens' framebuffers; the new picture appears at the next V-blank.
+
+So with `C3D_FRAME_SYNCDRAW`, at most one frame is in flight and the CPU never gets more than one frame ahead of the GPU — low latency, and simple ownership of GPU buffers.
+
+## Overlapping CPU and GPU
+
+Everything before `C3D_FrameBegin` runs while the GPU is still drawing the previous frame:
+
+```c
+while (aptMainLoop()) {
+    hidScanInput();
+    update_game();                      // overlaps with GPU work of the previous frame
+    prepare_cpu_side_data();            // must not touch buffers the GPU is reading
+
+    C3D_FrameBegin(C3D_FRAME_SYNCDRAW); // GPU idle from here: safe to rewrite its buffers
+    upload_dynamic_buffers();
+    record_draws();
+    C3D_FrameEnd(0);
+}
+```
+
+Putting game logic between `C3D_FrameBegin` and `C3D_FrameEnd` serialises the two processors: the GPU idles while the CPU updates, then the CPU idles in the next `C3D_FrameBegin` [documented mechanism; the size of the gain depends on the workload and is unmeasured here]. If you must prepare GPU-visible data before `C3D_FrameBegin`, write it into a second copy of the buffer (double-buffering) and swap.
+
+## Locking the frame rate
+
+| Goal | How |
+| ---- | --- |
+| 60 fps, tied to the display | `C3D_FrameBegin(C3D_FRAME_SYNCDRAW)` every frame |
+| Steady 30 fps (or 20, 15) | `C3D_FrameRate(30.0f)` once, then `C3D_FRAME_SYNCDRAW` as usual: the V-blank counters `C3D_FrameSync` waits on now advance only every second V-blank |
+| As fast as possible (benchmarks only) | Omit `C3D_FRAME_SYNCDRAW`; the loop is then limited only by GPU completion, and frames may be shown unevenly |
+| Never block the game thread on the GPU | `C3D_FrameBegin(C3D_FRAME_NONBLOCK)`; when it returns `false`, skip rendering this iteration (keep simulating) |
+
+`C3D_FrameRate(fps)` accepts values above 0 and up to 60 and returns the previous setting. It works by a per-screen accumulator: each V-blank subtracts `fps` from it, and whenever it drops to zero or below, 60 is added back and the frame counter advances, so non-divisor rates such as 45 produce an uneven cadence [documented: `renderqueue.c`]. Prefer 60, 30, 20 or 15.
+
+**Choose 30 deliberately.** If the slowest target cannot hold 60, a locked 30 avoids the judder of a rate that drifts between 40 and 60.
+
+## Separating simulation from rendering
+
+If the game advances one step per rendered frame, every slow frame slows the game down. Run the simulation on a fixed time step and let rendering show whatever state is current:
+
+```c
+const u64 STEP = (u64)(CPU_TICKS_PER_MSEC * 1000.0 / 60.0);   // one 60 Hz tick in system ticks
+u64 previous = svcGetSystemTick(), lag = 0;
+
+while (aptMainLoop()) {
+    u64 now = svcGetSystemTick();
+    lag += now - previous;
+    previous = now;
+    if (lag > 8 * STEP) lag = 8 * STEP;      // after a long stall, do not try to catch up forever
+
+    while (lag >= STEP) {                     // fixed-rate game logic
+        hidScanInput();
+        update_game();
+        lag -= STEP;
+    }
+    render(/* optionally interpolate with alpha = */ (float)lag / STEP);
+}
+```
+
+- `svcGetSystemTick` runs at 268,111,856 Hz on all models ([performance](performance.md#cpu-time-the-system-tick)).
+- Cap the catch-up (here 8 steps) so a long stall — loading, the HOME Menu, a debugger break — does not cause a burst of fast-forwarded steps.
+- For games ported from a console with its own refresh rate (the DS refreshes at about 59.83 Hz, not 60), decide explicitly whether to run the logic at the original rate or at 60; small differences accumulate in music and timers.
+- Report two numbers separately: logic ticks per second and distinct frames shown per second.
+
+## Detecting missed frames
+
+- `C3D_FrameCounter(0)` and `C3D_FrameCounter(1)` return the top and bottom screens' rate-limited V-blank counters. If the counter advanced by more than one between your `C3D_FrameBegin` calls, the frame took longer than its slot.
+- `gspWaitForVBlank()` (top screen) blocks until the next V-blank; useful for loops that do not use citro3d.
+- Keep a histogram of frame intervals (ticks between successive `C3D_FrameBegin` returns), not only an average: 59 good frames and one 100 ms hitch average out to "fine".
+
+## Latency
+
+Input read at the top of the loop is shown, at best, after the current frame's GPU work, the transfer and the next V-blank — roughly one to two display periods with `C3D_FRAME_SYNCDRAW` [hypothesis from the pipeline above; not measured]. Read input as late as practical before recording the frame if latency matters (rhythm games, fast action), and avoid adding extra queued frames.
+
+## Technical details
+
+- `C3D_FrameBegin(u8 flags)`: `C3D_FRAME_SYNCDRAW` = bit 0, `C3D_FRAME_NONBLOCK` = bit 1; returns `false` if already inside a frame or (non-blocking) if the GPU queue has not finished.
+- `C3D_FrameSync()` loops on `gspWaitForAnyEvent()` until both screens' frame counters have changed.
+- The swap happens in `onQueueFinish` via `gfxScreenSwapBuffers`, only for screens whose targets were drawn in that frame; the top screen is swapped in stereo mode only if the right-eye target was used.
+- V-blank callbacks are registered on `GSPGPU_EVENT_VBlank0` and `GSPGPU_EVENT_VBlank1` with `gspSetEventCallback`.
+
+## Pitfalls
+
+- **Game logic inside the frame** (between `C3D_FrameBegin` and `C3D_FrameEnd`): no CPU/GPU overlap.
+- **Using `C3D_FrameRate` for a fractional rate** (e.g. 45): uneven cadence.
+- **Assuming one frame = 1/60 s in game logic** while the game runs at 30: everything moves at half speed.
+- **Catching up without a cap** after HOME or sleep: the game fast-forwards.
+
+## Open questions
+
+- Measured input-to-photon latency with `C3D_FRAME_SYNCDRAW` versus a non-blocking loop.
+- Exact refresh rate of the 3DS LCDs (often quoted as about 59.83 Hz) — not confirmed in the sources used here.
+
+## Sources
+
+- [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (`C3D_FrameBegin`, `C3D_FrameSync`, `C3D_FrameRate`, `C3D_FrameCounter`, queue callback), `include/c3d/renderqueue.h`.
+- [libctru](https://github.com/devkitPro/libctru) — `services/gspgpu.h` (events, `gspWaitForVBlank`), `os.h` (tick rate), `source/ndsp/ndsp.c` (sound frame length).
+- [GBATEK](https://problemkaputt.de/gbatek.htm) — DS display timing (59.8261 Hz) for ports.

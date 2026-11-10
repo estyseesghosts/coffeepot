@@ -126,6 +126,14 @@ A standard command-line debugger that can stop a program, show its memory and re
 
 Storing an image in small square blocks (on the 3DS, 8×8 pixels, with pixels inside a block in Z-order) instead of row by row, so that neighbouring pixels sit close together in memory for the GPU's cache. Images must be converted into this layout before the GPU can use them as textures. See [CTR asset pipeline](ctr/engineering/asset-pipeline.md).
 
+### Hardware performance counters {#performance-counters}
+
+Counters built into a processor that count events such as clock cycles, cache misses or mispredicted branches while code runs. They show *why* code is slow rather than only *how long* it takes. See [CTR CPU optimisation](ctr/engineering/cpu-optimization.md#hardware-performance-counters).
+
+### ADPCM {#adpcm}
+
+Adaptive differential pulse-code modulation: a family of lossy audio formats that store about 4 bits per sample by encoding the difference from a predicted value. Nintendo's DSP-ADPCM variant, used since the GameCube, can be decoded by the 3DS's audio DSP. See [CTR audio](ctr/engineering/audio.md#formats).
+
 ### DSP (digital signal processor) {#dsp}
 
 A processor specialised for streaming number crunching such as audio mixing. See [CTR audio](ctr/hardware/audio.md).

@@ -1,11 +1,11 @@
 # Testing 3DS homebrew on hardware
 
-A program that works in an emulator, or on your own New 3DS, can still crash, stutter or run out of memory on the console your players own. This page describes which devices to test on and why, how to set up a fast test loop on a real console, how to run a performance experiment whose result you can trust, and a small benchmark program for measuring memory and cache costs yourself. Its companion pages are [debugging](debugging.md) and [performance](performance.md).
+A program that works in an emulator, or on your own New 3DS, can still crash, stutter or run out of memory on the console your players own. This page describes which devices to test on and why, how to set up a fast test loop on a real console, how to run a performance experiment whose result you can trust, and the wiki's benchmark programs for measuring memory, cache and draw-call costs yourself. Its companion pages are [debugging](debugging.md) and [performance](performance.md).
 
 ## Before you start
 
 - A console with [Luma3DS](../homebrew/luma3ds.md) and the Homebrew Menu, on the same network as your PC.
-- The benchmark below compiles without warnings with devkitARM r68 and libctru 2.7.1 (`3ds-examples` application template). It has **not** been run on hardware for this page; no results are recorded yet.
+- The [benchmark suite](../benchmarks/README.md) builds without warnings with devkitARM r68 and libctru 2.7.1. It has **not** been run on hardware; no results are recorded yet.
 
 ## Test tiers
 
@@ -72,127 +72,17 @@ The wiki has no measured numbers yet for the costs below; they are the questions
 - The cost of `C3D_FrameEnd(0)`'s whole-linear-heap flush.
 - How these change on a New 3DS with and without `osSetSpeedupEnable(true)`, and with an `APT_SetAppCpuTimeLimit` share active.
 
-### `membench`
+### The benchmark suite
 
-This program measures the first three. Put it in `source/main.c` of a copy of `3ds-examples/templates/application`, build, and run it with 3dslink; it prints min / median / max microseconds over 31 runs for each operation and size to the top screen. Add `osSetSpeedupEnable(true);` after `gfxInitDefault()` for the New 3DS fast-mode variant, or `APT_SetAppCpuTimeLimit(80);` to see the effect of a core-1 share on the GSP flush.
+Three ready-to-build programs live in [`ctr/benchmarks/`](../benchmarks/README.md):
 
-```c
-// membench: CPU write bandwidth and cache-flush cost on the 3DS.
-// Prints min / median / max microseconds per operation for several sizes.
-#include <3ds.h>
-#include <malloc.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+- **`membench`** — CPU write and copy speed for the heap and the linear heap at sizes inside and outside the L1 cache, kernel versus GSP flushes of a dirty range, and the whole-linear-heap flush. Prints min / median / max microseconds over 31 runs.
+- **`flushbench`** — flush cost at 1–32 MiB, dirty versus clean ranges, GSP flush versus kernel flush versus clean-only, and `C3D_FrameEnd(0)` versus `C3D_FrameEnd(GX_CMDLIST_FLUSH)`.
+- **`drawbench`** — CPU and GPU time per frame for N quads drawn as one batch, one draw each, and one draw each with a uniform update, a redundant texture bind, a combiner change or a texture swap.
 
-#define RUNS 31
+Build with `make` in each folder (or `tools/build_benchmarks.sh` for all), run with 3dslink, and record results as described in the [suite's README](../benchmarks/README.md#recording-results). For `membench`, add `osSetSpeedupEnable(true);` after `gfxInitDefault()` for the New 3DS fast-mode variant, or `APT_SetAppCpuTimeLimit(80);` to see the effect of a core-1 share on the GSP flush.
 
-extern u32 __ctru_linear_heap, __ctru_linear_heap_size;
-
-static int cmp_u64(const void *a, const void *b)
-{
-    u64 x = *(const u64 *)a, y = *(const u64 *)b;
-    return (x > y) - (x < y);
-}
-
-static void report(const char *name, u32 size, u64 *t)
-{
-    qsort(t, RUNS, sizeof(u64), cmp_u64);
-    printf("%-14s %5luK %7.1f %7.1f %7.1f\n", name, size / 1024,
-           t[0] / CPU_TICKS_PER_USEC, t[RUNS / 2] / CPU_TICKS_PER_USEC,
-           t[RUNS - 1] / CPU_TICKS_PER_USEC);
-}
-
-static void bench_size(u8 *heap, u8 *linear, u32 size)
-{
-    u64 t[RUNS];
-    volatile u32 sink = 0;
-
-    for (int i = 0; i < RUNS; i++) {               // CPU fill, normal heap
-        u64 s = svcGetSystemTick();
-        memset(heap, i, size);
-        t[i] = svcGetSystemTick() - s;
-        sink += heap[size - 1];
-    }
-    report("memset heap", size, t);
-
-    for (int i = 0; i < RUNS; i++) {               // CPU fill, linear heap
-        u64 s = svcGetSystemTick();
-        memset(linear, i, size);
-        t[i] = svcGetSystemTick() - s;
-        sink += linear[size - 1];
-    }
-    report("memset linear", size, t);
-
-    for (int i = 0; i < RUNS; i++) {               // copy heap -> linear
-        u64 s = svcGetSystemTick();
-        memcpy(linear, heap, size);
-        t[i] = svcGetSystemTick() - s;
-    }
-    report("memcpy h->lin", size, t);
-
-    for (int i = 0; i < RUNS; i++) {               // kernel flush of a dirty range
-        memset(linear, i, size);
-        u64 s = svcGetSystemTick();
-        svcFlushProcessDataCache(CUR_PROCESS_HANDLE, (u32)linear, size);
-        t[i] = svcGetSystemTick() - s;
-    }
-    report("svcFlush", size, t);
-
-    for (int i = 0; i < RUNS; i++) {               // GSP flush (IPC) of a dirty range
-        memset(linear, i, size);
-        u64 s = svcGetSystemTick();
-        GSPGPU_FlushDataCache(linear, size);
-        t[i] = svcGetSystemTick() - s;
-    }
-    report("GSPGPU_Flush", size, t);
-    (void)sink;
-}
-
-int main(void)
-{
-    gfxInitDefault();
-    consoleInit(GFX_TOP, NULL);
-
-    bool isNew = false;
-    APT_CheckNew3DS(&isNew);
-    printf("membench  %s 3DS, linear heap %lu KiB\n", isNew ? "New" : "Old",
-           __ctru_linear_heap_size / 1024);
-    printf("%-14s %6s %7s %7s %7s  (us)\n", "op", "size", "min", "med", "max");
-
-    const u32 max = 1024 * 1024;
-    u8 *heap = memalign(32, max);
-    u8 *linear = linearMemAlign(max, 32);
-    if (!heap || !linear) {
-        printf("allocation failed\n");
-    } else {
-        static const u32 sizes[] = { 16 * 1024, 256 * 1024, 1024 * 1024 };
-        for (unsigned i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
-            bench_size(heap, linear, sizes[i]);
-
-        u64 t[RUNS];                               // what C3D_FrameEnd(0) does
-        for (int i = 0; i < RUNS; i++) {
-            u64 s = svcGetSystemTick();
-            GSPGPU_FlushDataCache((void *)__ctru_linear_heap, __ctru_linear_heap_size);
-            t[i] = svcGetSystemTick() - s;
-        }
-        report("whole linear", __ctru_linear_heap_size, t);
-    }
-    printf("\nPress START to exit.\n");
-
-    while (aptMainLoop()) {
-        hidScanInput();
-        if (hidKeysDown() & KEY_START) break;
-        gspWaitForVBlank();
-    }
-    linearFree(linear);
-    free(heap);
-    gfxExit();
-    return 0;
-}
-```
-
-How to read the output:
+How to read `membench`'s output:
 
 - `memset heap` vs `memset linear`: whether the linear heap is slower for the CPU to write than the ordinary heap on your model.
 - `svcFlush` vs `GSPGPU_Flush`: the kernel call versus the service request, for the same dirty range.
@@ -214,7 +104,7 @@ When you have results, add them to the relevant page with the console model, sys
 
 ## Open questions
 
-- No results yet from `membench` on any console. Contributions should record model, system version, Luma3DS version, and whether fast mode or a core-1 share was active.
+- No results yet from the benchmark suite on any console. Contributions should record model, system version, Luma3DS version, and whether fast mode or a core-1 share was active.
 
 ## Sources
 

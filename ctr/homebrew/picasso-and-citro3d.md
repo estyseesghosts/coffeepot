@@ -43,6 +43,7 @@ Components can be named `xyzw`, `rgba` or `stpq` and swizzled (`r0.wwxy`); outpu
 - Control-flow statements may fail at the end of another block; picasso inserts padding no-ops.
 - Two consecutive `mova` instructions freeze the GPU.
 - Only one *input* register can be referenced reliably in the source operands of an instruction (referring to the same register several times is fine).
+- Uniforms (`c0`–`c95`) can only be used where the instruction encoding has a wide source slot: in an ordinary two-operand instruction such as `add`, the uniform must be the **first** source. `add r0.xyz, inpos.xyz, offset.xyz` fails with "invalid source2 register"; `add r0.xyz, offset.xyz, inpos.xyz` assembles [documented: picasso 2.7.2 error, found while writing the [drawbench](../benchmarks/README.md#drawbench) shader]. For `dph`, `sge`, `slt` and `mad`, picasso picks an alternative encoding automatically when the operands allow it (see Technical details).
 
 ### citro3d: GPU library
 

@@ -57,6 +57,7 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [libctru](homebrew/libctru.md) — the userland library: heaps, clocks, services, QTM.
 - [picasso and citro3d](homebrew/picasso-and-citro3d.md) — the shader assembler and GPU library.
 - [Development workflow](homebrew/development-workflow.md) — toolchain versions, how `.3dsx` programs are loaded today, `.3dsx` vs `.cia`, and the example projects.
+- [Research index](homebrew/research-index.md) — who is credited with which findings and tools, and where vanished sources survive.
 
 ## Engineering
 
@@ -67,7 +68,15 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Memory and cache](engineering/memory-and-cache.md) — how much memory a program gets, heap vs linear vs VRAM, cache flushing rules, buffer lifetime.
 - [GPU rendering](engineering/gpu-rendering.md) — citro3d frames, draw-call costs, batching, textures, combiner recipes, citro2d, stereo and wide mode.
 - [Asset pipeline](engineering/asset-pipeline.md) — tex3ds, shaders, fonts, RomFS, audio and compression.
-- [Testing on hardware](engineering/testing-on-hardware.md) — test tiers, a fast test loop, experiment protocol and a memory/flush benchmark.
+- [Testing on hardware](engineering/testing-on-hardware.md) — test tiers, a fast test loop and the experiment protocol.
+- [CPU optimisation](engineering/cpu-optimization.md) — how the ARM11 executes code, expensive constructs, reading generated code, hardware performance counters.
+- [Threading](engineering/threading.md) — which cores you can use, core-1 time sharing, priorities, synchronisation, a worker pattern.
+- [Frame pacing](engineering/frame-pacing.md) — the CPU/GPU/display timing model, locking to 60 or 30, fixed-step simulation, missed frames.
+- [Audio](engineering/audio.md) — ndsp setup and the DSP firmware file, formats, buffer sizing, streaming, diagnosing crackles.
+- [2D rendering](engineering/rendering-2d.md) — sprites, tilemaps, layers, transparency, text and palette effects on a 3D GPU.
+- [Porting](engineering/porting.md) — planning a port, desktop-to-PICA200 concept mapping, SDL and portlibs, what published ports chose.
+- [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
+- [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush and draw-call costs (not yet run on hardware).
 
 ## Notes and open questions
 
@@ -75,7 +84,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - Source data differ in places (XDMA channel count, DSP sample rate, 176 vs 178 MB maximum application memory, MCU instruction set naming); each hardware page records the disagreement.
 - Not yet covered: individual system applications (Home Menu internals, browser), the StreetPass wire protocol (only the mailbox side is documented), the camera and NFC subsystems in detail, the Teak DSP architecture, gas rendering.
 - Kernel11 and Process9 internals beyond what 3dbrew publishes are not in the source set.
-- The engineering pages contain no measurements made for this wiki yet: costs such as the whole-linear-heap flush, draw-call overhead and heap-versus-linear write bandwidth are listed as open questions with a [benchmark](engineering/testing-on-hardware.md#membench) to settle them.
+- The engineering pages contain no measurements made for this wiki yet: costs such as the whole-linear-heap flush, draw-call overhead and heap-versus-linear write bandwidth are listed as open questions with [benchmarks](benchmarks/README.md) that build but have not yet been run on hardware.
 
 ## Sources
 

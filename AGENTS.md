@@ -17,6 +17,10 @@ README.md                    # human landing page (what this wiki covers)
   software/<topic>.md        # one page per system software / format / service
   homebrew/<topic>.md        # one page per exploit / tool / library / workflow
   engineering/<topic>.md     # one page per practical problem (debugging, performance, porting...)
+  benchmarks/<name>/         # buildable benchmark programs + README.md with method and results
+tools/
+  check_docs.py              # link, anchor and Sources-section checker
+  build_benchmarks.sh        # builds every benchmark, fails on warnings
 ```
 
 Current scope is two platforms: `ctr/` (Nintendo 3DS family) and `nx/` (Nintendo Switch family). Add a new top-level platform directory only for a distinct hardware platform, using its established codename or short kebab-case name (e.g. `ctr`, `nx`).
@@ -234,6 +238,15 @@ Engineering pages, and any performance or behaviour claim elsewhere, must say wh
 Never let a `[hypothesis]` lose its label when it is copied to another page. Advice like "X is faster" without a `[measured]` result or a `[documented]` mechanism behind it does not belong in the wiki.
 
 Code examples must state what they were checked against: at minimum, that they compile with a named toolchain/library version. Say explicitly when an example has not been run on hardware.
+
+## Code, benchmarks and verification
+
+- Every code example and benchmark carries a **verification status**: *builds* (with the toolchain versions on the console's source-versions page, no warnings under `-Wall`), *emulator-tested*, *Old 3DS-tested*, *New 3DS-tested*. Record it in the console's source-versions page (CTR: `ctr/engineering/source-versions.md`) and, for benchmarks, in `benchmarks/README.md`. Never upgrade a status without having done the step.
+- Fragments that are not whole programs are compiled inside a minimal `main` with stubs before they are published.
+- Benchmarks live in `<console>/benchmarks/<name>/` as complete projects (Makefile + sources). Their README states the question, the method, the variants to run, and how to record results. Raw results go in the README; the page whose claim they settle gets the `[measured]` label and a link.
+- Emulator timings are never results.
+- When a claim depends on a library or firmware version, pin it: record the commit on the source-versions page and link the source file at that commit when the exact behaviour matters.
+- Run `python3 tools/check_docs.py` (and `tools/build_benchmarks.sh` if code changed) before committing. CI runs both.
 
 ## Writing guidelines
 

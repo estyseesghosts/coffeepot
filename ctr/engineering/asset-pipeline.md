@@ -94,7 +94,7 @@ There is no build-time audio converter in the 3DS toolchain. Three common choice
 - **Ogg Vorbis** or **Opus** decoded on the console with the `libvorbisidec` (integer-only Vorbis) or `opusfile` port libraries from devkitPro's package manager, streamed into `ndsp` wave buffers: small files, CPU cost while playing. See `audio/ogg-vorbis-decoding`, `audio/opus-decoding` and `audio/streaming` [documented: `3ds-examples`].
 - **Tracker modules** with `libmodplug` (`audio/modplug-decoding`).
 
-The DSP's native output rate is about 32,728 Hz ([audio](../hardware/audio.md)); `ndsp` resamples each channel from its own rate (`ndspChnSetRate`). Decoding on a core-1 thread on an Old 3DS is a common pattern; read [performance](performance.md#using-the-second-core) for its caveats.
+The DSP's native output rate is about 32,728 Hz ([audio](../hardware/audio.md)); `ndsp` resamples each channel from its own rate (`ndspChnSetRate`). Decoding on a core-1 thread on an Old 3DS is a common pattern; read [performance](threading.md) for its caveats.
 
 ## Data compression
 

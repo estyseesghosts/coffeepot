@@ -48,6 +48,7 @@ Pin these in your project's README: libctru has made breaking changes between ma
 | `makerom` | Builds NCCH, CCI and CIA | not part of devkitPro; 3DSGuy's Project_CTR |
 | `bannertool` | Makes the CIA banner (image + sound) and SMDH | not part of devkitPro; originally Steveice10's |
 | `firmtool` | Builds `.firm` images | needed only to build CFW such as [Luma3DS](luma3ds.md) |
+| `braindump`, `uncart` | On-console tools that dumped ExeFS/RomFS and game cards | neobrain; historical, listed as unmaintained on 3dbrew |
 
 Libraries for common needs (zlib, libpng, Ogg Vorbis, Opus, libmodplug, SDL ports and more) are installed as `3ds-*` packages with `dkp-pacman` and found with `$(PORTLIBS)` / `pkg-config` in the Makefiles. Older libraries still listed on 3dbrew (`sf2dlib`, `gl3ds`, `libkhax`, `cpp3ds`, `SpriteTools`) are unmaintained; prefer citro2d/citro3d.
 

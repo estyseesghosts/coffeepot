@@ -96,7 +96,7 @@ The ARM11 data cache is write-back ([CPU](../hardware/cpu.md#the-mp11-core-from-
 
 [documented: libctru `svc.h`, `services/gspgpu.c`, `services/dsp.h`, `gpu/gx.h`; citro3d `texture.c`]. The `svc*` functions take **virtual** addresses. All of them operate on whole 32-byte cache lines, so a range that shares a line with unrelated data affects that data too: align GPU and DSP buffers to at least 32 bytes and avoid placing CPU-written variables in the same line as a buffer you invalidate.
 
-The kernel calls avoid a round-trip to a system module. That matters when your program has taken core-1 time from the system modules: a third-party report measured `DSP_FlushDataCache` at 1–5 ms with an 80% core-1 limit, versus about 0.1 ms for `svcFlushProcessDataCache` ([performance](performance.md#old-3ds-core-1-is-shared-with-the-system)).
+The kernel calls avoid a round-trip to a system module. That matters when your program has taken core-1 time from the system modules: a third-party report measured `DSP_FlushDataCache` at 1–5 ms with an 80% core-1 limit, versus about 0.1 ms for `svcFlushProcessDataCache` ([performance](threading.md#core-1-borrowing-the-system-core)).
 
 ### The C3D_FrameEnd flush
 
@@ -134,7 +134,7 @@ Most corruption bugs are a buffer reused while another processor still reads it.
 FREE → CPU writing → flushed → queued for GPU/DSP → GPU/DSP finished → FREE
 ```
 
-With citro3d's standard frame loop, "GPU finished" for everything drawn in frame *N* is the moment `C3D_FrameBegin` returns for frame *N+1* ([performance](performance.md#overlapping-cpu-and-gpu)). Data written for the GPU *before* that point needs a second copy. When deleting textures or buffers, wait for the GPU first (`C3D_FrameBegin` returning, or `C3D_Fini`), or the GPU may read freed and reused memory.
+With citro3d's standard frame loop, "GPU finished" for everything drawn in frame *N* is the moment `C3D_FrameBegin` returns for frame *N+1* ([performance](frame-pacing.md#overlapping-cpu-and-gpu)). Data written for the GPU *before* that point needs a second copy. When deleting textures or buffers, wait for the GPU first (`C3D_FrameBegin` returning, or `C3D_Fini`), or the GPU may read freed and reused memory.
 
 ## Technical details
 
@@ -154,7 +154,7 @@ With citro3d's standard frame loop, "GPU finished" for everything drawn in frame
 
 ## Open questions
 
-- Measured cost of the full linear-heap flush in `C3D_FrameEnd` at 16 and 32 MiB, Old vs New 3DS.
+- Measured cost of the full linear-heap flush in `C3D_FrameEnd` at 16 and 32 MiB, Old vs New 3DS — [`flushbench`](../benchmarks/README.md#flushbench) measures it; no results yet.
 - Whether the kernel switches to a whole-cache clean above some range size (which would bound the cost of large flushes) is not documented in the sources used.
 - CPU write and read bandwidth to the application heap versus linear heap on each model.
 

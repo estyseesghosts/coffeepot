@@ -155,7 +155,7 @@ Plan around these instead of discovering them late:
 
 ## Open questions
 
-- Draw-call CPU cost in citro3d per state change (ticks per `C3D_DrawArrays` with 0, 1 and many dirty states) on Old 3DS.
+- Draw-call CPU cost in citro3d per state change on Old and New 3DS — [`drawbench`](../benchmarks/README.md#drawbench) measures exactly this; no results yet.
 - Fill-rate figures for RGBA8 vs RGB565 targets and for each texture format, with and without the texture cache warm.
 - Whether placing static textures in VRAM gives a measurable speed-up over linear FCRAM for typical scenes.
 
