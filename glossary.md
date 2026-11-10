@@ -44,8 +44,128 @@ Where games and system software live when powered off: cartridges, internal flas
 
 ### Homebrew {#homebrew}
 
-Unofficial software written by hobbyists to run on a console: tools, emulators, games. Homebrew pages live under each console's `homebrew/` directory (planned — not yet scaffolded).
+Unofficial software written by hobbyists to run on a console: tools, emulators, games. See [CTR homebrew history](ctr/homebrew/history.md).
 
 ### Custom firmware (CFW) {#cfw}
 
-Modified system software that enables [homebrew](#homebrew) and extra features. Per-console CFW coverage is planned under each console's `homebrew/` directory.
+Modified system software that enables [homebrew](#homebrew) and extra features. See [CTR custom firmware](ctr/homebrew/custom-firmware.md).
+
+### Bootloader {#bootloader}
+
+A small program that runs first at power-on and loads the next, larger piece of software. Consoles chain several of these, starting from an unchangeable [boot ROM](#boot-rom). See [CTR boot process](ctr/software/boot-process.md).
+
+### Boot ROM {#boot-rom}
+
+Code burned permanently into the processor chip at the factory. It is the first thing to run after power-on and cannot be updated, so flaws in it are permanent. See [CTR boot process](ctr/software/boot-process.md).
+
+### NAND (flash memory) {#nand}
+
+Non-volatile flash memory that keeps its contents with the power off; consoles use it for system software and settings. On the 3DS it is an eMMC chip (see [CTR NAND filesystem](ctr/software/nand-filesystem.md)).
+
+### Cache {#cache}
+
+A small, fast memory next to a CPU that holds recently used data so the CPU rarely waits on slower main memory. Caches can be per-core (level 1, "L1") or shared (level 2, "L2"). See [CTR CPU](ctr/hardware/cpu.md).
+
+### Direct memory access (DMA) {#dma}
+
+A hardware block that copies data between memories or devices without the CPU doing the copying. See [CTR memory](ctr/hardware/memory.md).
+
+### Memory management unit (MMU) {#mmu}
+
+CPU hardware that translates the addresses programs use (**virtual addresses**) into real memory locations (**physical addresses**) and enforces who may read, write, or run each page. See [CTR CPU](ctr/hardware/cpu.md).
+
+### Memory protection unit (MPU) {#mpu}
+
+A simpler cousin of the [MMU](#mmu): it enforces access rules on a few fixed address regions but does no address translation. See [CTR CPU](ctr/hardware/cpu.md).
+
+### SIMD {#simd}
+
+"Single instruction, multiple data": one instruction that works on several values packed into one register at once. See [CTR CPU](ctr/hardware/cpu.md).
+
+### Floating-point unit (FPU) {#fpu}
+
+Hardware for arithmetic on fractional numbers (`float`, `double`). On the 3DS this is the VFP coprocessor inside each core. See [CTR CPU](ctr/hardware/cpu.md).
+
+### Thread {#thread}
+
+One sequence of instructions the operating system schedules onto a CPU core. A [process](#process) contains one or more threads. See [CTR kernel](ctr/software/kernel.md).
+
+### Process {#process}
+
+A running program with its own private memory and handle table, isolated from other processes by the [kernel](#kernel). See [CTR kernel](ctr/software/kernel.md).
+
+### Userland {#userland}
+
+Everything that runs without full hardware privileges: games and most system services. Contrast with the [kernel](#kernel). A "userland exploit" is a bug that lets an attacker run their own code at this level. See [CTR exploits](ctr/homebrew/exploits.md).
+
+### System call (syscall) {#syscall}
+
+The controlled doorway a [userland](#userland) program uses to ask the [kernel](#kernel) to do something privileged, such as allocating memory or creating a thread. See [CTR kernel](ctr/software/kernel.md).
+
+### Inter-process communication (IPC) {#ipc}
+
+How [processes](#process) send requests and replies to each other, for example a game asking a system service to read a file. See [CTR services](ctr/software/services.md).
+
+### Microkernel {#microkernel}
+
+A kernel design that keeps only the essentials (memory, scheduling, messaging) in the privileged core and pushes everything else into ordinary [processes](#process). See [CTR OS](ctr/software/os.md).
+
+### Framebuffer {#framebuffer}
+
+A block of memory holding the pixels of one image, ready to be drawn by the GPU or sent to a screen. See [CTR GPU](ctr/hardware/gpu.md) and [CTR displays](ctr/hardware/display.md).
+
+### Shader {#shader}
+
+A small program that runs on the [GPU](#gpu) to process vertices (corners of shapes) or pixels. See [CTR GPU](ctr/hardware/gpu.md).
+
+### DSP (digital signal processor) {#dsp}
+
+A processor specialised for streaming number crunching such as audio mixing. See [CTR audio](ctr/hardware/audio.md).
+
+### Microcontroller (MCU) {#mcu}
+
+A tiny, self-contained computer chip that handles low-level chores (power, LEDs, sensors) so the main processor doesn't have to. See [CTR I/O](ctr/hardware/io-and-peripherals.md).
+
+### I²C and SPI {#i2c-spi}
+
+Two common short-distance serial wires between chips. A processor ("master") talks to many small peripherals over them. See [CTR I/O](ctr/hardware/io-and-peripherals.md).
+
+### eMMC {#emmc}
+
+Flash storage soldered to the board that presents itself like an SD card. It is the 3DS's internal [NAND](#nand). See [CTR NAND filesystem](ctr/software/nand-filesystem.md).
+
+### SD card {#sd-card}
+
+Removable flash card. The 3DS uses it for downloaded games and user data. See [CTR SD filesystem](ctr/software/sd-filesystem.md).
+
+### FAT filesystem {#fat}
+
+The simple, widely supported file layout (FAT12/16/32) used on SD cards and inside 3DS internal storage. See [CTR NAND filesystem](ctr/software/nand-filesystem.md).
+
+### One-time-programmable memory (OTP) {#otp}
+
+Memory that can be written exactly once at the factory. Consoles use it for per-device secrets. See [CTR security hardware](ctr/hardware/security-hardware.md).
+
+### AES, RSA, SHA, ECDSA {#crypto}
+
+Standard cryptographic building blocks. **AES** encrypts data with a shared secret key; **RSA** and **ECDSA** are public-key signature schemes (anyone can check a signature, only the key holder can make one); **SHA** produces a fingerprint ("hash") of data. See [CTR security architecture](ctr/software/security-architecture.md).
+
+### Digital signature and chain of trust {#chain-of-trust}
+
+A signature proves data came from the key holder and wasn't altered. A **chain of trust** is a sequence in which each stage verifies the next, anchored in the [boot ROM](#boot-rom). See [CTR security architecture](ctr/software/security-architecture.md).
+
+### Exploit {#exploit}
+
+A flaw that can be abused to make a device do something its maker didn't intend, such as running unsigned code. See [CTR exploits](ctr/homebrew/exploits.md).
+
+### Return-oriented programming (ROP) {#rop}
+
+An exploitation technique that chains tiny existing snippets of a program's own code to do the attacker's work, because the attacker can't inject new executable code. See [CTR exploits](ctr/homebrew/exploits.md).
+
+### Stereoscopic 3D {#stereoscopic-3d}
+
+Showing each eye a slightly different image so the brain perceives depth. See [CTR displays](ctr/hardware/display.md).
+
+### Vertical blank (V-blank) {#vblank}
+
+The short pause between finishing one screen refresh and starting the next; the safe moment to swap which framebuffer is shown. See [CTR displays](ctr/hardware/display.md).
