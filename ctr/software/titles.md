@@ -47,7 +47,7 @@ TWL titles carry over the DSi category masks, so TWL system titles have `0x8001`
 
 Regions are not stored in the title ID. Region ordering appears sequential (JPN, USA, EUR, then KOR, CHN, and TWN is 3DS-only).
 
-**Common title ID prefixes:** `00040010` system applications, `0004001B` system data archives, `00040030` system applets, `0004009B` shared data archives, `000400DB` system data archives, `00040130` system modules, `00040138` system firmware; `00040001` Download Play titles; `0004800*` TWL titles.
+**Common title ID prefixes** (a data-only example is the [country/region archive](country-region-data.md), `0004009B00010402`): `00040010` system applications, `0004001B` system data archives, `00040030` system applets, `0004009B` shared data archives, `000400DB` system data archives, `00040130` system modules, `00040138` system firmware; `00040001` Download Play titles; `0004800*` TWL titles.
 
 ### Version numbers
 

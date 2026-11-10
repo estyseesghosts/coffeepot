@@ -128,4 +128,36 @@ The standard bootloader built on [sighax](#sighax) that runs custom code with fu
 
 ### Luma3DS {#luma3ds}
 
-The most widely used 3DS custom firmware. See [CTR custom firmware](homebrew/custom-firmware.md).
+The most widely used 3DS custom firmware. See [Luma3DS](homebrew/luma3ds.md) and [CTR custom firmware](homebrew/custom-firmware.md).
+
+### Rosalina {#rosalina}
+
+Luma3DS's overlay menu and system module: screenshots, screen filters, cheats, a debugger, and a loader for `.3dsx` apps. See [Luma3DS](homebrew/luma3ds.md).
+
+### LayeredFS and 3GX {#layeredfs-3gx}
+
+Luma3DS game-modding features: **LayeredFS** replaces a game's files by redirecting paths to the SD card; **3GX** is the game-plugin format. See [Luma3DS](homebrew/luma3ds.md).
+
+### CRO, CRS, CRR {#cro}
+
+Dynamic code modules (`.cro`), the static module's symbol file (`.crs`) and the module verification list (`.crr`), loaded by the RO service. See [CTR dynamic modules](software/cro-modules.md).
+
+### CEC / StreetPass {#cec}
+
+The system module that carries StreetPass messages between consoles through per-game mailboxes. See [StreetPass (CEC)](software/streetpass-cec.md).
+
+### QTM {#qtm}
+
+The New 3DS service that tracks the viewer's head and positions the 3D screen's parallax barrier. See [CTR displays](hardware/display.md).
+
+### Linear heap {#linear-heap}
+
+Physically contiguous process memory (the "LINEAR" region) used for buffers the GPU, DSP or DMA must read. See [CTR memory](hardware/memory.md) and [libctru](homebrew/libctru.md).
+
+### SHBIN, picasso {#shbin}
+
+`.shbin` is the compiled GPU shader container; **picasso** is the assembler that makes it. See [picasso and citro3d](homebrew/picasso-and-citro3d.md).
+
+### libctru, citro3d {#libctru}
+
+The standard homebrew user library and the GPU wrapper built on it. See [libctru](homebrew/libctru.md) and [picasso and citro3d](homebrew/picasso-and-citro3d.md).

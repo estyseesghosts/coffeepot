@@ -22,7 +22,7 @@ CSND has 32 channels (double the DS) and is also used by 3DS software as an exte
 | ---- | --- | ---- |
 | Hardware | CEVA TeakLite (II), ~134 MHz (134.06 MHz, the ARM9 clock) | DS audio block, 32 channels |
 | Used by | 3DS games and apps | DS/DSi/GBA games; early homebrew; 3DS as extension |
-| Output | Stereo, 16-bit, 32 kHz class (3dbrew lists 32728 Hz, 24 channels) | — |
+| Output | Stereo, 16-bit, **32,728.5 Hz** (`libctru`: `NDSP_SAMPLE_RATE = SYSCLOCK_SOC / 512`); 24 voices | — |
 | Working RAM | 512 KB, double-buffered (2 × 256 KB) | — |
 | DMA | Dedicated | — |
 | Registers | `0x10203000` (DSP), `0x10103000` (CSND) | — |
@@ -53,11 +53,11 @@ The firmware alternates between two 0x8000-byte areas (at `0x1FF50000` and `0x1F
 
 ## Homebrew notes
 
-[Userland homebrew](../homebrew/exploits.md) historically had no DSP access, and the hacking workflow even asks users to dump the Home Menu's DSP firmware so homebrew can load it. The original 3DS also had hardware speaker noise issues that Nintendo documented separately.
+`libctru` ships `ndsp`, a userland driver for the DSP; its `NDSP_SAMPLE_RATE` and channel/filter functions (ADPCM, PCM8/PCM16 buffers, auxiliary output callbacks) mirror the voice model described above. [Userland homebrew](../homebrew/exploits.md) historically had no DSP access, and the hacking workflow even asks users to dump the Home Menu's DSP firmware so homebrew can load it. The original 3DS also had hardware speaker noise issues that Nintendo documented separately.
 
 ## Open questions
 
-- Sample rate: 3dbrew says 32728 Hz, Copetti says "up to 32 kHz". The exact figure is not confirmed here.
+- Sample rate: Copetti says "up to 32 kHz" and 3dbrew "32728 Hz"; the libctru definition (16,756,991 Hz ÷ 512 = 32,728.498 Hz) fixes the exact value used by the output.
 - DSP architecture is only known through emulator work (the "Teakra" project); no official documentation is public.
 
 ## Sources
@@ -65,4 +65,5 @@ The firmware alternates between two 0x8000-byte areas (at `0x1FF50000` and `0x1F
 - [3dbrew: DSP Services](https://www.3dbrew.org/wiki/DSP_Services), [DSP Binary](https://www.3dbrew.org/wiki/DSP_Binary), [DSP Memory Region](https://www.3dbrew.org/wiki/DSP_Memory_Region), [DSP AAC Decoder](https://www.3dbrew.org/wiki/DSP_AAC_Decoder) — service commands, firmware header, shared-memory layout.
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — DSP part and clock.
 - [3dbrew: IO Registers](https://www.3dbrew.org/wiki/IO_Registers) — DSP/CSND register addresses.
+- [libctru `ndsp.h`](https://github.com/devkitPro/libctru) — sample rate definition and the userland DSP driver API.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Audio](https://www.copetti.org/writings/consoles/nintendo-3ds/) — DSP vs CSND, memory, channel counts.

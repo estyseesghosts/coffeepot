@@ -84,6 +84,7 @@ For present-day use, the shape of the journey is: get any entry point (see [expl
 
 ## Sources
 
+- [Luma3DS README](https://github.com/LumaTeam/Luma3DS) — project start (2015), later maintainers and when each system module was added.
 - [Hacks Guide Wiki: History of 3DS Hacking](https://wiki.hacks.guide/wiki/3DS:History_of_3DS_Hacking) — master timeline (itself adapted from zoogie's "A Pretty Brief History of the 3DS Hacking/Homebrew Scene" on GBAtemp).
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Anti-Piracy and Homebrew](https://www.copetti.org/writings/consoles/nintendo-3ds/) — narrative of Gateway3DS, Ninjhax, memchunkhax, arm9loaderhax, sighax, boot9strap, ntrboot.
 - [3dbrew: Homebrew Exploits](https://www.3dbrew.org/wiki/Homebrew_Exploits) — exploit names and firmware ranges.

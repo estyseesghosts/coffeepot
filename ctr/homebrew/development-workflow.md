@@ -17,10 +17,12 @@ This page is for developers. For how code gets *onto* a console in the first pla
 | Component | Role | Notes |
 | --------- | ---- | ----- |
 | `devkitARM` | GCC-based cross-compiler for ARM consoles | by WinterMute et al.; builds ARM11 userland code |
-| `libctru` (formerly `ctrulib`) | C library for ARM11 userland: system calls, services, memory, threads | by smea and others, now maintained by devkitPro |
-| `citro3d` | Stateful wrapper around the PICA200 GPU | by fincs |
+| `libctru` (formerly `ctrulib`) | C library for ARM11 userland: system calls, services, memory, threads ([details](libctru.md)) | by smea and others, now maintained by devkitPro |
+| `citro3d` | Stateful wrapper around the PICA200 GPU ([details](picasso-and-citro3d.md)) | by fincs |
 | `citro2d` | 2D drawing on top of `citro3d` | by fincs |
-| `picasso` | PICA200 shader assembler | by fincs; alternatives `nihstro` (neobrain) and `aemstro` (smea) |
+| `picasso` | PICA200 shader assembler, produces `.shbin` ([details](picasso-and-citro3d.md)) | by fincs; alternatives `nihstro` (neobrain) and `aemstro` (smea) |
+| `tex3ds` | Converts images to `.t3x` texture files for citro3d | used by the example Makefiles |
+| `firmtool` | Builds the `boot.firm` image for a CFW | needed to build [Luma3DS](luma3ds.md), with `makerom` |
 | `3ds-cmake` | CMake support for `devkitARM` | |
 | `makerom` | Builds NCCH, CCI and CIA | 3dsguy, maintained by profi200 |
 | `bannertool` | Makes SMDH icon metadata and banners | Steveice10 |
@@ -37,6 +39,23 @@ Older or deprecated libraries still listed on 3dbrew: `sf2dlib`, `gl3ds`, `libkh
 5. For `.cia`/`.3ds`: strip the ELF (`arm-none-eabi-strip`), then use `makerom` with an RSF file, an icon (the SMDH), and a banner (256×128 PNG + 16-bit WAV compiled with `bannertool`). If you do not need kernel-level access, 3DSX is preferred.
 
 Always build with the hard-float ABI: use `-mfloat-abi=hard` everywhere. Mixing `softfp` and `hard` fails at link time (`uses VFP register arguments but … does not`).
+
+### Example projects (`3ds-examples`)
+
+The devkitPro `3ds-examples` repository (public domain) is the best starting point; each folder is a ready-to-build project. As of the checked copy it contains:
+
+| Folder | Shows |
+| ------ | ----- |
+| `templates/application`, `templates/library` | Skeleton projects |
+| `graphics/gpu/*` | `simple_tri`, `textured_cube`, `lenny`, `fragment_light`, `normal_mapping`, `toon_shading`, `proctex`, `geoshader`, `loop_subdivision`, `particles`, `cubemap`, `mipmap_fog`, `immediate`, `gpusprites`, `2d_shapes`, `both_screens`, `stereoscopic_2d`, `wide_mode_3d`, `composite_scene`, `multiple_buf`; plus `graphics/bitmap` and `graphics/printing` |
+| `audio/*` | Streaming, microphone, filters, and decoding of Ogg Vorbis, Opus and module music |
+| `input/*` | Controls, touch screen, software keyboard |
+| `camera/*` | Still image and video capture |
+| `network/*` | `3dslink` demo, HTTP and POST, sockets, SSL, local wireless (`uds`), SpotPass (`boss`) |
+| `nfc`, `mvd`, `qtm/*` | amiibo access (New 3DS or a host process with `nfc:u`), the New 3DS video-decoder block (needs access to `MVDSTD` from a modified firmware or an old userland exploit), head-tracking data |
+| `app_launch`, `libapplet_launch`, `mii_selector`, `get_system_language`, `romfs`, `sdmc`, `threads/*`, `time/rtc`, `physics/box2d` | Launching other applications and applets, Mii picker, system language, packaged resources, SD card access, threads and events, the real-time clock, a physics demo |
+
+The GPU examples build their shaders from `*.v.pica` (vertex) and `*.g.pica` (geometry) files with `picasso` into `.shbin`, and their textures from images with `tex3ds`.
 
 ### Language options
 
@@ -66,4 +85,7 @@ C, C++ and some assembly; Lua via the Lua Player Plus interpreter; Pascal via a 
 - [3dbrew: Homebrew Libraries and Tools](https://www.3dbrew.org/wiki/Homebrew_Libraries_and_Tools) — libraries and PC/3DS tools.
 - [3dbrew: Homebrew Applications](https://www.3dbrew.org/wiki/Homebrew_Applications) — `.3dsx` / `.smdh` / `.xml` installation convention, launchers.
 - [3dbrew: Makerom](https://www.3dbrew.org/wiki/Makerom) — packaging NCCH/CCI/CIA.
+- [3ds-examples (devkitPro)](https://github.com/devkitPro/3ds-examples) — example projects and their Makefile rules.
+- [libctru](https://github.com/devkitPro/libctru), [citro3d](https://github.com/devkitPro/citro3d) and [picasso](https://github.com/devkitPro/picasso) — library sources and manuals.
+- [Luma3DS README](https://github.com/LumaTeam/Luma3DS) — build requirements (`makerom`, `firmtool`, devkitARM, libctru).
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Anti-Piracy and Homebrew](https://www.copetti.org/writings/consoles/nintendo-3ds/) — history of libctru, nihstro, the Homebrew Launcher and its userland limits.

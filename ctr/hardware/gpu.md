@@ -2,7 +2,7 @@
 
 The 3DS draws its graphics with a chip licensed from a small company, Digital Media Professionals (DMP): the **[PICA200](../glossary.md#pica200)**. It is a mid-point between the old fixed-function style (fixed circuits for lighting and texture blending) and modern programmable graphics (shaders for geometry). Games feed it lists of commands; it draws three images per frame — a left-eye and right-eye view for the top screen, and one for the bottom screen.
 
-The PICA200 only works with [framebuffers](../../glossary.md#framebuffer): there are no hardware sprites or background layers as on the DS. For DS and GBA games, a separate legacy path produces the picture instead (see [displays](display.md)).
+The effects it can do in hardware — lighting, shadows, procedural textures, subdivision — are described on [GPU shading features](gpu-shading-features.md). The PICA200 only works with [framebuffers](../../glossary.md#framebuffer): there are no hardware sprites or background layers as on the DS. For DS and GBA games, a separate legacy path produces the picture instead (see [displays](display.md)).
 
 ## Where it fits
 
@@ -34,8 +34,9 @@ The GPU is not stereoscopic-aware. A game renders the top screen twice (slightly
 | Vertex processors | 4 (3 vertex + 1 "Primitive Engine"/geometry unit when enabled) |
 | Shader number format | 24-bit floats (not IEEE 754), 4-component vectors (96 bits) |
 | Shader program limits | ≤ 512 instructions, ≤ 128 operand descriptors (inferred from SDK debug data) |
+| Shader registers | 16 inputs (`v0`–`v15`), 16 outputs, 16 scratch (`r0`–`r15`), 96 float uniforms (`c0`–`c95`), 4 integer and 16 boolean uniforms (per picasso) |
 | Vertex output cache | "Sync control" block, 384 bytes (32 × 96-bit vectors) |
-| Texture units | 4: three can do 2D textures, one of those can also do shadow, cube and projective mapping, and the fourth is used only for procedural textures |
+| Texture units | 4: three can do 2D textures; one of those (unit 0, per the Citra notes: only unit 0 supports shadow textures) also does shadow, cube and projective mapping; the fourth (unit 3) is used only for procedural textures |
 | Texture cache | 256 B L1 per unit, 8 KB shared L2 |
 | Colour combiners | 6 (each takes 3 inputs: previous combiner, texture unit or constant) |
 | Memory | 6 MB VRAM + FCRAM; on-chip DMA between them |
@@ -86,25 +87,31 @@ The GPU has two register spaces.
 
 Draws use `GPUREG_DRAWARRAYS` or `GPUREG_DRAWELEMENTS`. Constant vertex attributes can use *fixed attributes*, and small draws can supply vertices inline by writing `0xF` to `GPUREG_FIXEDATTRIB_INDEX` followed by float data (immediate mode).
 
+### Design notes from DMP
+
+DMP's CEDEC 2012 talk gives the reasoning: the PICA200 was announced in 2006 as a low-power core; reconfigurable fixed-function fragment hardware runs the effects in 1–4 cycles per fragment (tens of cycles on a Shader Model 3.0-class programmable unit), and the whole chip uses deep pipelining and fine-grained clock gating to save power. Its geometry stage caches processed vertices in a *secondary vertex cache* that also allows variable-size primitives for subdivision. A lower-end version, the "PICA200 Lite", appeared in a compact camera (the 4Gamer report names the Olympus Tough TG-1). The geometry unit cannot read textures, so displacement mapping is impossible. Details: [shading features](gpu-shading-features.md).
+
 ### Known pitfalls
 
 - Vertex attributes are aligned to their element size; the stride in `GPUREG_ATTRIBBUFFERi_CONFIG2` must exactly equal the real vertex size (use padding attributes) or the GPU hangs or draws nothing.
 - Output map registers (`GPUREG_SH_OUTMAP_O*`) consume slots only for outputs enabled in `GPUREG_SH_OUTMAP_MASK`.
 - Texture unit 1 can corrupt or become unstable in some configurations.
 - Shader outputs configured must be written exactly once; `MOVA` (address-register) instructions cannot be adjacent.
+- After changing a shader program, the attribute-buffer and vertex-input registers must be configured again, and a draw-elements sequence must end with two dummy writes to `GPUREG_PRIMITIVE_CONFIG`, otherwise the GPU can crash ([shading features](gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)).
 
 ## Homebrew notes
 
-Homebrew normally uses `citro3d` (state-tracking wrapper) and `citro2d`, with shaders written in `picasso` assembly (see [development workflow](../homebrew/development-workflow.md)). Emulator work needs the register-level pages on 3dbrew.
+Homebrew normally uses `citro3d` (state-tracking wrapper) and `citro2d`, with shaders written in `picasso` assembly ([picasso and citro3d](../homebrew/picasso-and-citro3d.md), [development workflow](../homebrew/development-workflow.md)). The `3ds-examples` repository contains ready GPU samples (cube map, fragment lighting, geometry shader, loop subdivision, procedural texture, toon shading, normal mapping, particles, stereoscopic 2D, wide mode 3D and more). Emulator work needs the register-level pages on 3dbrew.
 
 ## Open questions
 
 - Primitive Engine and variable-size primitives are only partly reverse-engineered; how they are enabled is unknown.
-- Which texture unit supports shadow/cube/projective mapping is not stated in the sources used.
 - Unknown registers in the external map ("writes `0x22221200` on init", etc.) are undocumented.
 
 ## Sources
 
 - [3dbrew: GPU](https://www.3dbrew.org/wiki/GPU) and subpages: [External Registers](https://www.3dbrew.org/wiki/GPU/External_Registers), [Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers), [Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide), [Pitfalls](https://www.3dbrew.org/wiki/GPU/Pitfalls), [Primitive Engine](https://www.3dbrew.org/wiki/GPU/Primitive_Engine), [Shader Instruction Set](https://www.3dbrew.org/wiki/GPU/Shader_Instruction_Set), [Fragment Lighting](https://www.3dbrew.org/wiki/GPU/Fragment_Lighting), [Procedural Texture Generation](https://www.3dbrew.org/wiki/GPU/Procedural_Texture_Generation) — registers, shaders, lighting, pitfalls.
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — chip identification and Maestro feature list.
+- [4Gamer.net: CEDEC 2012 PICA200 report](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's design rationale, cycle counts, secondary vertex cache, power saving (Japanese).
+- [picasso manual](https://github.com/devkitPro/picasso) — shader register file and caveats.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Graphics](https://www.copetti.org/writings/consoles/nintendo-3ds/) — pipeline walk-through, cache and combiner counts, SDK graphics layers.

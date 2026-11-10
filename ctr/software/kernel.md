@@ -13,7 +13,7 @@ This page describes the ARM11 kernel as programs see it: processes, threads, syn
 
 ### Scheduling
 
-Little about the scheduler is confirmed. Threads on the first core (the *appcore*) appear to use **cooperative** scheduling: a core is handed to another thread only when the running thread makes a system call (most calls trigger the scheduler), so a game can deadlock itself with careless threading. The *syscore* has been hypothesised to be preemptive but this is unconfirmed. The syscore can lend roughly 30% of its time to the application (an application CPU time limit set through the `APT` service). How the ARM9 and the two extra New 3DS cores are scheduled is unknown.
+Each core has its own `KScheduler`. 3dbrew states that little about it is confirmed; the Citra team's reverse engineering (below) adds detail. The first core (the *appcore*) is **mostly cooperative**: a thread loses the core when it blocks or makes certain system calls, but the scheduler may also preempt a lower-priority thread to let a higher-priority one run in specific cases. A game can still deadlock itself with careless threading. The *syscore* has been hypothesised to be preemptive but this is unconfirmed. The application's share of the syscore is set as a CPU-time percentage (see below). The syscore can lend roughly 30% of its time to the application (an application CPU time limit set through the `APT` service). How the ARM9 and the two extra New 3DS cores are scheduled is unknown.
 
 Per Copetti, the New 3DS's fourth core is used solely for head tracking, and the third core is idle unless the title's metadata asks for it (see [CPU](../hardware/cpu.md#new-3ds-extra-cores)). Because the system cannot assume games are written for it, the faster clock and extra memory are off unless requested.
 
@@ -59,17 +59,30 @@ System calls are numbered; `NF ARM11` marks calls on the normal ARM11 firmware. 
 
 Some call ids (`0x3C Break`, `0x3D OutputDebugString`, `0x3E ControlPerformanceCounter`) are not available to normal processes. `svc 0x59 SetGpuProt` enables/disables the GPU's memory protection.
 
+### Waiting, signalling and rescheduling (Citra reverse-engineering notes)
+
+- Every kernel object that can be waited on keeps a **waitlist** of threads blocked on it. When the object is signalled, the kernel takes the highest-priority waiter, checks whether it can run, appends it to the scheduler queue and removes it from the waitlist, repeating for every thread that is ready.
+- Each thread also keeps a list of objects it is waiting on, used only by `WaitSynchronizationN`. A thread is queued only when *all* objects in its list are ready (wait-all mode).
+- `WaitSynchronization1` with timeout 0: if the object is signalled, it is acquired with **no reschedule**; if not, it returns error `0x09401BFE` immediately. With a timeout above 0, an unready object adds the thread to the waitlist and suspends it; a ready object is acquired with no reschedule.
+- `WaitSynchronizationN` in wait-any mode acquires the first ready object in order (no reschedule for timeout 0 or −1); in wait-all mode it first checks that all are ready. If a thread that cannot acquire everything is marked for termination (offset `0x36` in the `KThread`), it returns `0xD920060D` after being rescheduled; otherwise it joins every object's waitlist and suspends. After suspension the kernel removes the thread from the waitlists again — behavior the authors speculate is a coroutine-like return that sets the call's result.
+- A reschedule attempt happens: at the end of a system call if the thread is marked for termination or its process has a debug event; after `ExitThread`, `SleepThread`, `ExitProcess`, `TerminateProcess`, `CreateThread`, `SetThreadPriority`; after a process or thread that others waited on is destroyed; after a timeout wakes a thread; when `WaitSynchronization1`/`N` has to block; after a sync request to a client session and after `ReplyAndReceive` replies to a server session; when a client or server session is closed (waiters wake with an error); when a thread resumes after a signal; after `ReleaseMutex` brings the lock count to 0; and after `SetResourceLimitValues` with type CPU_TIME (`9`) and a value below `0x5A` (90).
+- The notes mark as unverified: address arbiter handling, memory-mapping calls, DMA transfers and `Map`/`UnmapProcessMemory`; `ReplyAndReceive` is still TODO.
+
+### Resource limits and arbitration
+
+Resource limit types: 0 priority, 1 commit (allocatable memory), 2 threads, 3 events, 4 mutexes, 5 semaphores, 6 timers, 7 shared-memory objects, 8 address arbiters, 9 CPU time (a percentage, regular until it reaches 90). Address-arbiter actions: signal (`−1` wakes all), wait if less than, decrement-and-wait if less than, and timeout variants of both. `svcCreateThread` takes a processor ID: 0 is the application core, 1 the system core, `−1` all cores, `−2` the default from the exheader.
+
 ### Kernel errors
 
 Kernel results use the standard 3DS error-code layout; see 3dbrew's SVC page for a table.
 
 ## Homebrew notes
 
-The `Backdoor` (0x7B) call and kernel exploits turn userland control into full ARM11 kernel access (see [exploits](../homebrew/exploits.md)). `libctru` wraps the system calls and `svcGetSystemTick` is used for precise timing.
+The `Backdoor` (0x7B) call and kernel exploits turn userland control into full ARM11 kernel access (see [exploits](../homebrew/exploits.md)). `libctru` wraps the system calls and `svcGetSystemTick` is used for precise timing. Custom firmware extends the kernel: Luma3DS injects `k11_extension` to hook and add supervisor calls ([Luma3DS](../homebrew/luma3ds.md)).
 
 ## Open questions
 
-- The scheduler's exact policies are unknown (as stated above).
+- The scheduler's exact policies are only partly known; the Citra notes flag the address-arbiter, memory-mapping and DMA cases as unverified.
 - Behavior of `CreateCodeSet`/`CreateProcess`/`Run` on 3dbrew is marked unconfirmed.
 
 ## Sources
@@ -79,4 +92,7 @@ The `Backdoor` (0x7B) call and kernel exploits turn userland control into full A
 - [3dbrew: Multi-threading](https://www.3dbrew.org/wiki/Multi-threading) — processes, threads, synchronization, capability descriptors.
 - [3dbrew: CTR API](https://www.3dbrew.org/wiki/CTR_API) — critical sections.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — thread context pages, kernel pointers.
+- Citra project wiki, "Kernel synchronization" (scheduler, waitlists, rescheduling cases) — the `citra-emu/citra` repository that hosted it has since been removed from GitHub, so no live link could be verified.
+- [libctru `svc.h`, `thread.h`, `apt.h`](https://github.com/devkitPro/libctru) — resource limit types, arbitration types, processor IDs, application CPU time limit calls.
+- [Luma3DS `k11_extension`](https://github.com/LumaTeam/Luma3DS) — the supervisor calls Luma adds or replaces ([Luma3DS](../homebrew/luma3ds.md)).
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Operating System](https://www.copetti.org/writings/consoles/nintendo-3ds/) — scheduler behavior per core and the 30% lending rule.

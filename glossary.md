@@ -169,3 +169,7 @@ Showing each eye a slightly different image so the brain perceives depth. See [C
 ### Vertical blank (V-blank) {#vblank}
 
 The short pause between finishing one screen refresh and starting the next; the safe moment to swap which framebuffer is shown. See [CTR displays](ctr/hardware/display.md).
+
+### Lookup table (LUT) {#lut}
+
+A table of precomputed answers: instead of calculating a result, hardware or software uses the input as an index and reads the answer. The 3DS GPU uses LUTs for lighting, fog and procedural textures. See [CTR GPU shading features](ctr/hardware/gpu-shading-features.md).

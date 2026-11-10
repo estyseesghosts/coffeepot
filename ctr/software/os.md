@@ -41,6 +41,9 @@ Boot ROMs live in the SoC; per-console secrets live in OTP; system data in the i
 | ------- | ---------------- |
 | Kernel objects, system calls, scheduler | [Kernel](kernel.md) |
 | Service list | [Services](services.md) |
+| Dynamic modules | [CRO modules](cro-modules.md) |
+| StreetPass | [StreetPass (CEC)](streetpass-cec.md) |
+| Region data | [Country/region archive](country-region-data.md) |
 | Installed software, tickets, metadata | [Titles](titles.md) |
 | Containers (NCSD, NCCH, CIA, DISA) | [File formats](file-formats.md) |
 | Filesystem layout | [NAND](nand-filesystem.md), [SD](sd-filesystem.md), [saves](savegames.md) |

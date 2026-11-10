@@ -34,7 +34,7 @@ The GPU also does not display from its render target directly: games reserve sep
 | yes | `0x10000000` | — | I/O registers (see [I/O](io-and-peripherals.md)) |
 | yes | `0x17E00000` | `0x2000` | [MPCore private memory region](cpu.md#mpcore-private-memory-region) |
 | no | `0x17E10000` | `0x1000` | L2C-310 level-2 cache controller (2 MB L2) |
-| yes | `0x18000000` | `0x600000` | VRAM |
+| yes | `0x18000000` | `0x600000` | VRAM (two banks, A and B, of 3 MiB each) |
 | no | `0x1F000000` | `0x400000` | New 3DS additional memory (used by head tracking and the New 3DS kernel; not GPU-accessible on Old 3DS) |
 | yes | `0x1FF00000` | `0x80000` | DSP memory |
 | yes | `0x1FF80000` | `0x80000` | AXI WRAM |
@@ -103,6 +103,12 @@ Each process sees its own address space up to `0x40000000` (`0x20000000` before 
 
 Executable pages are read-only; data pages are execute-never. The kernel's virtual map (valid for the earliest firmware sampled) puts mapped VRAM at `0xE8000000`, internal memory at `0xEFF00000`, main memory at `0xF0000000` and the IRQ block at `0xFFFEE000`. I/O registers map into userland at `physical = virtual − 0x1EC00000 + 0x10100000`.
 
+### Constants used by libctru
+
+`libctru`'s `os.h` names the virtual regions programs use: heap area `0x08000000–0x0E000000` (96 MiB), mappable area `0x10000000–0x14000000`, old (pre-8.x) linear FCRAM mapping at `0x14000000` → physical `0x20000000` (128 MiB), New 3DS QTM memory at `0x1E800000` → `0x1F000000` (4 MiB, the last 128 KiB reserved by the kernel), MMIO at `0x1EC00000` → `0x10100000` (4 MiB), VRAM at `0x1F000000` → `0x18000000` (6 MiB), DSP RAM `0x1FF00000` (512 KiB), kernel configuration page `0x1FF80000`, shared configuration page `0x1FF81000`, and the current linear FCRAM mapping at `0x30000000` → `0x20000000` (256 MiB). The kernel configuration page (read-only) starts with the kernel version, an update flag, the NS title ID and holds `app_memtype`, the three memory-region sizes and the FIRM version; field layouts are on the [libctru page](../homebrew/libctru.md).
+
+On start-up `libctru` allocates an application heap and a linear heap from the process's memory allowance (default: half each, with the application heap capped at 24 MiB and the linear heap at 32 MiB unless the other side has room); VRAM allocations (`vramAlloc`) never cross the A/B bank boundary.
+
 ### Typical VRAM use by system applets
 
 The system applets place their LCD framebuffers in VRAM: top-screen left/right 3D buffers (240×400×3 bytes each) at `0x1E6000` and `0x22C800` (framebuffer 0) and `0x273000`/`0x2B9800` (framebuffer 1), and the bottom screen (240×320×3) at `0x48F000` and `0x4C7800`. Ordinary games manage their own VRAM layout; the system clears these buffers when launching a game.
@@ -121,5 +127,6 @@ Buffers shared with the GPU live in the "LINEAR"/GSP heap, which maps straight o
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — physical maps, MPU regions, FCRAM region table, userland virtual map, VRAM framebuffer addresses.
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — FCRAM part, VRAM size.
 - [3dbrew: IO Registers](https://www.3dbrew.org/wiki/IO_Registers) — I/O address range and user mapping formula.
+- [libctru `os.h`, allocator and `allocateHeaps.c`](https://github.com/devkitPro/libctru) — virtual-region constants, VRAM bank handling, default heap split.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: CPU](https://www.copetti.org/writings/consoles/nintendo-3ds/) — memory pools, FCRAM background, sizes.
 - [Copetti, Nintendo 3DS Architecture: Operating System](https://www.copetti.org/writings/consoles/nintendo-3ds/) — application memory budget and APPMEMTYPE.

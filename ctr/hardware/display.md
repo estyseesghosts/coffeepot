@@ -18,7 +18,16 @@ The top panel is physically 800×240 pixels, but each pixel is half-width. A **p
 - **2D mode:** pairs of columns are treated as single pixels, showing one 400×240 image.
 - The panel can in principle show a true 800×240 image; no commercial game used it.
 
-The barrier needs extra brightness (shorter battery life), and the effect only works if the player holds the console square to their face. A slider ("3D depth slider") scales how different the two views are. Starting with the New 3DS, a front camera and infrared LED track the player's head to keep the image aligned (this takes one CPU core; see [CPU](cpu.md)).
+The barrier needs extra brightness (shorter battery life), and the effect only works if the player holds the console square to their face. A slider ("3D depth slider") scales how different the two views are. Starting with the New 3DS, a front camera and infrared LED track the player's head to keep the image aligned (this takes one CPU core; see [CPU](cpu.md) and the next section).
+
+### Head tracking and "Super Stable 3D" (New 3DS)
+
+On New models a system service called **[QTM](../glossary.md#qtm)** moves the parallax barrier to follow the viewer. `libctru` documents it (QTM services `qtm:u`, `qtm:s`, `qtm:c`):
+
+- The inner camera samples at 320×240 and 30 frames per second; the gyroscope predicts the eye positions between camera samples, effectively doubling the tracking rate. An infrared LED lights the scene in low light.
+- The barrier is a pattern of 12 positions per interocular-distance unit, set through a TI TCA6416A I²C-to-parallel expander; its pattern and polarity are dithered by software roughly every 10 ms (one gyroscope sample).
+- Nintendo's "Super Stable 3D" works out the midpoint of the viewer's eyes in camera pixels, rotates it by a calibrated angle, converts it to millimetres of horizontal deviation using the camera's field of view and the calibrated eye-to-screen distance, and shifts the barrier by that amount (rounded with a ±0.01 bias to avoid flicker). All calculations assume a 62 mm eye separation. It is not applied in 2D mode.
+- QTM is absent on the Old 3DS and may be unavailable on the New 2DS XL (no 3D screen), so programs must check that the services exist.
 
 ### Framebuffers and swapping
 
@@ -75,7 +84,7 @@ Top-screen buffers are 240×400×3 bytes for each eye (the panel is scanned rota
 
 ## Homebrew notes
 
-Homebrew normally uses `libctru`'s `gfx` API (which wraps the GSP service) rather than programming the PDC. Direct register work is needed only for bare-metal or exploit-driven code (running with ARM11 kernel privileges). The video-capture test points on the board (documented on 3dbrew) allow capturing the raw screen signals with hardware.
+Homebrew normally uses `libctru`'s `gfx` API (which wraps the GSP service) rather than programming the PDC; that API treats the panels as portrait screens rotated 90° counter-clockwise, so the top screen is 240 pixels wide and 400 tall ([libctru](../homebrew/libctru.md)). Direct register work is needed only for bare-metal or exploit-driven code (running with ARM11 kernel privileges). The video-capture test points on the board (documented on 3dbrew) allow capturing the raw screen signals with hardware.
 
 ## Open questions
 
@@ -88,5 +97,6 @@ Homebrew normally uses `libctru`'s `gfx` API (which wraps the GSP service) rathe
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — resolutions and screen sizes.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — VRAM framebuffer addresses.
 - [3dbrew: Video Capture](https://www.3dbrew.org/wiki/Video_Capture) — screen capture test points.
+- [libctru `qtm.h` and `gfx.h`](https://github.com/devkitPro/libctru) — QTM head-tracking and barrier control, portrait-orientation note for the framebuffer API.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Displays](https://www.copetti.org/writings/consoles/nintendo-3ds/) — parallax barrier, 2D/3D modes, head tracking.
 - [Copetti, Nintendo 3DS Architecture: Graphics](https://www.copetti.org/writings/consoles/nintendo-3ds/) — framebuffer swap process and the legacy (DS/GBA) path.

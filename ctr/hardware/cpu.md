@@ -26,7 +26,7 @@ Developers only target the ARM11. They write multi-threaded code and let the OS 
 
 ### New 3DS compatibility layer
 
-On a New 3DS, a game's metadata says whether it targets the new hardware. If it does, the OS enables the faster clock, extra memory and level-2 [cache](../../glossary.md#cache) for that game. If not, those features stay off so old games see the hardware they expect.
+On a New 3DS, a game's metadata says whether it targets the new hardware. If it does, the OS enables the faster clock, extra memory and level-2 [cache](../../glossary.md#cache) for that game. If not, those features stay off so old games see the hardware they expect. Luma3DS lets users override this per game with its `app_launch_new_3ds_cpu` setting (`off`, `clock`, `l2`, `clock+l2`; see [Luma3DS](../homebrew/luma3ds.md)).
 
 ## Technical details
 
@@ -45,6 +45,8 @@ On a New 3DS, a game's metadata says whether it targets the new hardware. If it 
 The ARM9 has a [memory protection unit](../../glossary.md#mpu), 32 KB instruction and 16 KB data tightly-coupled memory (TCM). The ARM11 has an [MMU](../../glossary.md#mmu) instead. Memory sizes and maps are on the [memory page](memory.md).
 
 Only one multiplier other than 1× exists in the official New 3DS kernel: 3×. Other multipliers exist in hardware but no official code uses them.
+
+**Clock tree.** `libctru` defines every clock from one base value, which pins down the exact figures: `SYSCLOCK_SOC` = 16,756,991 Hz; the system clock is 2× that (33,513,982 Hz); the SD/MMC clock is 2× the system clock; the ARM9 clock is 4× the system clock (134,055,928 Hz); the ARM11 clock is 2× the ARM9 clock (268,111,856 Hz); on the New 3DS the ARM11 can also run at 2× (536,223,712 Hz) or 3× (804,335,568 Hz) its base clock. The same constants set the CPU tick rate (`CPU_TICKS_PER_MSEC`). A program asks for the New 3DS fast mode with `osSetSpeedupEnable`, which calls `PTMSYSM_ConfigureNew3DSCPU(3)` (clock and L2-cache bits both set; see [libctru](../homebrew/libctru.md)).
 
 > Timing note: the faster clock was measured by reading `svcGetSystemTick` around an idle loop; that counter keeps ticking at 268 MHz in the fast mode, so elapsed time can be derived. It appears to apply only to the running application's cores.
 
@@ -111,6 +113,8 @@ Homebrew code is ordinary ARMv6K code built with `devkitARM` (see [development w
 - [ARM11 MPCore Processor Technical Reference Manual (ARM DDI 0360E, r1p0)](https://developer.arm.com/documentation/ddi0360/e) — pipeline, caches, TLB, SCU/MESI coherency, private memory region, interrupt distributor, timers, VFP.
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — clock speeds, core counts, New 3DS 804 MHz behavior.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — L2 cache controller address, MPCore private region location.
+- [libctru `os.h` and `os.c`](https://github.com/devkitPro/libctru) — the clock tree constants and the New 3DS speed-up call.
+- [Luma3DS configuration code](https://github.com/LumaTeam/Luma3DS) — `app_launch_new_3ds_cpu` options.
 - [3dbrew: IO Registers](https://www.3dbrew.org/wiki/IO_Registers) — DMA controller addresses and revisions.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: CPU](https://www.copetti.org/writings/consoles/nintendo-3ds/) — the three-CPU design, operating modes, L1 cache sizes, New 3DS compatibility layer, DMA overview.
 - [Copetti, Nintendo 3DS Architecture: Operating System](https://www.copetti.org/writings/consoles/nintendo-3ds/) — appcore/syscore and New 3DS core usage.

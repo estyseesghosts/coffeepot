@@ -26,18 +26,24 @@ Services grouped by the process that provides them (all present on Old and New 3
 | NIM | `nim:aoc`, `nim:ndm`, `nim:s`, `nim:u` | DLC, eShop, updater |
 | Config | `cfg:u`, `cfg:s`, `cfg:i`, `cfg:nor` | User/system/initialisation config; `nor` is the Wi-Fi SPI flash |
 | NS and APT | `ns:s`, `ns:p`, `ns:c`, `APT:A`, `APT:S`, `APT:U` | Shell launching, power, applet management |
-| RO | `ldr:ro` | Dynamic library loading (CRO) |
+| RO | `ldr:ro` | Dynamic library loading ([CRO modules](cro-modules.md)) |
 | Network | `ndm:u`, `nwm::CEC/EXT/INF/SAP/SOC/TST/UDS`, `http:C`, `ssl:C`, `soc:P`, `soc:U` | StreetPass, infrastructure, local wireless, HTTP, TLS, sockets |
 | Sound | `csnd:SND`, `dsp::DSP`, `cdc:HID/MIC/CSN/DSP/LGY/CHK` | See [audio](../hardware/audio.md) |
 | Camera | `cam:u`, `y2r:u`, `cam:s`, `cam:c`, `cam:q` (New 3DS only) | |
 | GPU/LCD | `gsp::Lcd`, `gsp::Gpu` | See [GPU](../hardware/gpu.md) and [displays](../hardware/display.md) |
-| Misc | `boss:U/P/M` (SpotPass), `cecd:u/s/ndm` (StreetPass), `ir:u/USER/rst`, `dlp:CLNT/FKCL/SRVR` (Download Play), `ptm:*` (power/play history), `hid:USER/SPVR/NFC/QTM`, `i2c::MCU/CAM/LCD/DEB/HID/IR/EEP/NFC/QTM`, `gpio:*` | |
+| Misc | `boss:U/P/M` (SpotPass), `cecd:u/s/ndm` (StreetPass; see [StreetPass (CEC)](streetpass-cec.md)), `ir:u/USER/rst`, `dlp:CLNT/FKCL/SRVR` (Download Play), `ptm:*` (power/play history), `hid:USER/SPVR/NFC/QTM`, `i2c::MCU/CAM/LCD/DEB/HID/IR/EEP/NFC/QTM`, `gpio:*` | |
 
 ### Services and the ARM9
 
 `pxi:*` and `Pxi*` services are the ARM11 side of the [PXI](../glossary.md#pxi) channel to the ARM9. File access to NAND and cartridges goes `fs:USER` → `fs` process → PXI → [Process9](os.md).
 
+### Service wrappers in libctru
+
+`libctru` has a header and source file per service group, which is a convenient index of what is publicly usable: `ac`, `act`, `am`, `ampxi`, `apt`, `boss`, `cam`, `cdcchk`, `cfgnor`, `cfgu`, `csnd`, `dsp`, `frd`, `frdn`, `fs`, `fspxi`, `fsreg`, `gspgpu`, `gsplcd`, `hid`, `httpc`, `ir`, `irrst`, `loader`, `mcu*` (camera, codec, GPU, HID, hardware controller, network, power-LED, RTC, sound), `mic`, `mvd`, `ndm`, `news`, `nfc`, `nim`, `ns`, `nwmext`, `pmapp`, `pmdbg`, `ps`, `ptmgets`/`ptmplays`/`ptmsets`/`ptmsysm`/`ptmu`, `pxidev`, `pxipm`, `qtm`/`qtmc`, `soc`, `srvpm`, `sslc`, `uds`, `y2r`. See [libctru](../homebrew/libctru.md).
+
 ### System titles that implement services
+
+Luma3DS replaces three of the early service-related system modules with its own versions: `sm` (the service manager, to remove access-control restrictions), `pxi` and `pm` ([Luma3DS](../homebrew/luma3ds.md)).
 
 The Home Menu, applets, system settings, browser and other bundled programs are ordinary [titles](titles.md). 3dbrew lists them (Home Menu "menu", eShop "tiger", Internet Browser "spider"/"skater", Mii Maker "edit", System Settings "mset", and so on).
 
@@ -54,5 +60,7 @@ Homebrew calls the same services through `libctru` wrappers. Some [exploits](../
 
 - [3dbrew: Services API](https://www.3dbrew.org/wiki/Services_API) — the full service list.
 - [3dbrew: DSP Services](https://www.3dbrew.org/wiki/DSP_Services) — example command headers.
+- [libctru services headers](https://github.com/devkitPro/libctru) — the list of service wrappers.
+- Citra project wiki, "3DS CEC (StreetPass) Documentation" — `cecd:u`/`cecd:s` functions (no verified link; see [StreetPass (CEC)](streetpass-cec.md)).
 - [3dbrew: Nintendo Software](https://www.3dbrew.org/wiki/Nintendo_Software) — system applications.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Operating System](https://www.copetti.org/writings/consoles/nintendo-3ds/) — how services layer over the kernel.

@@ -26,6 +26,7 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [Audio](hardware/audio.md) — the DSP and the DS-style CSND block.
 - [Input/output and peripherals](hardware/io-and-peripherals.md) — buttons, sensors, cameras, the MCU, buses and the I/O register map.
 - [Game cards](hardware/gamecard.md) — the cartridge interface and protocol.
+- [GPU shading features](hardware/gpu-shading-features.md) — lighting, shadows, procedural textures and the hardware's quirks.
 - [Security hardware](hardware/security-hardware.md) — AES/RSA/SHA engines, OTP and boot ROM key storage.
 - [Models and variants](hardware/models.md) — the six models and their parts.
 
@@ -40,6 +41,9 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [File formats](software/file-formats.md) — NCSD, NCCH, CIA and friends.
 - [NAND filesystem](software/nand-filesystem.md) and [SD filesystem](software/sd-filesystem.md) — storage layout and encryption.
 - [Savegames](software/savegames.md) — DISA containers and game-card save protection.
+- [CRO dynamic modules](software/cro-modules.md) — loadable code modules and the RO service.
+- [StreetPass (CEC)](software/streetpass-cec.md) — mailbox model and file formats.
+- [Country/region data](software/country-region-data.md) — the shared archive of country and region tables.
 - [Security architecture](software/security-architecture.md) — the chain of trust and its design flaws.
 - [Development units](software/dev-unit-software.md) — Nintendo's non-retail hardware and software.
 
@@ -48,14 +52,17 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [History](homebrew/history.md) — thirteen years of hacking, from flashcarts to MSET9.
 - [Exploit catalogue](homebrew/exploits.md) — the privilege ladder and the named exploits.
 - [boot9strap, sighax and ntrboot](homebrew/boot9strap.md) — the boot-ROM break behind today's standard setup.
-- [Custom firmware](homebrew/custom-firmware.md) — Luma3DS and its predecessors, emuNAND.
-- [Development workflow](homebrew/development-workflow.md) — devkitARM, libctru and packaging.
+- [Custom firmware](homebrew/custom-firmware.md) — the CFW concept, its predecessors and emuNAND.
+- [Luma3DS](homebrew/luma3ds.md) — its components, patches, Rosalina, plugins and the GDB stub.
+- [libctru](homebrew/libctru.md) — the userland library: heaps, clocks, services, QTM.
+- [picasso and citro3d](homebrew/picasso-and-citro3d.md) — the shader assembler and GPU library.
+- [Development workflow](homebrew/development-workflow.md) — devkitARM, packaging and the example projects.
 
 ## Notes and open questions
 
 - Several areas are documented only partly in the sources: scheduler policy, GPU Primitive Engine, many I/O registers, the byte-level layouts of NCSD/NCCH/ExeFS/RomFS (3dbrew has them; not summarised here).
 - Source data differ in places (XDMA channel count, DSP sample rate, 176 vs 178 MB maximum application memory, MCU instruction set naming); each hardware page records the disagreement.
-- Not yet covered: individual system applications (Home Menu internals, browser), network/StreetPass protocols, the camera and NFC subsystems in detail, the Teak DSP architecture.
+- Not yet covered: individual system applications (Home Menu internals, browser), the StreetPass wire protocol (only the mailbox side is documented), the camera and NFC subsystems in detail, the Teak DSP architecture, gas rendering.
 - Kernel11 and Process9 internals beyond what 3dbrew publishes are not in the source set.
 
 ## Sources
@@ -65,3 +72,6 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [ARM11 MPCore Processor Technical Reference Manual (DDI 0360E)](https://developer.arm.com/documentation/ddi0360/e) — CPU core details.
 - [Hacks Guide Wiki: History of 3DS Hacking](https://wiki.hacks.guide/wiki/3DS:History_of_3DS_Hacking) — timeline.
 - [WikiTemp: 3DS Homebrew Development](https://wiki.gbatemp.net/w/index.php?title=3DS_Homebrew_Development) — homebrew build workflow.
+- Citra project wiki (kernel synchronization, CRO, CEC, PICA200 notes) — the repository has been removed from GitHub, so pages are cited by title without links.
+- [4Gamer.net CEDEC 2012 PICA200 report](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's talk on the GPU.
+- Project sources: [Luma3DS](https://github.com/LumaTeam/Luma3DS), [libctru](https://github.com/devkitPro/libctru), [citro3d](https://github.com/devkitPro/citro3d), [picasso](https://github.com/devkitPro/picasso), [3ds-examples](https://github.com/devkitPro/3ds-examples).
