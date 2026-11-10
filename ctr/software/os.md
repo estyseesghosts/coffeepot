@@ -19,7 +19,7 @@ The ARM11 kernel resides in 512 KB of [AXI WRAM](../glossary.md#axi-wram); Kerne
 
 ### What games are allowed
 
-Retail games run as sandboxed ARM11 processes and may use only a subset of the services; those in turn call more privileged services. The kernel hard-codes the roles of the first two cores ([kernel page](kernel.md#scheduling)): the game gets the appcore; the syscore belongs to the system, which lends the game up to about 30% of its time. Of the main memory, apps get only part: 64 MB of 128 MB on Old 3DS (and 124 MB of 256 MB on New 3DS by default); a metadata flag (`APPMEMTYPE`) can claim more by making the console reboot into a layout that skips the Home Menu ([memory](../hardware/memory.md)).
+Retail games run as sandboxed ARM11 processes and may use only a subset of the services; those in turn call more privileged services. The kernel hard-codes the roles of the first two cores ([kernel page](kernel.md#scheduling)): the game gets the appcore; the syscore belongs to the system, which lends the game a share of its time when asked (often quoted as about 30%; the exheader sets the maximum, up to 89% — see [kernel](kernel.md#scheduling)). Of the main memory, apps get only part: 64 MB of 128 MB on Old 3DS (and 124 MB of 256 MB on New 3DS by default); a metadata flag (`APPMEMTYPE`) can claim more by making the console reboot into a layout that skips the Home Menu ([memory](../hardware/memory.md)).
 
 ### The shell: Home Menu, NS and applets
 

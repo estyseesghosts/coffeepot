@@ -12,7 +12,7 @@ The [ARM11 CPU](cpu.md) builds a **command list** and a **vertex buffer** in [me
 
 ### The pipeline in plain terms
 
-1. **Commands.** The GPU reads a buffer of register writes. Vertex data can be embedded in the buffer or, much more efficiently, kept in a separate array in VRAM.
+1. **Commands.** The GPU reads a buffer of register writes. Vertex data can be embedded in the buffer (immediate mode) or, much more efficiently, kept in separate arrays the GPU reads directly — in homebrew usually in the linear part of FCRAM, optionally in VRAM.
 2. **Vertex stage.** Small programs ([shaders](../../glossary.md#shader)) transform every corner of every shape. There are four shader processors; one can be turned into a **geometry shader** that creates new shapes from the others' output, which leaves three for vertex work.
 3. **Rasteriser.** Shapes are converted to pixels, with culling and clipping.
 4. **Fragment stage.** Four texture units fetch textures; six *colour combiners* blend texture, vertex colour and constants in a chain. This stage is **not** programmable; instead DMP added fixed "Maestro" features (per-pixel lighting, shadows, bump mapping, fog, procedural textures).
@@ -36,7 +36,7 @@ The GPU is not stereoscopic-aware. A game renders the top screen twice (slightly
 | Shader program limits | ≤ 512 instructions, ≤ 128 operand descriptors (inferred from SDK debug data) |
 | Shader registers | 16 inputs (`v0`–`v15`), 16 outputs, 16 scratch (`r0`–`r15`), 96 float uniforms (`c0`–`c95`), 4 integer and 16 boolean uniforms (per picasso) |
 | Vertex output cache | "Sync control" block, 384 bytes (32 × 96-bit vectors) |
-| Texture units | 4: three can do 2D textures; one of those (unit 0, per the Citra notes: only unit 0 supports shadow textures) also does shadow, cube and projective mapping; the fourth (unit 3) is used only for procedural textures |
+| Texture units | 4: three can do 2D textures; one of those (unit 0 — per fincs's PICA200 RE notes only unit 0 supports shadow textures) also does shadow, cube and projective mapping; the fourth (unit 3) is used only for procedural textures |
 | Texture cache | 256 B L1 per unit, 8 KB shared L2 |
 | Colour combiners | 6 (each takes 3 inputs: previous combiner, texture unit or constant) |
 | Memory | 6 MB VRAM + FCRAM; on-chip DMA between them |
@@ -101,7 +101,7 @@ DMP's CEDEC 2012 talk gives the reasoning: the PICA200 was announced in 2006 as 
 
 ## Homebrew notes
 
-Homebrew normally uses `citro3d` (state-tracking wrapper) and `citro2d`, with shaders written in `picasso` assembly ([picasso and citro3d](../homebrew/picasso-and-citro3d.md), [development workflow](../homebrew/development-workflow.md)). The `3ds-examples` repository contains ready GPU samples (cube map, fragment lighting, geometry shader, loop subdivision, procedural texture, toon shading, normal mapping, particles, stereoscopic 2D, wide mode 3D and more). Emulator work needs the register-level pages on 3dbrew.
+Homebrew normally uses `citro3d` (state-tracking wrapper) and `citro2d`, with shaders written in `picasso` assembly ([picasso and citro3d](../homebrew/picasso-and-citro3d.md), [development workflow](../homebrew/development-workflow.md)). How to use it efficiently — frame structure, draw-call costs, batching, texture formats, combiner recipes, stereo — is on [GPU rendering](../engineering/gpu-rendering.md); measuring GPU time and diagnosing hangs on [performance](../engineering/performance.md) and [debugging](../engineering/debugging.md#gpu-hangs). The `3ds-examples` repository contains ready GPU samples (cube map, fragment lighting, geometry shader, loop subdivision, procedural texture, toon shading, normal mapping, particles, stereoscopic 2D, wide mode 3D and more). Emulator work needs the register-level pages on 3dbrew.
 
 ## Open questions
 
@@ -114,4 +114,5 @@ Homebrew normally uses `citro3d` (state-tracking wrapper) and `citro2d`, with sh
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — chip identification and Maestro feature list.
 - [4Gamer.net: CEDEC 2012 PICA200 report](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's design rationale, cycle counts, secondary vertex cache, power saving (Japanese).
 - [picasso manual](https://github.com/devkitPro/picasso) — shader register file and caveats.
+- [fincs, "Random PICA200 RE Notes"](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) — texture-unit restrictions and other quirks.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Graphics](https://www.copetti.org/writings/consoles/nintendo-3ds/) — pipeline walk-through, cache and combiner counts, SDK graphics layers.

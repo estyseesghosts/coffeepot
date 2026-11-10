@@ -115,7 +115,7 @@ The system applets place their LCD framebuffers in VRAM: top-screen left/right 3
 
 ## Homebrew notes
 
-Buffers shared with the GPU live in the "LINEAR"/GSP heap, which maps straight onto the start of FCRAM (see the virtual map above). Copetti notes that early [userland homebrew](../homebrew/exploits.md) could use only 64 MB of RAM, the default application region size.
+Buffers shared with the GPU live in the "LINEAR"/GSP heap, which maps straight onto the start of FCRAM (see the virtual map above). Copetti notes that early [userland homebrew](../homebrew/exploits.md) could use only 64 MB of RAM, the default application region size. Today a `.3dsx` under Luma3DS inherits the current memory mode, while an installed `.cia` can request a larger one. Which pool to use for which buffer, how libctru splits the heaps, and when to flush the CPU cache are covered on [memory and cache](../engineering/memory-and-cache.md).
 
 ## Open questions
 

@@ -43,13 +43,21 @@ Names are the patch functions in `arm9/source/patches.c`. Each works on the load
 - **Boot menus:** press Select at boot for the configuration menu (`/luma/config.ini` on the SD card, or `/rw/luma/config.ini` on CTRNAND when Luma runs from NAND, which happens when the SD card is missing); press Start for the **chainloader** menu for `.firm` payloads in `/luma/payloads` (payload filenames like `x_test.firm` give hotkeys).
 - **[Rosalina](../glossary.md#rosalina)** (default combination L+Down+Select): screenshots in game, blue-light and colour screen filters, input redirection for external controllers, cheat codes, network time, process list with memory viewer, miscellaneous and system settings, New 3DS CPU options.
 - **Game modding:** game plugins in `3GX` format (plugin loader added in v13.0 by PabloMK7), per-game language override ("locale emulation"), **[LayeredFS](../glossary.md#layeredfs-3gx)** (replacing game assets by path redirection), and user-provided patches or full system-module replacements — important for Nintendo Network replacement projects.
-- **GDB stub:** ports 4000–4002 (normal), 4003 for break-on-start; `attach` in extended-remote mode with `info os processes`; `monitor getmemregions` helps reverse engineering. Works with devkitARM's GDB and IDA Pro.
+- **GDB stub:** ports 4000–4002 (normal), 4003 for break-on-start; `attach` in extended-remote mode with `info os processes`; `monitor getmemregions` helps reverse engineering. Works with devkitARM's GDB and IDA Pro. Walk-through: [debugging](../engineering/debugging.md#gdb-with-rosalina).
 - **Chainloading:** other `.firm` payloads, including other versions of Luma3DS.
 - **Config options (INI):** boot — `autoboot_emunand`, `enable_external_firm_and_modules`, `enable_game_patching`, `app_syscore_threads_on_core_2`, `show_system_settings_string`, `show_gba_boot_screen`; misc — `use_dev_unitinfo`, `enable_dsi_external_filter`, `disable_arm11_exception_handlers`, `enable_safe_firm_rosalina`; others include `default_emunand_number`, `brightness_level`, `splash_position` and `splash_duration_ms`, a PIN lock, `app_launch_new_3ds_cpu` (`off`, `clock`, `l2`, `clock+l2` — the New 3DS options from [CPU](../hardware/cpu.md#new-3ds-compatibility-layer)) and `autoboot_mode` (including a DSi option). Some settings are stored in a free area of the MCU's registers.
 
 ### emuNAND support
 
 Luma3DS locates an **[emuNAND](../glossary.md#emunand)** on the SD card by looking for the NCSD header at the expected position and checks three sector layouts: *legacy* (sector offset `0x400000`, or `0x200000` when the card's NAND-size value is small), *default* (offset rounded up to a 4 MB multiple past the real NAND size) and *minsize* (`0x1D8000` on Old 3DS, `0x26E000` on New 3DS sectors); multiple emuNANDs are selected by index. It also recognises the original *RedNAND* layout (an NCSD at `+1` sector). Locating the SD-card controller structure uses code by Normmatt.
+
+### Homebrew loading (`hb:ldr`)
+
+The reimplemented `loader` also loads `.3dsx` homebrew. It exposes an `hb:ldr` service (commands `SetTarget` and `SetArgv`; the older `LoadProcess` and `PatchExHeaderInfo` commands were removed). When the designated title is launched — `000400000D921E00`, named `hblauncher_loader`, unless the user picked another with Rosalina's *Switch the hb. title to the current app* — the loader loads the target 3DSX (default `sdmc:/boot.3dsx`, the Homebrew Menu) into that process instead. The 3DSX gets a generated extended header: process name `3dsx_app`, core 0 at priority `0x30`, the current memory mode, a core-1 CPU-time limit of up to 89%, New 3DS core-2 access, all filesystem and service access, and mappings for all ARM11 I/O, DSP RAM (read/write) and VRAM (read-only); the 804 MHz and L2-cache flags are left off [documented: `sysmodules/loader/source/hbldr.c`]. Developer consequences are on [development workflow](development-workflow.md#running-on-a-console) and [performance](../engineering/performance.md).
+
+### Debugging features
+
+Rosalina's GDB server (ports 4000–4003, up to three debugged processes at once, monitor commands such as `getmemregions`, `syncrequestinfo` and `catchsvc`), its fatal-error screen (ErrDisp), and the ARM11/ARM9 exception screens that save crash dumps to `/luma/dumps/arm11` and `/luma/dumps/arm9` are described from a developer's point of view on [debugging](../engineering/debugging.md).
 
 ### Kernel extensions
 
@@ -69,6 +77,6 @@ Luma3DS locates an **[emuNAND](../glossary.md#emunand)** on the SD card by looki
 
 ## Sources
 
-- [Luma3DS (LumaTeam)](https://github.com/LumaTeam/Luma3DS) — README, component layout, patch functions (`arm9/source/patches.c`), emuNAND code (`arm9/source/emunand.c`), config options (`arm9/source/config.c`), `k11_extension`, `sysmodules`.
+- [Luma3DS (LumaTeam)](https://github.com/LumaTeam/Luma3DS) — README, component layout, patch functions (`arm9/source/patches.c`), emuNAND code (`arm9/source/emunand.c`), config options (`arm9/source/config.c`), `k11_extension`, `sysmodules` (notably `loader/source/hbldr.c`, `rosalina/source/gdb/`, `pm/source/reslimit.c`), `Makefile`. Checked at v13.5 / a November 2026 commit.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Anti-Piracy and Homebrew](https://www.copetti.org/writings/consoles/nintendo-3ds/) — Luma3DS's origins and bundled tools.
 - [Hacks Guide Wiki: History of 3DS Hacking](https://wiki.hacks.guide/wiki/3DS:History_of_3DS_Hacking) — AuReiNand → Luma3DS.

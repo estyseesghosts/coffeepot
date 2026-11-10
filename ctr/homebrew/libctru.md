@@ -41,7 +41,7 @@ At start-up (`ctru_init`, `appInit`) libctru:
 | Audio | `ndsp`: a userland driver for the [DSP](../hardware/audio.md); `csnd` for the legacy block |
 | Services | `services/*.h`: `ac`, `act`, `am`, `apt`, `boss`, `cam`, `cdcchk`, `cfgnor`, `cfgu`, `csnd`, `dsp`, `frd`, `fs`, `fspxi`, `gspgpu`, `gsplcd`, `hid`, `httpc`, `ir`, `irrst`, `loader`, `mcu*` (battery, LEDs, RTC...), `mic`, `mvd`, `ndm`, `news`, `nfc`, `nim`, `ns`, `ptm*`, `pxi*`, `qtm`, `soc`, `sslc`, `uds`, `y2r` and more |
 | Applets | `swkbd` (software keyboard), `error`, `miiselector` |
-| Devices | `romfs_dev` (RomFS as a filesystem), `archive_dev`, `3dslink` (send a program over the network) and a console for text output |
+| Devices | `romfs_dev` (RomFS as a filesystem), `archive_dev`, `3dslink` (redirect `stdout`/`stderr` to the PC that sent the program), `gdbhio_dev` (standard streams and file I/O through an attached GDB) and a console for text output |
 
 ### Clocks and the New 3DS speed-up
 
@@ -77,13 +77,16 @@ libctru 2.4.0 added full documentation of the **[QTM](../glossary.md#qtm)** serv
 
 ### Version notes
 
-Selected changelog facts: 2.1.0 introduced VRAM bank handling and changed the platform macro to `__3DS__`; 2.1.1 gave every thread a predictable initial `FPSCR`; 2.2.0 added deliver-argument support to the chainloader; 2.3.0 added experimental standard threading; 2.4.0 added the full QTM service support and `MCUHWC_SetInfoLedPattern`.
+Selected changelog facts: 2.1.0 introduced VRAM bank handling and changed the platform macro to `__3DS__`; 2.1.1 gave every thread a predictable initial `FPSCR` (default-NaN and flush-to-zero, round to nearest — see [performance](../engineering/performance.md#cpu-side-habits)); 2.1.2 added `clock_gettime`; 2.2.0 added deliver-argument support to the chainloader; 2.3.0 added experimental standard threading (`pthread`, C11 threads, `std::thread`) and the `CTR_` prefix on `ALIGN`/`PACKED`/`DEPRECATED`; 2.4.0 added the full QTM service support (a breaking API change) and `MCUHWC_SetInfoLedPattern`.
+
+Later releases (from the git history; the `Changelog.md` file stops at 2.4.0): **2.5.0** added the GSP performance-log API (`GSPGPU_SetPerfLogMode`, `GSPGPU_GetPerfLog` — per-operation GPU timings, see [performance](../engineering/performance.md#per-operation-gpu-times-the-gsp-performance-log)), `aptLaunchSystemApplet`, full ACT and FRD service implementations, and woke the DSP correctly around system applets. **2.6.x** brought ANSI console fixes (bright colours, 1-based coordinates), `getaddrinfo`/`sockaddr` length fixes and play/step-history `ptm` calls. **2.7.0** completed the AM service, added the `ptm:plays` service and an `appmemtype` parameter to `NS_RebootToTitle`. **2.7.1** completed the MCU services, clamps the application heap to the 96 MiB heap area (the excess goes to the linear heap, see [memory and cache](../engineering/memory-and-cache.md#how-libctru-splits-it)), and fixed `MCUHWC_Get3dSliderLevel`, `gdbhio` file modes and console scrolling.
 
 ## Limits and risks
 
 - libctru exposes what the OS exposes: without kernel privileges many hardware blocks are unreachable.
 - Some services are not available to every process (the exheader decides), and some only exist on a New 3DS.
 - Breaking changes occur between major versions (for example `__3DS__`, QTM API changes in 2.4.0); pin the toolchain version used to build a project.
+- Using libctru well — heap sizing, cache flushing, timing, threads on the second core — is covered on the engineering pages: [memory and cache](../engineering/memory-and-cache.md), [performance](../engineering/performance.md), [debugging](../engineering/debugging.md) (3dslink, GDB file I/O, exception handlers).
 
 ## Sources
 

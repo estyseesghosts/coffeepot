@@ -161,3 +161,24 @@ Physically contiguous process memory (the "LINEAR" region) used for buffers the 
 ### libctru, citro3d {#libctru}
 
 The standard homebrew user library and the GPU wrapper built on it. See [libctru](homebrew/libctru.md) and [picasso and citro3d](homebrew/picasso-and-citro3d.md).
+
+### GSP {#gsp}
+
+The system service (`gsp::Gpu`) through which applications use the GPU: it runs command lists, memory fills and display transfers, swaps the screens' framebuffers and reports completion events. Homebrew reaches it through libctru's `gspgpu` and `gx` functions. See [CTR GPU](hardware/gpu.md) and [performance](engineering/performance.md#per-operation-gpu-times-the-gsp-performance-log).
+
+### TEV (texture combiner) {#tev}
+
+The six fixed-function "texture environment" stages of the PICA200's fragment pipeline. Each stage combines up to three inputs (texture colours, vertex colour, a constant, the previous stage, lighting results) with one function such as multiply or interpolate; they replace programmable pixel shaders. See [GPU rendering](engineering/gpu-rendering.md#colour-combiners-tev-recipes).
+
+### Homebrew Menu and hb:ldr {#hbmenu}
+
+The **Homebrew Menu** (`3ds-hbmenu`, file `boot.3dsx`) lists and starts `.3dsx` programs and includes the 3dslink netloader. **`hb:ldr`** is the Luma3DS loader service that actually loads a 3DSX into a taken-over title's process. See [development workflow](homebrew/development-workflow.md#running-on-a-console) and [Luma3DS](homebrew/luma3ds.md#homebrew-loading-hbldr).
+
+### 3dslink {#3dslink}
+
+A devkitPro protocol and PC tool that sends a `.3dsx` to the Homebrew Menu over Wi-Fi and can relay the program's text output back to the PC. See [debugging](engineering/debugging.md#logging-over-the-network-3dslink).
+
+
+### Extended header (exheader) {#exheader}
+
+The part of an executable title (NCCH) that declares what the program may do: its memory mode, CPU cores and clock, thread priority, the system services and filesystem areas it may use, memory mappings and kernel calls. The kernel and loader enforce it. Luma3DS generates one for `.3dsx` homebrew. See [file formats](software/file-formats.md) and [development workflow](homebrew/development-workflow.md#packaging-3dsx-or-cia).

@@ -59,7 +59,13 @@ citro3d "exposes hardware functionality in the way that is most natural and conv
 | `light`, `lightenv`, `lightlut` | Up to **8** lights, per-light and environment LUTs, 256-entry light LUTs |
 | `fog`, `proctex`, `gas`, `effect` | Fog (128-entry LUT), procedural textures (see [shading features](../hardware/gpu-shading-features.md)), gas, blend/depth/stencil state |
 
-A typical frame: begin a frame, choose a render target (top-left, top-right, bottom), bind a shader program and uniforms, set the texture-environment stages, draw, end the frame; citro3d copies the render target to the screen's LCD framebuffer with the transfer flags stored on the target. This matches the pipeline in [GPU](../hardware/gpu.md) and [displays](../hardware/display.md).
+A typical frame: begin a frame, choose a render target (top-left, top-right, bottom), bind a shader program and uniforms, set the texture-environment stages, draw, end the frame; citro3d copies the render target to the screen's LCD framebuffer with the transfer flags stored on the target. This matches the pipeline in [GPU](../hardware/gpu.md) and [displays](../hardware/display.md). A practical guide to frames, draw-call costs, batching, textures and combiners is on [GPU rendering](../engineering/gpu-rendering.md).
+
+Three behaviours of the frame API matter for performance and correctness [documented: `source/renderqueue.c`]:
+
+- `C3D_FrameBegin` waits for the GPU to finish the previous frame (or, with `C3D_FRAME_NONBLOCK`, returns `false`); with `C3D_FRAME_SYNCDRAW` it first waits for V-blank on both screens. `C3D_FrameRate(fps)` lowers that V-blank pacing.
+- `C3D_FrameEnd(flags)` flushes the CPU cache over the **entire linear heap** unless `GX_CMDLIST_FLUSH` is passed, in which case only the command list is flushed and the program must flush its own vertex and texture data ([memory and cache](../engineering/memory-and-cache.md#the-c3d_frameend-flush)).
+- `C3D_GetProcessingTime()` and `C3D_GetDrawingTime()` report, in milliseconds, the CPU time spent recording the frame and the GPU time (including display transfers) of the last completed frame ([performance](../engineering/performance.md#citro3ds-two-timers)).
 
 ## Technical details
 
@@ -72,7 +78,8 @@ A typical frame: begin a frame, choose a render target (top-left, top-right, bot
 ## Limits and risks
 
 - GPU hangs are easy to cause: strides must match the real vertex size and some configuration orders must be respected ([GPU](../hardware/gpu.md#known-pitfalls), [shading features](../hardware/gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)).
-- citro3d is stateful; commands are batched in a command buffer, so errors may show up as a frozen GPU rather than an immediate error.
+- citro3d is stateful; commands are batched in a command buffer, so errors may show up as a frozen GPU rather than an immediate error ([debugging GPU hangs](../engineering/debugging.md#gpu-hangs)).
+- `C3D_TexBind` marks the texture unit dirty even when the same texture is already bound, and every rebind clears the GPU texture cache at the next draw; deduplicate binds in your own code ([GPU rendering](../engineering/gpu-rendering.md#what-a-draw-call-costs)).
 
 ## Sources
 

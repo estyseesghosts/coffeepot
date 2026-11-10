@@ -118,6 +118,14 @@ A block of memory holding the pixels of one image, ready to be drawn by the GPU 
 
 A small program that runs on the [GPU](#gpu) to process vertices (corners of shapes) or pixels. See [CTR GPU](ctr/hardware/gpu.md).
 
+### GDB (GNU debugger) {#gdb}
+
+A standard command-line debugger that can stop a program, show its memory and registers, and step through it. It can debug a program on another machine through a small "stub" that speaks GDB's remote protocol over a network or cable. See [CTR debugging](ctr/engineering/debugging.md#gdb-with-rosalina).
+
+### Texture tiling (swizzling) {#tiling}
+
+Storing an image in small square blocks (on the 3DS, 8×8 pixels, with pixels inside a block in Z-order) instead of row by row, so that neighbouring pixels sit close together in memory for the GPU's cache. Images must be converted into this layout before the GPU can use them as textures. See [CTR asset pipeline](ctr/engineering/asset-pipeline.md).
+
 ### DSP (digital signal processor) {#dsp}
 
 A processor specialised for streaming number crunching such as audio mixing. See [CTR audio](ctr/hardware/audio.md).

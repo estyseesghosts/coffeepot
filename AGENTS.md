@@ -16,6 +16,7 @@ README.md                    # human landing page (what this wiki covers)
   hardware/<topic>.md        # one page per hardware component/system
   software/<topic>.md        # one page per system software / format / service
   homebrew/<topic>.md        # one page per exploit / tool / library / workflow
+  engineering/<topic>.md     # one page per practical problem (debugging, performance, porting...)
 ```
 
 Current scope is two platforms: `ctr/` (Nintendo 3DS family) and `nx/` (Nintendo Switch family). Add a new top-level platform directory only for a distinct hardware platform, using its established codename or short kebab-case name (e.g. `ctr`, `nx`).
@@ -60,6 +61,7 @@ Pick exactly one type per page. If a topic spans types (e.g. a chip and its SDK 
 - `hardware/<topic>.md` — one hardware component or subsystem (CPU, GPU, memory map, display, input, cartridge, wireless). What it does, where it sits in the system, its observable behavior, then full specs.
 - `software/<topic>.md` — one software thing (OS/kernel, system menu, applet, file format, filesystem, system service, update mechanism). What the user sees, what a developer needs to know, formats and behaviors.
 - `homebrew/<topic>.md` — one exploit, custom firmware, tool, library, or workflow. What it achieves, who it is for, how it works, how to use it, limits and risks.
+- `engineering/<topic>.md` — one practical problem a developer faces when writing software for the console (debugging, profiling, performance, memory management, rendering, asset conversion, hardware testing). Reference pages say what the hardware and libraries *are*; engineering pages say how to *use* them in working software and how to check the result. They link to the reference pages for facts rather than restating them.
 
 ## Templates
 
@@ -185,6 +187,53 @@ What it cannot do, what can brick or ban, what undoes it (updates, resets). Be b
 
 - [Title](URL) — what this source covers (upstream repo, write-up, release notes)
 ```
+
+### Engineering page
+
+```markdown
+# <Problem-oriented title, e.g. "Debugging homebrew">
+
+Plain-language overview: which problem this page solves, who hits it, and the short answer. 2–4 sentences.
+
+## Before you start
+
+Toolchain and library versions the page was checked against, console models it applies to, prior setup.
+
+## <Task sections>
+
+One section per task or decision, in the order a developer meets them. Each gives: what to do, a minimal code or command example, what result to expect, and how it fails. Link to the reference pages for hardware facts.
+
+## Technical details
+
+Exact API behaviour (with the source file it was read from), constants, edge cases, model differences.
+
+## Pitfalls
+
+Mistakes that cost people time, each with its symptom and fix.
+
+## Open questions
+
+What has not been measured or verified, and what experiment would settle it.
+
+## Sources
+
+- [Title](URL) — what this source covers
+```
+
+## Evidence labels
+
+Engineering pages, and any performance or behaviour claim elsewhere, must say what supports each non-obvious claim. Tag it inline with one of:
+
+| Label | Meaning |
+| ----- | ------- |
+| `[documented]` | Stated in official documentation or readable in the source code of the library/firmware involved (name the file) |
+| `[reverse-engineered]` | Established through reverse engineering or hardware experiments published by others (name who) |
+| `[measured]` | A benchmark result; give console model, firmware/CFW version, build, and conditions |
+| `[hypothesis]` | Plausible but unverified; say what would confirm or refute it |
+
+Never let a `[hypothesis]` lose its label when it is copied to another page. Advice like "X is faster" without a `[measured]` result or a `[documented]` mechanism behind it does not belong in the wiki.
+
+Code examples must state what they were checked against: at minimum, that they compile with a named toolchain/library version. Say explicitly when an example has not been run on hardware.
 
 ## Writing guidelines
 

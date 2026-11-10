@@ -81,7 +81,7 @@ The geometry stage has a **Primitive Engine** that works with a *secondary verte
 
 ### Gas
 
-The PICA200 can render "accumulative gas" (volumetric clouds and smoke). DMP filed a patent describing the algorithm, but the Citra notes call the document messy, OCR-damaged and in Japanese, and the page is marked to-do. Gas is exposed by `citro3d`'s `gas` module.
+The PICA200 can render "accumulative gas" (volumetric clouds and smoke). DMP filed a patent describing the algorithm, but fincs's RE notes call the document messy, OCR-damaged and in Japanese, and the page is marked to-do. Gas is exposed by `citro3d`'s `gas` module.
 
 ## Technical details
 
@@ -98,18 +98,19 @@ The PICA200 was reverse-engineered from: two DMP papers (Ohbuchi & Unno on LUT-b
 
 ## Homebrew notes
 
-Use `citro3d`'s `C3D_LightLut`, `C3D_ProcTex` and `C3D_FogLut` APIs rather than writing registers by hand, and keep the quirks above in mind when writing a driver or emulator. Emulator authors (Citra) are the main source of these findings.
+Use `citro3d`'s `C3D_LightLut`, `C3D_ProcTex` and `C3D_FogLut` APIs rather than writing registers by hand, and keep the quirks above in mind when writing a driver or emulator. Reverse engineers around the Citra emulator, notably fincs, are the main source of these findings.
 
 ## Open questions
 
 - Gas rendering is undeciphered.
 - Quaternion interpolation method is unknown.
 - The 1D-mipmap mode of the procedural colour table has not been tested.
-- 3dbrew documents the same procedural-texture pipeline from DMP's talk; the Citra notes add the PRNG and per-mode formulas.
+- 3dbrew documents the same procedural-texture pipeline from DMP's talk; fincs's RE notes add the PRNG and per-mode formulas.
 
 ## Sources
 
-- Citra project wiki, "Random PICA200 RE Notes" (procedural textures, shadows, gas, quirks, sources) and "GPU_LUTINPUT_CP" (anisotropic reflection) — the `citra-emu/citra` repository that hosted them has since been removed from GitHub, so no live link could be verified.
+- [fincs, "Random PICA200 RE Notes" (gist `notes.md`)](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) — procedural-texture noise, shifting, clipping, combiner and mapper formulas; shadow mapping; random quirks; and the list of sources used for PICA200 reverse engineering (DMP papers, the CEDEC 2012 talk, *Steel Diver: Sub Wars* symbols, *Brunswick Pro Bowling* DWARF data, the CTRAging factory test program). Its Gas section stops after a short introduction (`...todo...`). The same notes were mirrored on the Citra project wiki, which is gone since the `citra-emu/citra` repository was removed.
+- Citra project wiki, "GPU_LUTINPUT_CP" (anisotropic reflection and tangent mapping) — no live copy found; cited by title.
 - [4Gamer.net: ［CEDEC 2012］3DSはまだその実力を100％発揮できていない!? 3DSが搭載するGPUコア「PICA200」の詳細](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's talk on procedural textures, secondary vertex cache and subdivision, fixed-function fragment stage, power saving (in Japanese).
 - [3dbrew: GPU/Fragment Lighting](https://www.3dbrew.org/wiki/GPU/Fragment_Lighting) and [GPU/Procedural Texture Generation](https://www.3dbrew.org/wiki/GPU/Procedural_Texture_Generation) — lighting equation setups and the procedural pipeline.
 - [citro3d source (devkitPro)](https://github.com/devkitPro/citro3d) — LUT sizes and module names (`lightlut.h`, `proctex.h`, `fog.h`, `gas.h`).

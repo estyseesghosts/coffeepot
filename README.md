@@ -10,5 +10,5 @@ A wiki of research on Nintendo consoles: their hardware, their software, and hom
 ## Reading guide
 
 - Jargon is explained on first use and defined in the [global glossary](glossary.md) or the per-console glossary ([CTR](ctr/glossary.md), [NX](nx/glossary.md)).
-- Each console has hardware, software and homebrew sections; start from the console's `index.md`.
+- Each console has hardware, software and homebrew sections, and the 3DS also has engineering guides (debugging, performance, memory, rendering, assets, testing); start from the console's `index.md`.
 - Every page ends with Sources. Contributors: read [AGENTS.md](AGENTS.md) first.

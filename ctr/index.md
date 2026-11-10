@@ -56,7 +56,18 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [Luma3DS](homebrew/luma3ds.md) — its components, patches, Rosalina, plugins and the GDB stub.
 - [libctru](homebrew/libctru.md) — the userland library: heaps, clocks, services, QTM.
 - [picasso and citro3d](homebrew/picasso-and-citro3d.md) — the shader assembler and GPU library.
-- [Development workflow](homebrew/development-workflow.md) — devkitARM, packaging and the example projects.
+- [Development workflow](homebrew/development-workflow.md) — toolchain versions, how `.3dsx` programs are loaded today, `.3dsx` vs `.cia`, and the example projects.
+
+## Engineering
+
+Practical guides for writing working, fast homebrew. They build on the reference pages above and label each claim by its evidence (documented, reverse-engineered, measured, hypothesis).
+
+- [Debugging](engineering/debugging.md) — 3dslink logging, error screens and crash dumps, GDB through Rosalina, GPU hangs, emulators.
+- [Performance](engineering/performance.md) — measuring CPU and GPU time, finding the bottleneck, frame pacing, using the second core, ARM11 code habits.
+- [Memory and cache](engineering/memory-and-cache.md) — how much memory a program gets, heap vs linear vs VRAM, cache flushing rules, buffer lifetime.
+- [GPU rendering](engineering/gpu-rendering.md) — citro3d frames, draw-call costs, batching, textures, combiner recipes, citro2d, stereo and wide mode.
+- [Asset pipeline](engineering/asset-pipeline.md) — tex3ds, shaders, fonts, RomFS, audio and compression.
+- [Testing on hardware](engineering/testing-on-hardware.md) — test tiers, a fast test loop, experiment protocol and a memory/flush benchmark.
 
 ## Notes and open questions
 
@@ -64,6 +75,7 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - Source data differ in places (XDMA channel count, DSP sample rate, 176 vs 178 MB maximum application memory, MCU instruction set naming); each hardware page records the disagreement.
 - Not yet covered: individual system applications (Home Menu internals, browser), the StreetPass wire protocol (only the mailbox side is documented), the camera and NFC subsystems in detail, the Teak DSP architecture, gas rendering.
 - Kernel11 and Process9 internals beyond what 3dbrew publishes are not in the source set.
+- The engineering pages contain no measurements made for this wiki yet: costs such as the whole-linear-heap flush, draw-call overhead and heap-versus-linear write bandwidth are listed as open questions with a [benchmark](engineering/testing-on-hardware.md#membench) to settle them.
 
 ## Sources
 
@@ -74,4 +86,6 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [WikiTemp: 3DS Homebrew Development](https://wiki.gbatemp.net/w/index.php?title=3DS_Homebrew_Development) — homebrew build workflow.
 - Citra project wiki (kernel synchronization, CRO, CEC, PICA200 notes) — the repository has been removed from GitHub, so pages are cited by title without links.
 - [4Gamer.net CEDEC 2012 PICA200 report](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's talk on the GPU.
-- Project sources: [Luma3DS](https://github.com/LumaTeam/Luma3DS), [libctru](https://github.com/devkitPro/libctru), [citro3d](https://github.com/devkitPro/citro3d), [picasso](https://github.com/devkitPro/picasso), [3ds-examples](https://github.com/devkitPro/3ds-examples).
+- Project sources: [Luma3DS](https://github.com/LumaTeam/Luma3DS), [libctru](https://github.com/devkitPro/libctru), [citro3d](https://github.com/devkitPro/citro3d), [citro2d](https://github.com/devkitPro/citro2d), [picasso](https://github.com/devkitPro/picasso), [3ds-examples](https://github.com/devkitPro/3ds-examples), [3ds-hbmenu](https://github.com/devkitPro/3ds-hbmenu), [aemstro](https://github.com/smealum/aemstro).
+- [fincs, Random PICA200 RE Notes](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) — procedural textures, shadows, GPU quirks.
+- [libctru issue #556](https://github.com/devkitPro/libctru/issues/556) — third-party measurements of DSP cache-flush latency under a core-1 time share.
