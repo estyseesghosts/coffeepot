@@ -205,3 +205,11 @@ The top of a certificate chain. A TLS client accepts a server only if the server
 ### Transport Layer Security (TLS) {#tls-protocol}
 
 The encryption layer under HTTPS. See [networking](ctr/engineering/networking.md).
+
+### System tick {#system-tick}
+
+A 64-bit counter of CPU ticks since power-on, read with `svcGetSystemTick()`. On the 3DS it runs at the fixed ARM11 base rate of 268,111,856 Hz on every model, regardless of the New 3DS clock mode. It is not the same as the CPU's own cycle counter. See [CPU optimisation](ctr/engineering/cpu-optimization.md#counters-versus-the-system-tick).
+
+### Non-blocking I/O {#non-blocking}
+
+A socket mode where a call returns at once with "would block" instead of waiting for data. Used with `poll` to implement timeouts. See [networking](ctr/engineering/networking.md).

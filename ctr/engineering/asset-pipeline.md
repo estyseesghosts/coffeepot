@@ -49,7 +49,7 @@ The first packs many sprites into one atlas texture; the second makes one compre
 
 | Option | Choices | Notes |
 | ------ | ------- | ----- |
-| `-f` format | `rgba8888` (default), `rgb888`, `rgba5551`, `rgb565`, `rgba4444`, `la88`, `hilo88`, `l8`, `a8`, `la44`, `l4`, `a4`, `etc1`, `etc1a4`, `auto-l8`, `auto-l4`, `auto-etc1` | `auto-*` picks the alpha variant only when the image has alpha |
+| `-f` format | `rgba8888` (default; also `rgba`, `rgba8`), `rgb888` (`rgb`, `rgb8`), `rgba5551`, `rgb565`, `rgba4` (also `rgba444`), `la88` (`la`, `la8`), `hilo88` (`hilo`, `hilo8`), `l8` (`l`), `a8` (`a`), `la44` (`la4`), `l4`, `a4`, `etc1`, `etc1a4`, `auto-l8`, `auto-l4`, `auto-etc1` | `auto-*` picks the alpha variant only when the image has alpha |
 | `-a` | atlas | Pack all listed images into one texture; sub-images retrievable by index |
 | `-m` filter | `point`, `box`, `triangle`, `cubic`, `lanczos`, `mitchell`, … | Generate a mipmap chain with that filter |
 | `-z` compression | `auto` (default), `none`, `huff`, `lzss`/`lz10`, `lz11`, `rle` | Compresses the *file*; data is decompressed on load. Not the same as ETC1, which stays compressed in GPU memory |
@@ -58,8 +58,11 @@ The first packs many sprites into one atlas texture; the second makes one compre
 | `-t` | | Trim transparent edges of atlas images |
 | `-c`, `-s` | | Cube map / skybox from a cross-shaped image |
 | `-r` | | Raw image data only, no `.t3x` header |
+| `-d`, `-H`, `-p`, `-i` | file names | Dependency file for `make`, generated C header with sub-texture indices, a preview image of the converted result, and an options file to include |
 
-[documented: `tex3ds --help`, version 2.3.0]
+[documented: `tex3ds --help`, version 2.3.0, re-read from the installed binary]. The help text lists the spellings above (`rgba4`/`rgba444`, not `rgba4444`); this page previously wrote `rgba4444`, which the help does not list.
+
+A cube map (`-c`) or skybox (`-s`) is cut from one cross-shaped image laid out as `+Y` above `+Z`, with `-X +Z +X -Z` in the middle row and `-Y` below (the diagram in `tex3ds --help`). Failure mode: a wrong layout gives faces in the wrong order with no error. Inspect the `-p` preview image before shipping.
 
 ### Choosing a format
 
@@ -68,7 +71,7 @@ The first packs many sprites into one atlas texture; the second makes one compre
 | Photographic or painted textures, large backgrounds | `etc1` / `etc1a4` | 0.5 / 1 |
 | Opaque pixel art, UI backgrounds | `rgb565` | 2 |
 | Sprites with hard edges (1-bit transparency) | `rgba5551` | 2 |
-| Sprites and UI with soft edges | `rgba4444`, or `rgba8888` if banding is visible | 2 / 4 |
+| Sprites and UI with soft edges | `rgba4`, or `rgba8888` if banding is visible | 2 / 4 |
 | Glyphs, masks, light maps, single-channel data | `a8`, `l8`, `la88`, `a4`, `l4`, `la44` | 1, 1, 2, 0.5, 0.5, 1 |
 | Two-channel data such as normal-map XY | `hilo88` | 2 |
 
@@ -84,7 +87,7 @@ Shader source files ending in `.v.pica` in a source directory are assembled one 
 
 ## Fonts
 
-citro2d draws text from **BCFNT** fonts (the console's own font format). Either use the system font, `C2D_FontLoadSystem(CFG_REGION_USA)` (other regions give Chinese, Korean and Taiwanese glyph sets), which costs nothing to ship; or convert your own TrueType font with `mkbcfnt -s <points> -o out.bcfnt in.ttf`, optionally restricting it to the characters you need with `-w` (whitelist) or `-b` (blacklist) files to save memory [documented: `mkbcfnt --help`, `graphics/printing/custom-font`].
+citro2d draws text from **BCFNT** fonts (the console's own font format). Either use the system font, `C2D_FontLoadSystem(CFG_REGION_USA)` (other regions give Chinese, Korean and Taiwanese glyph sets), which costs nothing to ship; or convert your own TrueType font with `mkbcfnt -s <points> -o out.bcfnt in.ttf`, optionally restricting it to the characters you need with `-w` (whitelist) or `-b` (blacklist) files to save memory. Those files are whitespace-separated lists of Unicode codepoints. `mkbcfnt` accepts several input fonts and gives lower-numbered inputs priority, which is how a Latin font can be combined with a CJK fallback [documented: `mkbcfnt --help` (general-tools 1.4.4), `graphics/printing/custom-font`]. Expected result: one `.bcfnt` whose size grows with the number of glyphs; if text shows missing glyphs, the codepoint was filtered out or no input font contains it.
 
 ## Audio
 

@@ -103,9 +103,11 @@ Each process sees its own address space up to `0x40000000` (`0x20000000` before 
 
 Executable pages are read-only; data pages are execute-never. The kernel's virtual map (valid for the earliest firmware sampled) puts mapped VRAM at `0xE8000000`, internal memory at `0xEFF00000`, main memory at `0xF0000000` and the IRQ block at `0xFFFEE000`. I/O registers map into userland at `physical = virtual − 0x1EC00000 + 0x10100000`.
 
+> Conflict: largest New 3DS application region. 3dbrew's memory-layout table gives APPMEMTYPE 7 an APPLICATION size of `0x0B200000` (178 MB); Copetti says "up to 176 MB". This page follows 3dbrew because it is a table with exact byte sizes that also sum to 256 MB with SYSTEM and BASE (178 + 46 + 32); the 2 MB difference is unexplained (rounding or a different firmware). Unresolved.
+
 ### Constants used by libctru
 
-`libctru`'s `os.h` names the virtual regions programs use: heap area `0x08000000–0x0E000000` (96 MiB), mappable area `0x10000000–0x14000000`, old (pre-8.x) linear FCRAM mapping at `0x14000000` → physical `0x20000000` (128 MiB), New 3DS QTM memory at `0x1E800000` → `0x1F000000` (4 MiB, the last 128 KiB reserved by the kernel), MMIO at `0x1EC00000` → `0x10100000` (4 MiB), VRAM at `0x1F000000` → `0x18000000` (6 MiB), DSP RAM `0x1FF00000` (512 KiB), kernel configuration page `0x1FF80000`, shared configuration page `0x1FF81000`, and the current linear FCRAM mapping at `0x30000000` → `0x20000000` (256 MiB). The kernel configuration page (read-only) starts with the kernel version, an update flag, the NS title ID and holds `app_memtype`, the three memory-region sizes and the FIRM version; field layouts are on the [libctru page](../homebrew/libctru.md).
+Verified against libctru `os.h` `[documented]` (all constants below match the clone) and `allocateHeaps.c` (linear heap gets half of the remaining memory rounded down to a page, application heap the rest; the application heap is capped at 24 MiB, preferring to grow the linear heap, and the linear heap has its own cap). `libctru`'s `os.h` names the virtual regions programs use: heap area `0x08000000–0x0E000000` (96 MiB), mappable area `0x10000000–0x14000000`, old (pre-8.x) linear FCRAM mapping at `0x14000000` → physical `0x20000000` (128 MiB), New 3DS QTM memory at `0x1E800000` → `0x1F000000` (4 MiB, the last 128 KiB reserved by the kernel), MMIO at `0x1EC00000` → `0x10100000` (4 MiB), VRAM at `0x1F000000` → `0x18000000` (6 MiB), DSP RAM `0x1FF00000` (512 KiB), kernel configuration page `0x1FF80000`, shared configuration page `0x1FF81000`, and the current linear FCRAM mapping at `0x30000000` → `0x20000000` (256 MiB). The kernel configuration page (read-only) starts with the kernel version, an update flag, the NS title ID and holds `app_memtype`, the three memory-region sizes and the FIRM version; field layouts are on the [libctru page](../homebrew/libctru.md).
 
 On start-up `libctru` allocates an application heap and a linear heap from the process's memory allowance (default: half each, with the application heap capped at 24 MiB and the linear heap at 32 MiB unless the other side has room); VRAM allocations (`vramAlloc`) never cross the A/B bank boundary.
 
@@ -120,7 +122,6 @@ Buffers shared with the GPU live in the "LINEAR"/GSP heap, which maps straight o
 ## Open questions
 
 - Exact meaning of several small AXI WRAM kernel pages (`0x1FFF0000–0x1FFF4000`) is unknown in the source.
-- 176 MB vs 178 MB for the largest New 3DS application memory type: sources disagree by 2 MB in rounding; the 3dbrew table (`0x0B200000`) is used here.
 
 ## Sources
 

@@ -60,7 +60,7 @@ Physical ranges (ARM11 user mapping: `physical = virtual − 0x1EC00000 + 0x1010
 | `0x10110000`/`1000` | LgyFb bottom/top | Legacy framebuffer |
 | `0x10120000` | Cameras | |
 | `0x10122000` | Wi-Fi SDIO | `nwm` services |
-| `0x10130000` | MVD (New 3DS only) | Video decode block |
+| `0x10130000`, `0x10131000`, `0x10132000` | MVD registers | Video decode block (MVD services); 3dbrew lists several MVD windows, see below |
 | `0x10140000` | CONFIG11 | System configuration |
 | `0x10141000` | PDN | Power management |
 | `0x10142000`, `0x10143000`, `0x10160000` | SPI | |
@@ -75,13 +75,18 @@ Physical ranges (ARM11 user mapping: `physical = virtual − 0x1EC00000 + 0x1010
 | `0x10200000` | CDMA | ARM11 |
 | `0x10202000` | LCD registers | |
 | `0x10203000` | DSP | |
-| `0x10206000`/`7000` | New 3DS CDMA / MVD | |
+| `0x10206000` | CDMA (New 3DS kernel's DMA-330 r1p2) | the original CDMA at `0x10200000` is used only by the boot ROM on New 3DS |
+| `0x10207000` | MVD registers | 3dbrew: "New 3DS only?" |
 | `0x1020F000` | AXI interconnect (NIC-301) | |
 | `0x10400000` | GPU | See [GPU](gpu.md) |
 
 ### New 3DS MVD
 
-New 3DS has an uncommonly documented decoder block, **MVD**, which performs H.264 and MJPEG decoding and YUV→RGB conversion, with its own DMA. Per Copetti it is used only by the web browser for accelerated video.
+New 3DS has an uncommonly documented decoder block, **MVD**, which performs H.264 and MJPEG decoding and YUV→RGB conversion, with its own DMA. 3dbrew's IO Registers page lists MVD register windows at `0x10130000`, `0x10131000`, `0x10132000` and `0x10207000`; which of them exist only on the New 3DS is not stated unambiguously there (the `0x10207000` entry is marked "New 3DS only?"). Per Copetti it is used only by the web browser for accelerated video.
+
+> Conflict: MVD register windows. 3dbrew's IO Registers table lists `0x10130000` and `0x10131000` with a "No" in its availability column, `0x10132000` with "Yes" and `0x10207000` as "New 3DS only?"; the column meaning is not defined in the extracted page. Copetti describes MVD only as a New 3DS block. This page follows Copetti for "New 3DS only" and treats the individual windows as unclear. Unresolved: a per-window read from New and Old 3DS hardware would settle it.
+
+> Conflict: MCU instruction set. 3dbrew's Hardware page says the MCU uses the RL78 ISA; Copetti describes an NEC/Renesas 78K0R-family chip. The 78K0R is the predecessor family of the RL78, so the two may describe the same part loosely. This page follows 3dbrew, which names the ISA directly, but no teardown or datasheet was checked. Unresolved.
 
 ### Wi-Fi
 
@@ -97,7 +102,6 @@ Homebrew reaches peripherals through the same services as retail software (`libc
 
 ## Open questions
 
-- RL78 (3dbrew) vs. 78K0R (Copetti) for the MCU core: the 78K0R is the predecessor family of RL78; which name applies is not settled here.
 - Many I/O blocks are listed with unknown contents (`?`).
 
 ## Sources

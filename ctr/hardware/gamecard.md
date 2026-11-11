@@ -45,7 +45,7 @@ Save-game SPI transfers use CPOL=1, CPHA=1. The only chip identified so far retu
 
 ### Command protocol
 
-Starting commands (8-byte mode, plain): `0x9F` reset; `0x71C93FE9BB0A3B18` "act as a 3DS card"; `0x90` get card ID 1; `0xA0` get card ID 2; `0x3E` enter 16-byte mode. In 16-byte mode, `0x82` returns the 0x200-byte header ("InitialData", which includes an NCCH header at `0x100`) and enables encryption; further commands are encrypted with keys derived from the header and AES key slot `0x3B` (key X is set up by Boot9).
+Starting commands (8-byte mode, plain): `0x9F` reset; `0x71C93FE9BB0A3B18` "act as a 3DS card"; `0x90` get card ID 1; `0xA0` get card ID 2; `0x3E` enter 16-byte mode. In 16-byte mode, `0x82` returns the 0x200-byte header ("InitialData", which includes an NCCH header at `0x100`) and enables encryption; further commands are encrypted with keys derived from the header and AES key slot `0x3B` (key X is set up by Boot9; key Y comes from the first 16 bytes of the header response). If the response to command `0xA0` ANDed with 3 equals 3, 3dbrew says slot `0x11` with an all-zero normal key is used instead. After every `0x200`-byte data block in 16-byte mode the card appends a 4-byte CRC32 of the unencrypted block (polynomial `0x82608EDB`, output XOR `0xFFFFFFFF`).
 
 ### Update region
 

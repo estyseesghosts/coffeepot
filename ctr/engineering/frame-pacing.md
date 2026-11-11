@@ -25,6 +25,10 @@ citro3d ties them together [documented: citro3d `renderqueue.c`]:
 
 So with `C3D_FRAME_SYNCDRAW`, at most one frame is in flight and the CPU never gets more than one frame ahead of the GPU — low latency, and simple ownership of GPU buffers.
 
+## How many images the GPU draws
+
+The GPU draws one image per render target per frame, not a fixed three. With the 3D slider off, a typical frame is a top image plus a bottom image (two); with 3D on, a left-eye and a right-eye top image plus the bottom (three) ([GPU](../hardware/gpu.md)). A screen whose contents did not change needs no image at all: citro3d swaps a screen's framebuffer only if a target for it was drawn that frame (see Technical details), so a mostly static bottom screen can be skipped by not drawing its target [documented: citro3d `renderqueue.c`; the saving is unmeasured]. Check `gfxIs3D()` or the slider and skip the right-eye target when it is off.
+
 ## Overlapping CPU and GPU
 
 Everything before `C3D_FrameBegin` runs while the GPU is still drawing the previous frame:

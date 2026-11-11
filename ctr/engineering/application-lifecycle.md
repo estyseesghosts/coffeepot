@@ -4,6 +4,19 @@ A 3DS program does not own the console. The user can press HOME, close the lid, 
 
 The short answer: call `aptMainLoop()` once per frame from one thread, treat it as a call that may block for a long time, pause your other threads from hooks, and do not use files or services inside the exit hook.
 
+## The whole thing in 10 lines
+
+1. Call `aptMainLoop()` once per frame, from one thread only. It is where HOME, sleep and "close" are acted on.
+2. It may block for minutes (HOME menu, lid closed). Your other threads keep running while it blocks.
+3. Register `aptHook()` callbacks to learn about `ONSUSPEND`/`ONRESTORE` (HOME, applets) and `ONSLEEP`/`ONWAKEUP` (lid).
+4. In those hooks only flip flags and park workers; do not touch the GPU, files or services.
+5. After `ONRESTORE`, redraw everything; do not assume the screen or your GPU state survived.
+6. When `aptMainLoop()` returns `false`, stop, save, and return from `main`.
+7. Save **before** leaving the loop: `ONEXIT` runs after the file service is closed.
+8. `ONEXIT` only fires when the system ordered the close, not when you quit on START.
+9. Use `aptSetHomeAllowed(false)` only around short critical sections, and set it back.
+10. Nothing on this page has been run on a console; see [Verification status](#verification-status).
+
 ## Before you start
 
 - Checked against libctru 2.7.1 at the commit pinned on [source versions](source-versions.md) (`62b7c42c88b1ee837f513358409d2e5c8f9001a9`), devkitARM r68. Source links below are at that commit.
@@ -17,7 +30,7 @@ At any time your program is either *active* (it owns the screens) or *not active
 | What happens | What `aptMainLoop()` does | Hooks fired (in order) | Returns |
 | ------------ | ------------------------ | ---------------------- | ------- |
 | Nothing | Returns immediately | none | `true` |
-| User presses HOME (and `aptSetHomeAllowed(true)`, the default) | Jumps to the HOME menu and blocks until you are brought back | `ONSUSPEND`, then `ONRESTORE` after return | `true` (or `false` if the system cancelled you meanwhile) |
+| User presses HOME (and HOME is allowed, see [Choosing what the user may do](#choosing-what-the-user-may-do)) | Jumps to the HOME menu and blocks until you are brought back | `ONSUSPEND`, then `ONRESTORE` after return | `true` (or `false` if the system cancelled you meanwhile) |
 | POWER button pressed | Same jump to the HOME menu | as above | as above |
 | Lid closed / sleep (if `aptSetSleepAllowed(true)`, the default) | Blocks until the console wakes | `ONSLEEP`, then `ONWAKEUP` | `true` |
 | System orders the program to close (for example "close software" in HOME, or shutdown) | Nothing blocks; `aptShouldClose()` becomes true | none yet | `false` |
@@ -45,6 +58,7 @@ Rules that follow from the source:
 
 | Call | Effect |
 | ---- | ------ |
+| `aptSetHomeAllowed(true)` | Allows HOME presses. Call it explicitly if you rely on HOME working: `aptInit` starts with only the sleep flag set and adds the HOME flag only when `osGetSystemCoreVersion() == 2`, although the comment above that line says HOME is allowed by default except in safe mode [documented: `apt.c` `aptInit`; the code and the comment can be read as disagreeing, which this page has not resolved] |
 | `aptSetHomeAllowed(false)` | HOME presses are remembered as rejected (`aptCheckHomePressRejected()` returns true) and no jump happens; use it to show a "HOME is disabled" icon [documented: `apt.h`, `apt.c` APTSIGNAL_HOMEBUTTON case] |
 | `aptSetSleepAllowed(false)` | The sleep query is answered "reject", so closing the lid does not sleep the console while you are active [documented: `apt.c` APTSIGNAL_SLEEP_QUERY case] |
 
@@ -59,7 +73,7 @@ Order of events inside `aptJumpToHomeMenu` [documented: `apt.c`]:
 1. `ONSUSPEND` hook runs (on your thread, before anything is released).
 2. libctru saves the VRAM system area, captures the screens for the HOME menu's thumbnail, puts the DSP to sleep (`aptDspSleep`), and releases the GPU right (`GSPGPU_ReleaseRight`).
 3. `APT_JumpToHomeMenu`, then it waits for a wake-up command.
-4. On wake-up it re-acquires the GPU right (`GSPGPU_AcquireRight`), restores the VRAM system area, and runs `ONRESTORE`. `ONRESTORE` is **not** called when the wake-up command is plain `APTCMD_WAKEUP` or `APTCMD_WAKEUP_CANCEL` [documented: `aptWaitForWakeUp`].
+4. On wake-up it re-acquires the GPU right (`GSPGPU_AcquireRight`), restores the VRAM system area, and runs `ONRESTORE`. **All three steps are skipped** when the wake-up command is plain `APTCMD_WAKEUP` or `APTCMD_WAKEUP_CANCEL`, or when the transition is a cancelled library applet (`TR_CANCELLIB`) [documented: `aptWaitForWakeUp`, one `if` guards all three]. `ONRESTORE` runs *before* libctru calls `aptDspWakeup()`, so inside the hook the DSP is still asleep.
 
 What your code must do:
 
@@ -108,8 +122,9 @@ How the program is started changes how it ends [documented: `apt.c`, `aptExit`]:
 | Launch method | Exit path | Result |
 | ------------- | --------- | ------ |
 | `.3dsx` started by a launcher that sets `RUNFLAG_APTREINIT` in the system run flags (that the Homebrew Menu does so is `[hypothesis]`: not read here) | APT is finalized without closing the process | Control returns to the loader, which can launch another `.3dsx` |
-| Installed `.cia` | `APT_PrepareToCloseApplication`, then the process is closed | Returns to the HOME menu |
-| Either, after `aptSetChainloader*` | Application jump to another title | The other title starts; `.3dsx` without HOME menu uses a Luma3DS-provided workaround |
+| Installed `.cia` (no run flags set) | `APT_PrepareToCloseApplication`, then the process is closed | Returns to the HOME menu |
+| `.3dsx` started by Luma3DS's built-in 3DSX loader | Luma sets `RUNFLAG_APTCHAINLOAD` in the process's `_prm` run flags, so `aptInit` calls `aptSetChainloaderToSelf()`; leaving without a system close then performs an application jump | The launching title (normally the Homebrew Menu) starts again [documented: Luma3DS `sysmodules/loader/source/3dsx.c`; libctru `apt.c` `aptInit`/`aptExit`] |
+| Either, after `aptSetChainloader*` | Application jump to another title | The other title starts; if the HOME menu is not running, libctru uses a Luma3DS-provided workaround (`srvPublishToSubscriber(0x3000)`) [documented: `apt.c`] |
 
 If the system ordered the close, `ONEXIT` runs first in all cases. A `.cia` has its own title ID and (optionally) save data; a `.3dsx` has neither, so persistent data goes on the SD card ([filesystem and saves](filesystem-and-saves.md)). Building each format: [development workflow](../homebrew/development-workflow.md); the container formats: [file formats](../software/file-formats.md). Homebrew-launch background: [libctru](../homebrew/libctru.md).
 
@@ -236,6 +251,8 @@ int main(void)
 }
 ```
 
+Note that `main` calls `aptUnhook(&cookie)` before returning (the hook's `param` points at a local variable, so it must not outlive `main`). That also means this program never sees its own `ONEXIT`; the `ONEXIT` branch only shows the pattern for a program that keeps the hook registered with static state.
+
 What to expect (from reading the source, **not observed**): pressing HOME prints `hook ONSUSPEND`, the worker counter stops, and after returning to the program `hook ONRESTORE` prints and the counter resumes. Closing the lid prints `ONSLEEP` then, after opening, `ONWAKEUP`. Pressing **A** prints `ONSUSPEND`/`ONRESTORE` around the keyboard. Pressing **B** then HOME prints `HOME press rejected`. Hook output printed during the transition is drawn to the console buffer, which only reaches the screen once you present a frame after restoring.
 
 How it fails: if you forget `LightEvent_Signal(&g_resume)` before `threadJoin`, the worker blocks forever when you exit while paused. The console `printf` inside a hook is acceptable in a demo; in real code log to a ring buffer and print it from the main loop.
@@ -261,6 +278,23 @@ Compiled and linked (not run) with devkitARM r68-1 (GCC 16.1.0) and libctru 2.7.
 | Start order in `__appInit` | `srvInit`, `aptInit`, `hidInit`, `fsInit`, `archiveMountSdmc`, `userAppInit` | `source/system/appInit.c` |
 
 All files are under `https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/`.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Check |
+| ------- | ------------ | ----- |
+| Pressing HOME does nothing | `aptSetHomeAllowed(false)` was left on, or `aptMainLoop()` is not being called | `aptIsHomeAllowed()`, `aptCheckHomePressRejected()`; is the loop running every frame? |
+| HOME menu appears seconds late | Main loop stalled in long work | [frame pacing](frame-pacing.md); split long jobs across frames |
+| Worker thread keeps running (heat, battery) while HOME is shown | Worker not parked from `ONSUSPEND`/`ONSLEEP` | Pause flag as in the example |
+| Console never sleeps on lid close | `aptSetSleepAllowed(false)`, or a library applet launch in progress | `aptIsSleepAllowed()` |
+| Hang on exit | Worker blocked on an event nobody signals | Signal the resume event before `threadJoin` |
+| Save missing after quitting from the HOME menu | Save attempted in `ONEXIT` (FS already closed) | Save before the loop ends |
+| Garbage or stale image after returning from HOME or the keyboard | Presented the previous frame without redrawing | Draw a full frame after `ONRESTORE` |
+| `aptMainLoop()` returns `false` right after the keyboard | User pressed HOME in the applet and the system cancelled you | Treat as exit |
+
+## Not covered yet
+
+Interrupting the program during a GPU transfer, a file write or an audio refill (the experiment listed for this guide) has not been done; see [Open questions](#open-questions). Continuous audio is covered only by pointer to [audio](audio.md). Local wireless (UDS) and input/sensor behaviour across sleep are not covered yet: see the service catalogue entry in [CTR services](../software/services.md) and [networking](networking.md#not-covered-yet).
 
 ## Pitfalls
 

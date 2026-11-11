@@ -4,9 +4,22 @@ Almost everything a 3DS program does beyond computing — reading the SD card, a
 
 Background and the list of services: [CTR services](../software/services.md). The system calls involved are described on the [kernel](../software/kernel.md) page; the memory a message points into is covered in [memory and cache](memory-and-cache.md).
 
+## The whole thing in 10 lines
+
+1. Get a session: `srvGetServiceHandle(&h, "name")` (names are at most 8 characters). Zero `h` first.
+2. Take the command buffer: `u32 *cmd = getThreadCommandBuffer();`
+3. Write the header with `IPC_MakeHeader(id, normalWords, translateWords)`.
+4. Write the normal parameters, then each translate parameter (descriptor word, then its pointer or handles).
+5. Send immediately: `svcSendSyncRequest(h)`. Do no other IPC-using call between filling the buffer and sending.
+6. If that returns an error, stop: the reply is not valid.
+7. Otherwise read `cmd[1]`, the service's own result; if it is an error, the output words are not valid.
+8. Only then read the outputs, immediately.
+9. Close the session exactly once with `svcCloseHandle`, and zero your variable.
+10. Never send a descriptor the kernel documents as fatal (rights 0, oversized static buffer, move plus process ID).
+
 ## Before you start
 
-- Checked against libctru 2.7.1 at commit `62b7c42c88b1ee837f513358409d2e5c8f9001a9` (the pin in [source versions](source-versions.md)), read from a local clone at that commit, and against 3dbrew's *IPC* page (the old name *IPC Command Structure* redirects there), fetched in November 2026.
+- Checked against libctru 2.7.1 at commit `62b7c42c88b1ee837f513358409d2e5c8f9001a9` (the pin in [source versions](source-versions.md)), read from a local clone at that commit, and against 3dbrew's *IPC* page (the old name *IPC Command Structure* redirects there), fetched in November 2026 (re-read on 10 November 2026 as raw wikitext; the local `3dbrew` mirror does not contain the IPC, Config Services, HTTP or SSL pages).
 - Code compiles with devkitARM r68 (GCC 16.1.0) and libctru 2.7.1-1 with `-Wall -Wextra`, no warnings. **Nothing here has been run on hardware or in an emulator.** See [Verification status](#verification-status).
 - Terms used below, defined once: a **session** is a private two-ended message channel between your process and a service; the **handle** is the number your process uses to refer to its end of it. The **command buffer** is a 64-word area in each thread's **thread-local storage** (TLS, a small per-thread memory page) where a message is written. The **kernel** copies or rewrites parts of the message on its way to the service (see [IPC](../../glossary.md#ipc) and [service](../glossary.md#service)).
 
@@ -236,7 +249,7 @@ Consequences for a client:
 - **Names are at most 8 characters.** libctru copies with `strncpy(..., 8)` and `strnlen(name, 8)`; a longer name is silently cut, so you would ask for a different service. Check the length yourself (the wrapper below does).
 - **Access is checked per service name.** The kernel-level check uses the service-access list in the title's extended header, so a program can be denied a service it names correctly [reverse-engineered: 3dbrew IPC]. Under [Luma3DS](../homebrew/luma3ds.md) the service manager is replaced to lift these limits ([services](../software/services.md#system-titles-that-implement-services)). The exact error for a denied or unknown name is not recorded here; see Open questions.
 - **Fallback chains are normal.** `cfguInit` tries `cfg:i`, then `cfg:s`, then `cfg:u`, because the first has the most commands [documented: libctru `cfgu.c`]. If you need only a `cfg:u` command, open `cfg:u` only: fewer privileges, and a failure means something else.
-- Before system version 11.0 the kernel left junk in the output handle on failure [documented: comment in libctru `srv.c`]. Always zero a handle variable before the call and only use or close it after success.
+- Before system version 11.0 the kernel filled the output handle with junk when `svcConnectToPort` failed [documented: comment in libctru `srvInit`]. `srvGetServiceHandleDirect` itself writes 0 to `*out` on any failure, but the other path of `srvGetServiceHandle` (a handle from the loader's service list, duplicated with `svcDuplicateHandle`) writes nothing on failure [documented: `srv.c`]. So zero a handle variable before the call and only use or close it after success.
 
 ## Session lifetime and closing
 
@@ -394,6 +407,22 @@ int main(void)
 
 Treat the printed result codes as data to record in [source versions](source-versions.md) or a benchmark README with console model and firmware, which turns them from open questions into `[measured]` facts. See [testing on hardware](testing-on-hardware.md) for the test loop.
 
+## Troubleshooting
+
+| Symptom | Likely cause | Check |
+| ------- | ------------ | ----- |
+| `srvGetServiceHandle` fails | Name wrong or longer than 8 characters, service not permitted for your title, or service absent on this firmware | Print the raw `Result`; try from a title with broader access; see Open questions |
+| Program hangs inside `srvGetServiceHandle` | Session slots of that service exhausted by leaked handles | Count opens and closes; reference-count sessions |
+| Transport succeeds but outputs are zero or garbage | You read outputs without checking `cmdbuf[1]` | Check the service result first |
+| Reply words belong to another command | Another IPC call ran between your send and your read | Read outputs immediately; avoid `printf` over sockets in between |
+| Console reboots when the call is made | Fatal descriptor (rights 0, static buffer too big, move with process ID bit) | Build descriptors with the `IPC_Desc_*` helpers only |
+| Kernel rejects the request | Wrong translate-word count in the header | Count descriptor words: buffer 2, process ID 2, `n` handles `n + 1` |
+| Works on one firmware, fails on older | Command added in a later system version | Check the version column on the 3dbrew service page |
+
+## Not covered yet
+
+This page covers the client side only. Writing a *server* (a `svcReplyAndReceive` loop), PXI buffers in practice, and the exact error values for malformed requests are not covered or measured. For service-specific walkthroughs see [networking](networking.md) (`soc:U`, `http:C`) and [application lifecycle](application-lifecycle.md) (`APT`). Local wireless over `nwm::UDS` (a service client like any other, needing shared memory handles and event handles) and input/sensor services (`hid:USER`, `ir`) have no engineering page yet; start from [CTR services](../software/services.md).
+
 ## Technical details
 
 | Item | Value | Source |
@@ -430,7 +459,7 @@ Treat the printed result codes as data to record in [source versions](source-ver
 
 | Item | Status |
 | ---- | ------ |
-| The six examples in this page and in [networking](networking.md) | Build with devkitARM r68-1 (GCC 16.1.0) and libctru 2.7.1-1, `-Wall -Wextra`, no warnings; linked with `3dsx.specs` into `.elf` files |
+| The three examples with a `main` on this page, and the three in [networking](networking.md) | Build with devkitARM r68-1 (GCC 16.1.0) and libctru 2.7.1-1, `-Wall -Wextra`, no warnings; linked with `3dsx.specs` into `.elf` files |
 | Header/descriptor value assertions | Compiled and run on a PC (host), copy of `ipc.h` body; all pass. This checks the arithmetic only |
 | Emulator, Old 3DS, New 3DS | not run |
 

@@ -44,7 +44,7 @@ struct {
 };
 ```
 
-The names appear in sixteen fixed slots per record; the note does not say what the slots index (languages are a guess). Coordinates are 16-bit fractions of the half-range: latitude 0x4000 = 90°, longitude 0x8000 = 180°.
+The region-file note shows the records inside a `sections?[?]` wrapper (count unknown) followed by a trailing `u8 ?[entry_count_0+1?][0x10]` block of unknown meaning; the country-file note has the same kind of trailing block. The names appear in sixteen fixed slots per record; the note does not say what the slots index (languages are a guess). Coordinates are 16-bit fractions of the half-range: latitude 0x4000 = 90°, longitude 0x8000 = 180°.
 
 ## Homebrew notes
 

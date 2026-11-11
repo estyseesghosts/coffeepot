@@ -7,7 +7,7 @@ The flaw underneath it is called **[sighax](../glossary.md#sighax)**; **ntrboot*
 ## What you need
 
 - Any Nintendo 3DS-family console (3DS, 3DS XL, 2DS, New 3DS, New 3DS XL, New 2DS XL) on any firmware version — the boot ROM is identical on all of them.
-- Some way to write boot9strap's signed firmware into the console's NAND, which needs code running with ARM9 or NAND access: any of the ARM9-level entries in the [exploit catalogue](exploits.md) (for example MSET9, or the Safe Mode route on Old 3DS), or a hardware route such as ntrboot with a compatible DS flashcart (a magnet is used to simulate the closed shell; the Start + Select + X key combination is held).
+- Some way to write boot9strap's signed firmware into the console's NAND, which needs code running with ARM9 or NAND access: any of the ARM9-level entries in the [exploit catalogue](exploits.md) (for example MSET9, or the Safe Mode route on Old 3DS), or a hardware route such as ntrboot with a compatible DS flashcart (a magnet is used to simulate the closed shell; the Start + Select + X key combination is held (on Old 3DS/2DS the power button then works even with the shell closed or faked by a magnet, per 3dbrew: Bootloader)).
 - **Back up your NAND and your OTP data first.**
 
 ## How it works
@@ -16,7 +16,7 @@ The 3DS boot ROM checks every firmware with RSA-2048 signatures ([boot process](
 
 Making the signature needed brute force. Derrek's announcement did not publish a usable signature or a copy of Boot9; SciresM and Myria found that firmware versions before 1.0.0 shared flaws similar to sighax and used it to begin brute-forcing, eventually matching a signature using many Nvidia GPUs.
 
-The remaining question was how to run the forged firmware early enough. The pair found a route through the ARM9's exception handlers: the ARM9 cannot overwrite them, but its NDMA controller can. The team made NDMA fill the exception handlers with a jump to their code and had the ARM9 copy to address zero, causing an exception that runs their payload with unrestricted access. Packaged, this is **boot9strap**: a bootloader that either loads a payload from the SD card or continues to boot normally.
+The remaining question was how to run the forged firmware early enough. The pair found a route through the ARM9's exception handlers: the ARM9 cannot overwrite them, but its NDMA controller can (3dbrew describes the loader-side reason: Boot9's memory blacklist misses memory-mapped I/O and can be bypassed by a section that encloses the vector table; see Technical details). The team made NDMA fill the exception handlers with a jump to their code and had the ARM9 copy to address zero, causing an exception that runs their payload with unrestricted access. Packaged, this is **boot9strap**: a bootloader that either loads a payload from the SD card or continues to boot normally.
 
 Because boot9strap runs before Boot9 hides its ROM, it can keep access to the boot ROMs and the decrypted OTP, which tools such as GodMode9 use to dump both.
 
@@ -26,9 +26,12 @@ During boot, Boot9 asks whether a specific key combination is pressed and the sh
 
 ## Technical details
 
-- Boot ROM signature parser: no bounds checking; a crafted PKCS #1 v1.5 padding/ASN.1 block can be constructed to verify against any hash. Used for all signatures Boot9 verifies (NCSD, FIRM, and the Wi-Fi flash FIRM path).
+- Boot ROM signature check `[documented]` ([3dbrew: 3DS System Flaws](https://www.3dbrew.org/wiki/3DS_System_Flaws), "sighax"): FIRM partitions are signed with RSA-2048, SHA-256, PKCS #1 v1.5. Boot9 validates the padding wrongly in three ways: (1) it accepts block type 02 (meant for encryption) as well as 01, so the padding need not be a run of `FF` bytes; (2) it does not require the padding to fill the block; (3) it does not bounds-check the DER-encoded hash-algorithm and hash lengths, so the "hash" can point outside the block, at the hash Boot9 itself computed on the stack, and Boot9 then compares a value with itself. 3dbrew estimates about 1 in 2^43 random signatures would pass, about one week on one GTX 1080 Ti.
+- The same page says the flaw is also in factory firmware and earlier (down to 0.11) and was fixed in 1.0.0-0, which is how the brute force could start without a Boot9 dump (jakcron's finding as credited there).
+- Getting code to run from the forged FIRM needs a second flaw `[documented]` (3dbrew, same page): Boot9's FIRM loader blacklists some of its own memory but not memory-mapped I/O (derrek, 2015), and its section check only tests that a section's start and end are outside a blacklisted region, so a section that encloses the ARM9 exception vectors at `0x08000000` overwrites them ("superhax"; found independently by Normmatt and SciresM, January 2017). Overwriting the data-abort vector and adding a 4th section that NDMA-copies to NULL gives the abort that runs the payload.
 - Because the flaw lives in boot ROM, Nintendo could not fix it with a system update. A hardware revision would be needed; none appeared (the New 2DS XL was found to have the same boot ROM in June 2017).
-- Boot9's ARM9 exception vectors are the entry point exploited with NDMA; the first-stage chain executes before the boot ROM is hidden.
+- Boot9's ARM9 exception vectors (`0x08000000`, six 8-byte entries) are the entry point exploited with NDMA; the first-stage chain executes before the boot ROM is hidden.
+- Boot9 can load a FIRM from NAND, from an NTR card or from Wi-Fi flash; its status bytes at `0x1FFFE000+0xC` track each device (3dbrew: Bootloader).
 - ntrboot first practical release: August 2017 (initially ak2i and R4 cards). Stargate, a 3-in-1 hybrid, was announced in September 2017 and abandoned within months.
 
 ## Limits and risks
@@ -41,7 +44,8 @@ During boot, Boot9 asks whether a specific key combination is pressed and the sh
 
 ## Open questions
 
-- Details of the actual forged-signature construction are not in these sources.
+- The actual forged-signature bytes are not given here; 3dbrew explains the three padding/DER flaws but no usable signature is reproduced on this wiki.
+- Sources differ in framing: Copetti says the ARM9 cannot write the vectors but NDMA can; 3dbrew attributes it to Boot9's incomplete blacklist. They are compatible, but the wiki has not checked which of the two (MMIO omission or the enclosing-range bug) boot9strap itself uses.
 - The exact set of flashcarts supported by ntrboot is not listed here.
 
 ## Sources

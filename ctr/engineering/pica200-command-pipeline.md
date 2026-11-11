@@ -58,7 +58,7 @@ Both calls first run `C3Di_UpdateContext()` (flushing any dirty state as writes)
 | 10 | `GEOSTAGE_CONFIG2` mask 1 = 0 | triangles only: both `GEOSTAGE_CONFIG*` cleared |
 | 11 | `VTX_FUNC` = 1 (clear post-vertex cache) | same, then two masked writes of 0 to `PRIMITIVE_CONFIG` (mask 8) |
 
-Both set `C3DiF_DrawUsed`, which makes the next framebuffer change or frame split add `FRAMEBUFFER_FLUSH` / `FRAMEBUFFER_INVALIDATE` / `EARLYDEPTH_CLEAR` writes (`base.c`, `C3Di_SplitFrame`). The two trailing `PRIMITIVE_CONFIG` writes are the "two dummy writes" the wiki already lists as required ([shading features](../hardware/gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)). 3dbrew's [Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide) lists a different order for the "standard GL" sequence; citro3d's order above is what this wiki's source pin actually emits.
+Both set `C3DiF_DrawUsed`, which makes the next framebuffer change or frame split add `FRAMEBUFFER_FLUSH` / `FRAMEBUFFER_INVALIDATE` / `EARLYDEPTH_CLEAR` writes (`base.c`, `C3Di_SplitFrame`). The two trailing `PRIMITIVE_CONFIG` writes are the "two dummy writes" the wiki already lists as required ([shading features](../hardware/gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)). > Conflict: draw command order. 3dbrew's [Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide) (mirror revision 22469) lists a 17-step `DRAWELEMENTS` sequence "commonly used by the standard GL implementation" (the official SDK, not citro3d): `GEOSTAGE_CONFIG`, two `GEOSTAGE_CONFIG2` writes and `PRIMITIVE_CONFIG` (twice) come first; then `RESTART_PRIMITIVE`, `GEOSTAGE_CONFIG2` function indicator = 0, `INDEXBUFFER_CONFIG`, `NUMVERTICES`, `START_DRAW_FUNC0` = drawing, `DRAWELEMENTS`, `START_DRAW_FUNC0` = config, `VTX_FUNC`, then `FRAMEBUFFER_FLUSH` and clears of `GEOSTAGE_CONFIG`, `GEOSTAGE_CONFIG2`, `PRIMITIVE_CONFIG` and `VSH_ENTRYPOINT`. citro3d (`drawElements.c` at `9f21cf7`, read line by line) instead writes `PRIMITIVE_CONFIG`, `RESTART_PRIMITIVE`, `INDEXBUFFER_CONFIG`, `NUMVERTICES`, `VERTEX_OFFSET`, the triangle `GEOSTAGE_*` writes, the drawing-mode toggle around `DRAWELEMENTS`, then `VTX_FUNC` and two `PRIMITIVE_CONFIG` mask-8 writes; it has no `FRAMEBUFFER_FLUSH` or `VSH_ENTRYPOINT` clear inside the draw. These are two real implementations rather than contradictory claims, and the common core (restart, index config, vertex count, mode toggle around the trigger, `VTX_FUNC`) is identical. This page follows citro3d because it is the code homebrew actually emits. Which extra steps in the SDK sequence are *required* by hardware is unknown `[hypothesis]`; an experiment would remove one write at a time on hardware.
 
 `C3D_DrawElements` silently returns without drawing if `osConvertVirtToPhys(indices)` is below `bufInfo.base_paddr` (`drawElements.c`: `if (pa < base) return;`). Index data must therefore sit in linear memory, like the vertices.
 
@@ -68,7 +68,7 @@ libctru's `GPUCMD_AddInternal` (`source/gpu/gpu.c`) stores each logical write as
 
 | Header bits | Meaning |
 | ----------- | ------- |
-| 0-9 | register id (libctru masks with `0x3FF`; 3dbrew describes bits 0-15 as "command ID") |
+| 0-9 | register id (libctru masks with `0x3FF`; 3dbrew describes bits 0-15 as "command ID"; see the conflict below) |
 | 16-19 | byte-lane write mask (`0xF` = whole word; lane k enabled by bit 16+k) |
 | 20-27 | number of **extra** parameters (count - 1) |
 | 28-30 | unused |
@@ -77,6 +77,8 @@ libctru's `GPUCMD_AddInternal` (`source/gpu/gpu.c`) stores each logical write as
 - A command is `2 + extra` words; if that is odd, one zero pad word follows so every command is 8-byte aligned.
 - `GPUCMD_Add` splits writes longer than `0x100` parameters; in incremental mode the register id advances by the chunk length.
 - `GPUCMD_Split` appends `GPUREG_FINALIZE` (0x010) = `0x12345678`, and a second one if the word count is not a multiple of 4, so the list is 16-byte aligned. It then moves `gpuCmdBuf` past the finished list.
+> Conflict: header register-id width. 3dbrew's Internal Registers page gives header bits 0-15 as "Command ID" (its worked example `0x802F011C` is consecutive flag, mask `F`, id `011C`), while libctru's encoder masks the id with `0x3FF` (10 bits). No register in libctru's table exceeds `0x3FF`, so the two agree for every known register; whether bits 10-15 do anything on hardware is unknown. The decoder follows libctru and warns on header bits that should be zero.
+
 - 3dbrew: after the first `FINALIZE` the GPU ignores the rest of the buffer, and a buffer without one hangs the GPU [reverse-engineered: 3dbrew GPU/Internal Registers].
 
 Illustrative words (derived by hand from the rules above, not captured from a console): `GPUCMD_AddWrite(GPUREG_NUMVERTICES, 3)` is `0x00000003, 0x000F0228`. `GPUCMD_AddMaskedWrite(GPUREG_PRIMITIVE_CONFIG, 2, 0x100)` is `0x00000100, 0x0002025E`.
@@ -138,13 +140,16 @@ The decoder is [`tools/pica_cmdlist_decode.py`](../../tools/pica_cmdlist_decode.
 - `GX_ProcessCommandList` command: word0 `0x01000100 | 1`, word1 address, word2 size in bytes, word3 `flags & 1`, word7 `(flags >> 1) & 1` (libctru `gx.c`). `GX_CMDLIST_FLUSH` is `BIT(1)`.
 - GSP shared queue: 15 slots of 8 words; submit returns `-2` when 15 are pending (`gspgpu.c`).
 - citro3d keeps `ctx->cmdBufUsage` (fraction of the buffer used) after each split (`base.c`).
-- Format fields: libctru reads bits 0-1 as type (byte, ubyte, short, float) and bits 2-3 as component count - 1; 3dbrew labels the same two bits as a size of 8/16/24/32 bits. The decoder follows libctru.
+- Format fields (each attribute owns one nibble of `FORMAT_LOW`/`HIGH`): bits 0-1 are the element type (0 byte, 1 unsigned byte, 2 short, 3 float; libctru `GPU_FORMATS`, 3dbrew agrees). Bits 2-3 are the point of disagreement below.
+
+> Conflict: attribute "size" encoding. 3dbrew's Internal Registers page calls bits 2-3 "size" with values 0-3 meaning 8/16/24/32 bits. libctru's `GPU_ATTRIBFMT(i, n, f)` is `(((n-1)<<2) | (f&3)) << (i*4)`, so bits 2-3 hold the component count minus one, and citro3d passes the caller's count straight in (`AttrInfo_AddLoader(info, 0, GPU_FLOAT, 3)` for a 3-float position, as in the `3ds-examples` GPU samples). The element width already comes from the type field, so a second width field would double-count it, and "24 bits" cannot describe a 3-component float of 96 bits. Resolution: follow libctru, bits 2-3 = components - 1 `[documented: libctru gpu.h, citro3d attribs.c]`; read 3dbrew's 8/16/24/32 labels as a mislabel of 1-4 components. What 3dbrew's authors observed is not stated on the page, so the label's origin is unverified. The decoder follows libctru.
 
 ## Pitfalls
 
 - **Assuming a draw call talks to the GPU.** It only appends to memory; errors surface at the frame end or on the next `C3D_FrameBegin`.
 - **Splitting a frame and forgetting the flush mode.** `C3D_FrameSplit` passes flags straight to `GX_ProcessCommandList`.
-- **Trusting the 3dbrew draw order over the source.** Use citro3d's emitted order when comparing a capture.
+- **Trusting the 3dbrew draw order over the source.** Use citro3d's emitted order when comparing a capture; see the draw-order conflict above.
+- **Reading 3dbrew's attribute "size" as bits.** In practice it is a component count minus one.
 
 ## Open questions
 

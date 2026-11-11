@@ -70,6 +70,7 @@ The wiki has no measured numbers yet for the costs below; they are the questions
 - CPU write bandwidth to the application heap versus the linear heap, at sizes inside and outside the 16 KB L1 data cache.
 - The cost of flushing a range with the kernel call versus the GSP service, as a function of size.
 - The cost of `C3D_FrameEnd(0)`'s whole-linear-heap flush.
+- Whether the ARM11 performance counters work from a `.3dsx` under Luma3DS, and how the cycle counter relates to the system tick ([CPU optimisation: open questions](cpu-optimization.md#open-questions)); no benchmark program for this exists yet.
 - How these change on a New 3DS with and without `osSetSpeedupEnable(true)`, and with an `APT_SetAppCpuTimeLimit` share active.
 
 ### The benchmark suite

@@ -74,6 +74,20 @@ Segment types: 0 `.text`, 1 `.rodata`, 2 `.data`, 3 `.bss`. A **segment tag** is
 
 Linking applies **patches**: a module that exports symbols stores their locations as segment tags; a module that imports them keeps patches saying where and how to write each address. All patches for one imported symbol form a *batch*. Types are defined by `PatchType`. There are also **internal patches** (a module exporting to itself; needed because segment addresses change on rebase, not organised in batches) and **static anonymous patches** (symbols exported from dynamic modules to the static module, applied on rebase and never reset; no game is known to use them).
 
+### Registration lists and memory mapping
+
+The static module's `previous` field points to the head of the manual-link list and its `next` field to the head of the auto-link list. In each list the head's `previous` points to the tail and the tail's `next` is 0 [reverse-engineered: Citra CRO notes]. The application loads the CRO into its own buffer and passes a second, target address; RO maps the buffer there and always reads and writes through that mapping, while the application can read both. Citra could not model this aliasing and works around it by copying and synchronising the buffers around each service call (`MemorySynchronizer`), so emulator behaviour here is an approximation.
+
+### Segment setup on load
+
+`.text` and `.rodata` entries are pointed at where they are mapped. The `.data` entry is pointed at an application-supplied buffer, and RO does **not** copy `.data` from the CRO into it: the application does that. `.bss` also uses an application-supplied buffer. Header offset `0x9C` is "zero?" in the notes, and RO does not touch `0x94`, `0x9C` or the `nnroControlObject_`/`OnLoad`/`OnExit` tags; `OnUnresolved` is used.
+
+### Patch lifecycle
+
+Two different operations exist. *Reset*: before linking, and when unlinking, patched places are written with the module's `OnUnresolved` address. *Clear*: when a fix-level-0 module is unloaded, patched places are written with zero to restore the pre-load state. Static anonymous patches are applied on rebase and never reset, even after unload.
+
+> Unknown: the notes do not say whether RO verifies the four SHA-256 values in the header or relies on the CRR; the "does RO check them" question is open.
+
 ### Name lookup
 
 RO finds an exported named symbol through a trie-like **name tree** rather than scanning the table: a `bit_trie<symbol_name, symbol_index, string_tester>` whose nodes do not store keys and use absolute offsets in branches.

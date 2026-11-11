@@ -6,7 +6,7 @@ This page describes the ARM11 kernel as programs see it: processes, threads, syn
 
 ## Behavior
 
-- Every program runs as a **[process](../../glossary.md#process)** with its own address space, handle table and system-call permissions. A process can only call the system calls its **kernel capability descriptors** allow (official software copies them from its title's metadata, the *exheader*). Calling a forbidden one panics the kernel; `svcBreak` on retail kills only the calling process.
+- Every program runs as a **[process](../../glossary.md#process)** with its own address space, handle table and system-call permissions. A process can only call the system calls its **kernel capability descriptors** allow (official software copies them from its title's metadata, the *exheader*). Calling a forbidden one panics the kernel; `svcBreak` on retail kills only the calling process (`BreakReason` values: 0 PANIC, 1 ASSERT, 2 USER) [documented: 3dbrew SVC].
 - Processes cannot touch each other's memory directly. When a service call passes a buffer, the kernel maps that memory into the receiving process.
 - Handles (object references) are per-process; `0xFFFF8001` always means "the current process".
 - Low-level system information appears in a read-only **configuration memory** page mapped into every process (see [memory](../hardware/memory.md)).
@@ -55,16 +55,17 @@ System calls are numbered; `NF ARM11` marks calls on the normal ARM11 firmware. 
 | Interrupts/DMA/cache | `BindInterrupt` (0x50), `Invalidate/Store/FlushProcessDataCache` (0x52–0x54), `StartInterProcessDma` (0x55), `StopDma` (0x56) |
 | Debugging | `DebugActiveProcess` (0x60) … `WriteProcessMemory` (0x6B), `SetHardwareBreakPoint` (0x6C), `GetProcessList` (0x65), `GetThreadList` (0x66) |
 | Process creation | `CreateCodeSet` (0x73), `CreateProcess` (0x75), `TerminateProcess` (0x76), resource-limit calls (0x77–0x79) |
-| Privileged | `Backdoor` (0x7B, runs a function in kernel mode), `KernelSetState` (0x7C), `SetGpuProt` (0x59, added 11.3.0), `SetWifiEnabled` (0x5A, added 11.4.0) |
+| Privileged | `Backdoor` (0x7B, runs a function in kernel mode; see the Conflict below), `KernelSetState` (0x7C), `QueryProcessMemory` (0x7D), `SetGpuProt` (0x59, added 11.3.0), `SetWifiEnabled` (0x5A, added 11.4.0) |
+| Stubs | A stubbed call only returns an error (`0xF8C007F4`). 3dbrew marks `SignalAndWait` (0x26), `SendSyncRequest1-4` (0x2E-0x31), `GetThreadContext` (0x3B), `ReplyAndReceive1-4` (0x4B-0x4E) and `RandomStub` (0x74) as stubbed; `Set{Thread}AffinityMask` (0x0E) and `SetThreadIdealProcessor` (0x10) became stubs on NATIVE_FIRM from 8.0.0-18; `AddCodeSegment` (0x7A) on NATIVE_FIRM from 2.0.0-2 |
 
-Some call ids (`0x3C Break`, `0x3D OutputDebugString`, `0x3E ControlPerformanceCounter`) are not available to normal processes. `svc 0x59 SetGpuProt` enables/disables the GPU's memory protection.
+`0x3D OutputDebugString` does nothing on non-debug units, and `0x3E ControlPerformanceCounter` is listed without notes. `svc 0x59 SetGpuProt` enables/disables the GPU's memory protection.
 
 ### Waiting, signalling and rescheduling (Citra reverse-engineering notes)
 
 - Every kernel object that can be waited on keeps a **waitlist** of threads blocked on it. When the object is signalled, the kernel takes the highest-priority waiter, checks whether it can run, appends it to the scheduler queue and removes it from the waitlist, repeating for every thread that is ready.
 - Each thread also keeps a list of objects it is waiting on, used only by `WaitSynchronizationN`. A thread is queued only when *all* objects in its list are ready (wait-all mode).
 - `WaitSynchronization1` with timeout 0: if the object is signalled, it is acquired with **no reschedule**; if not, it returns error `0x09401BFE` immediately. With a timeout above 0, an unready object adds the thread to the waitlist and suspends it; a ready object is acquired with no reschedule.
-- `WaitSynchronizationN` in wait-any mode acquires the first ready object in order (no reschedule for timeout 0 or −1); in wait-all mode it first checks that all are ready. If a thread that cannot acquire everything is marked for termination (offset `0x36` in the `KThread`), it returns `0xD920060D` after being rescheduled; otherwise it joins every object's waitlist and suspends. After suspension the kernel removes the thread from the waitlists again — behavior the authors speculate is a coroutine-like return that sets the call's result.
+- `WaitSynchronizationN` in wait-any mode acquires the first ready object in order (no reschedule for timeout 0 or −1); in wait-all mode it first checks that all are ready. If a thread that cannot acquire everything is marked for termination (offset `0x36` in the `KThread`), it returns `0xD920060D` after being rescheduled; otherwise it joins every object's waitlist and suspends (in both wait modes `WaitSynchronizationN` clears the thread's own list and adds the thread to each object's waitlist; only wait-all repopulates the thread's list). After suspension the kernel removes the thread from the waitlists again — behavior the authors speculate is a coroutine-like return that sets the call's result.
 - A reschedule attempt happens: at the end of a system call if the thread is marked for termination or its process has a debug event; after `ExitThread`, `SleepThread`, `ExitProcess`, `TerminateProcess`, `CreateThread`, `SetThreadPriority`; after a process or thread that others waited on is destroyed; after a timeout wakes a thread; when `WaitSynchronization1`/`N` has to block; after a sync request to a client session and after `ReplyAndReceive` replies to a server session; when a client or server session is closed (waiters wake with an error); when a thread resumes after a signal; after `ReleaseMutex` brings the lock count to 0; and after `SetResourceLimitValues` with type CPU_TIME (`9`) and a value below `0x5A` (90).
 - The notes mark as unverified: address arbiter handling, memory-mapping calls, DMA transfers and `Map`/`UnmapProcessMemory`; `ReplyAndReceive` is still TODO.
 
@@ -74,11 +75,13 @@ Resource limit types: 0 priority, 1 commit (allocatable memory), 2 threads, 3 ev
 
 ### Kernel errors
 
-Kernel results use the standard 3DS error-code layout; see 3dbrew's SVC page for a table.
+Two kernel results quoted above: `0x09401BFE` is the timeout/not-ready result of the wait calls, `0xD920060D` the result for a thread marked for termination [reverse-engineered: Citra notes]. Kernel results use the standard 3DS error-code layout; see 3dbrew's SVC page for a table.
 
 ## Homebrew notes
 
-The `Backdoor` (0x7B) call and kernel exploits turn userland control into full ARM11 kernel access (see [exploits](../homebrew/exploits.md)). `libctru` wraps the system calls and `svcGetSystemTick` is used for precise timing. Custom firmware extends the kernel: Luma3DS injects `k11_extension` to hook and add supervisor calls ([Luma3DS](../homebrew/luma3ds.md)).
+> Conflict: 3dbrew's SVC table says `Backdoor` (0x7B) is used on ARM9, that ARM11 processes cannot call it without some form of kernelhax, and that it was removed from the ARM11 kernel in 11.0.0-33. Luma3DS's `k11_extension/source/svc.c` (`buildAlteredSvcTable`) nevertheless installs its own `Backdoor` at 0x7B. Both are consistent: stock ARM11 firmware from 11.0.0-33 has no userland Backdoor, but under Luma3DS the call exists again [documented: Luma3DS source at the pinned commit]. This page reports both and treats availability as "only under CFW" for current firmware.
+
+The `Backdoor` (0x7B) call and kernel exploits turn userland control into full ARM11 kernel access (see [exploits](../homebrew/exploits.md)). `libctru` wraps the system calls and `svcGetSystemTick` is used for precise timing. Luma's `buildAlteredSvcTable` replaces these official calls with hooks: 0x01 ControlMemory, 0x03 ExitProcess, 0x08 CreateThread (New 3DS only), 0x29-0x2D (GetHandleInfo, GetSystemInfo, GetProcessInfo, GetThreadInfo, ConnectToPort), 0x32 SendSyncRequest, 0x3C Break, 0x59 SetGpuProt, 0x5A SetWifiEnabled, 0x76 TerminateProcess, 0x7B Backdoor, 0x7C KernelSetState. It adds custom calls: 0x80 CustomBackdoor; 0x90-0x94 cache/address helpers (`convertVAToPA`, data-cache range/entire flush, instruction-cache range/entire invalidate); 0xA0-0xA3 (`MapProcessMemoryEx`, `UnmapProcessMemoryEx`, `ControlMemoryEx`, `ControlMemoryUnsafe`); 0xB0-0xB3 (`ControlService`, `CopyHandle`, `TranslateHandle`, `ControlProcess`) [documented: Luma3DS `k11_extension/source/svc.c`]. Custom firmware extends the kernel: Luma3DS injects `k11_extension` to hook and add supervisor calls ([Luma3DS](../homebrew/luma3ds.md)).
 
 ## Open questions
 

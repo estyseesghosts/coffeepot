@@ -25,10 +25,12 @@ This page is the timeline. How each exploit works is on the [exploit catalogue](
 - **August 2013:** the **Gateway-3DS** flashcart launches: a DS card (to install the exploit), a loader file for the SD card and a 3DS card with an FPGA and microSD for one game at a time. The exploit chain went through the Settings app and a kernel exploit; it also contained a custom firmware.
 - **October–December 2013:** Smealum demonstrates **redNAND** (booting a NATIVE_FIRM copy from the SD card); Gateway adds **emuNAND** and its payload is reverse-engineered and open-sourced as the "3DS Toolkit".
 
+> Conflict: Copetti dates Smealum's redNAND video to October 2013 and credits Smealum alone; the Hacks Guide timeline puts the community's reverse-engineering of Gateway's payload and the private *RedNAND* payload by smealum and Yellows8 in December 2013. This page lists both dates; whether the work was private earlier and shown publicly in October is not resolved by these sources.
+
 ### 2014: the open-source start
 
 - **January:** the "brickgate" scandal — Gateway firmware that intentionally bricked clone-card users also bricked innocent users.
-- **February:** yellows8 discovers **memchunkhax**, the first ARM11 kernel exploit: Kernel11 tracks free memory pages in a linked list of "memchunk headers" stored in FCRAM, which an earlier exploit can overwrite to grant access to AXI WRAM and eventually control the kernel's page table. Patched in December 2014; derrek's **memchunkhax2** (a race condition) followed.
+- **February:** yellows8 discovers **memchunkhax**, the first ARM11 kernel exploit: Kernel11 tracks free memory pages in a linked list of "memchunk headers" stored in FCRAM, which an earlier exploit can overwrite to grant access to AXI WRAM and eventually control the kernel's page table. 3dbrew gives the discovery as February 2014 and the fix as 9.3.0-21 (Copetti: patched December 2014); derrek's **memchunkhax2** (a race on the `next` pointer, revealed at 32C3) followed.
 - **Early 2014:** `ctrulib` (now `libctru`) is released by Smealum with yellows8, ichfly, WinterMute, fincs, mtheall and plutoo.
 - **March:** the first Citra emulator commit.
 - **Mid/late 2014:** the **Ninjhax** package — a crafted QR code for *Cubic Ninja*, a GPU-DMA userland exploit ("GSPWN") and the **Homebrew Launcher** loading `.3dsx` files — gives clean, flashcart-free homebrew (limited to userland: 64 MB of RAM, no DSP). yellows8's **oot3dhax** follows; **Palantine**, a closed-source CFW, leaks in November. Sky3DS cards appear (piracy-only, high ban risk).
@@ -42,10 +44,12 @@ This page is the timeline. How each exploit works is on the [exploit catalogue](
 
 ### 2016–2017: the golden age
 
-- **Early 2016:** exploit chains downgrade 10.x to 9.2 until 10.4 patches them; `ctr-httpwn`, `memchunkhax2.1` (Aliaspider) and DSiWare-based downgrades follow. **AuReiNand** (a fork) becomes **Luma3DS** (April, rewritten from scratch).
+- **Early 2016:** exploit chains downgrade 10.x to 9.2 until 10.4 patches them; `ctr-httpwn`, `memchunkhax2.1` (Aliaspider) and DSiWare-based downgrades follow.
+
+> Conflict: the Hacks Guide says memchunkhax2.1 let 9.2 downgrades continue "until version 10.7 patched it"; 3dbrew's *3DS System Flaws* lists memchunkhax2.1 as fixed in 11.0.0-X by a new memchunk-header MAC that stops DMA edits. This page follows 3dbrew for the version because it is the technical record, and treats the Hacks Guide's 10.7 as the date the downgrade chains stopped working in practice (not verified). **AuReiNand** (a fork) becomes **Luma3DS** (April, rewritten from scratch).
 - **April–June 2016:** `salt_sploit_installer` enables the secondary exploits `(v*)hax`, `supermysterychunkhax`, `humblehax` (required buying a Humble Bundle game) and `basehaxx`.
 - **September:** CTRNand Transfer and OTPless installers make `arm9loaderhax` easier (OTPless was removed for a rare random brick chance).
-- **December:** at 33C3 derrek's talk reveals **soundhax** (a free primary exploit using the Sound app), **fasthax** and **sighax**, and how the boot ROMs were dumped. Nintendo opens a bug-bounty program on HackerOne ($100–$20,000), after which exploit developers largely stop publishing.
+- **December:** at 33C3 derrek's talk reveals **soundhax** (a free primary exploit using the Sound app; the Hacks Guide credits its author as nedwill) and **fasthax** (also nedwill's), and **sighax**, and how the boot ROMs were dumped. Nintendo opens a bug-bounty program on HackerOne ($100–$20,000), after which exploit developers largely stop publishing.
 - **January 2017:** `safehax` (ARM9 privilege escalation, up to 11.2) streamlines `arm9loaderhax` installs. **February:** 11.3 patches safehax and fasthax; a later update restores safehax for 11.3.
 - **April:** `udsploit` (smealum) lands as 11.4 patches it.
 - **May:** SciresM's unofficial 33.5C3 talk reveals **boot9strap** and the principles of **ntrboot**; **June:** the New 2DS XL ships with the same vulnerable boot ROM; **August:** the first practical ntrboot is released.

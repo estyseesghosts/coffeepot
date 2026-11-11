@@ -254,3 +254,11 @@ An optional shader stage after the vertex shader that can emit extra vertices. S
 ### Outmap {#outmap}
 
 The configuration that maps shader output registers to position, colour, texture coordinates and so on. See [PICA200 shader programming](engineering/pica200-shader-programming.md).
+
+### MVD {#mvd}
+
+The New 3DS hardware video decoder block (H.264 and MJPEG, plus YUV-to-RGB conversion), reached through the MVD services. See [I/O and peripherals](hardware/io-and-peripherals.md).
+
+### Stubbed SVC {#stubbed-svc}
+
+A system call that exists in the kernel's call table but only returns an error code (for example `0xF8C007F4`) instead of doing anything. Several ARM11 kernel calls are stubs, some since a given firmware version. See [kernel](software/kernel.md).

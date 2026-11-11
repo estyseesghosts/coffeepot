@@ -67,7 +67,7 @@ Notation: `[command ID] (replies) Name(params)`; each parameter or reply takes o
 | `0x00` | 2 | Magic `0x6868` |
 | `0x04` | 4 | Version (always 1) |
 | `0x08` | 4 | Number of boxes |
-| `0x0C` | 16 × 24 | Box names (16 characters each; usually 8-digit IDs padded with nulls) |
+| `0x0C` | 16 × 24 (?) | Box names (16 characters each; usually 8-digit IDs padded with nulls) |
 
 ### `MBoxInfo____`
 
@@ -104,6 +104,8 @@ StreetPass stores game-controlled data that other consoles can inject, and its s
 
 ## Open questions
 
+- The `MBoxList____` row is given as "16 × 24" in the note while the text says 16 characters per name; whether that means 24 names of 16 bytes or 16 names of 24 bytes is not stated.
+- The 2019 StreetPass exploit claim above comes from the Hacks Guide history (MrNbaYoh, 36C3), not from the CEC note, which does not discuss security; the CEC format here is a Citra-wiki reverse-engineering and has no 3dbrew counterpart in the local mirror, so it is `[reverse-engineered]` throughout.
 - The meaning of `CecDataPathType` values beyond those shown is marked TODO in the source.
 - Many fields are labelled "?" (flags, second IDs, HMAC coverage).
 

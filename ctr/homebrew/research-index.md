@@ -16,12 +16,12 @@ Entries are grouped by area and list the person or group, what this wiki credits
 
 | Who | Credited with | Read more |
 | --- | ------------- | --------- |
-| smea (Smealum) | `ctrulib` (now libctru), released in early 2014 with yellows8, ichfly, WinterMute, fincs, mtheall and plutoo; `aemstro`, the first PICA200 shader (dis)assembler | [history](history.md), [libctru](libctru.md), [development workflow](development-workflow.md#2-install-devkitpro) |
-| WinterMute and devkitPro | `devkitARM`, maintenance of libctru, citro3d, citro2d and the tools | [development workflow](development-workflow.md#2-install-devkitpro) |
+| smea (Smealum) | `ctrulib` (now libctru), released in early 2014 with yellows8, ichfly, WinterMute, fincs, mtheall and plutoo; `aemstro`, the first PICA200 shader (dis)assembler | [history](history.md), [libctru](libctru.md), [picasso and citro3d](picasso-and-citro3d.md#related-shader-tools) |
+| WinterMute and devkitPro | `devkitARM` (3dbrew: "WinterMute et al."), maintenance of libctru, citro3d, citro2d and the tools | [development workflow](development-workflow.md#2-install-devkitpro), [libctru](libctru.md) |
 | fincs | `picasso`, `citro3d`, `citro2d`; co-author of libctru | [picasso and citro3d](picasso-and-citro3d.md) |
-| neobrain | `nihstro` shader assembler; `braindump` and `uncart` dumping tools | [development workflow](development-workflow.md#2-install-devkitpro) |
-| 3dsguy, profi200 | `makerom` (author, maintainer) | [file formats](../software/file-formats.md) |
-| Steveice10 | `bannertool` | [development workflow](development-workflow.md#2-install-devkitpro) |
+| neobrain | `nihstro` shader assembler; `braindump` and `uncart` dumping tools (3dbrew lists all three as unmaintained) | [development workflow](development-workflow.md#other-libraries-and-tools) |
+| 3dsguy, profi200 | `makerom` (author, maintainer) | [file formats](../software/file-formats.md), [development workflow](development-workflow.md#other-libraries-and-tools) |
+| Steveice10 | `bannertool` | [development workflow](development-workflow.md#icon-name-and-banner-smdh) |
 | Pierre Wendling | SDL's Nintendo 3DS port (SDL2 2.26+ and SDL3) | [porting](../engineering/porting.md#libraries-that-shorten-a-port) |
 | Gericom | Super Mario 64 3DS port | [porting](../engineering/porting.md#what-published-ports-report) |
 
@@ -38,10 +38,11 @@ Entries are grouped by area and list the person or group, what this wiki credits
 
 | Who | Credited with | Read more |
 | --- | ------------- | --------- |
-| smea | redNAND (2013); the original Homebrew Launcher; `arm9loaderhax`, `memchunkhax2` and related reveals at 32C3 (with derrek and plutoo) | [history](history.md), [custom firmware](custom-firmware.md), [development workflow](development-workflow.md#8-reference-links) |
-| yellows8 | `memchunkhax` (first ARM11 kernel exploit); TWL key entropy and key-generator analysis (with plutoo); `smashbroshax`/`beaconhax` | [history](history.md), [exploits](exploits.md) |
-| derrek | Boot ROM dumping and **sighax** (33C3, December 2016); RAM not cleared on MCU reboot; `soundhax`/`fasthax` reveal | [boot9strap](boot9strap.md), [exploits](exploits.md#hardware-and-boot-rom) |
+| smea | redNAND (2013; the Hacks Guide names smealum and Yellows8 for the private payload, see [history](history.md)); the original Homebrew Launcher; `arm9loaderhax`, `memchunkhax2` and related reveals at 32C3 (with derrek and plutoo) | [history](history.md), [custom firmware](custom-firmware.md), [development workflow](development-workflow.md#8-reference-links) |
+| yellows8 | `memchunkhax` (first ARM11 kernel exploit, February 2014 per 3dbrew); TWL key entropy and key-generator analysis (with plutoo); `smashbroshax`/`beaconhax` | [history](history.md), [exploits](exploits.md) |
+| derrek | Boot ROM dumping and **sighax** (33C3, December 2016); RAM not cleared on MCU reboot; presented the 33C3 talk where `soundhax` and `fasthax` were revealed (the Hacks Guide credits their authorship to nedwill) | [boot9strap](boot9strap.md), [exploits](exploits.md#hardware-and-boot-rom) |
 | SciresM, Myria | Practical sighax signatures and **boot9strap**; principles of **ntrboot** (33.5C3) | [boot9strap](boot9strap.md) |
+| nedwill | `soundhax` (free primary exploit) and `fasthax` (kernel), per the Hacks Guide; revealed at 33C3 | [history](history.md) |
 | plutoo | `freakyhax`; key-generator analysis with yellows8 | [exploits](exploits.md) |
 | zoogie | `MSET9`, `bannerbomb3`, `smilehax IIe`, `new-browserhax`; author of the history the Hacks Guide timeline adapts | [exploits](exploits.md), [history](history.md) |
 
@@ -68,9 +69,24 @@ Sources that have already vanished or moved, and where this wiki takes them from
 
 | Material | Status | Where the wiki cites it |
 | -------- | ------ | ----------------------- |
-| Citra project wiki (kernel synchronisation, CRO, CEC, `GPU_LUTINPUT_CP`, PICA200 RE notes) | Removed with the `citra-emu/citra` repository (2024) | Cited by title on each page; the PICA200 notes survive as [fincs's gist](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) |
+| Citra project wiki, "GPU_LUTINPUT_CP" (author wwylele) | Wiki gone; text survives as the author's [gist](https://gist.github.com/wwylele/f61d6653620bb763ab9dc7a60a9831ce) (last active 2022-09-19) | [GPU shading features](../hardware/gpu-shading-features.md) |
+| Citra project wiki, "Random PICA200 RE Notes" (author fincs) | Wiki gone; survives as [fincs's gist](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) | [GPU shading features](../hardware/gpu-shading-features.md) |
+| Citra project wiki, "3DS CRO Information" (author wwylele; the text itself notes it is incomplete) | Wiki gone; no archived copy located | [CRO modules](../software/cro-modules.md) |
+| Citra project wiki, "Kernel synchronization" | Wiki gone; no archived copy located | [kernel](../software/kernel.md) |
+| Citra project wiki, "3DS CEC (StreetPass) Documentation" | Wiki gone; no archived copy located | [StreetPass](../software/streetpass-cec.md) |
 | Original Citra emulator | Shut down March 2024; continued in Azahar | [debugging](../engineering/debugging.md#emulators) |
 | DMP's gas-rendering patent | Japanese, poorly OCR'd; not yet decoded | [GPU shading features](../hardware/gpu-shading-features.md) |
+
+### Looking for the vanished Citra wiki pages
+
+Checked on 2026-11-10, to keep author, original location and revision with each citation:
+
+- The original location was the `citra-emu/citra` repository's wiki (`https://github.com/citra-emu/citra/wiki/`); that URL now returns 404. The Internet Archive's CDX index lists only about 90 archived wiki URLs (the build, dumping, FAQ and developer pages, plus a "CPU" page) and none for the five titles above; a Wayback lookup of the guessed page names also returned nothing. The exact original page URLs are therefore **unconfirmed**; they are not given here rather than guessed.
+- The Azahar wiki (`github.com/azahar-emu/azahar/wiki`) carries user and build documentation only; none of the five titles exists there.
+- No revision identifiers were recoverable for any of them. The two gists carry their own dates and authors (above); the other three have none.
+- The wiki's text for the CRO page and the `GPU_LUTINPUT_CP` page was read from local copies of the text taken before the removal; those copies are not published and cannot be linked.
+
+> Unknown: whether the three unarchived pages survive elsewhere (forks of the Citra repository, Azahar's source history, or personal archives). A fork's wiki or a Wayback snapshot of the original would settle it; if one is found, add the link and its snapshot date to the table above and to the cited page's Sources.
 
 ## Limits and risks
 

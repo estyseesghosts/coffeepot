@@ -69,6 +69,7 @@ The practical rule: **one draw per material, not per object**. Put many objects 
 
 - Up to **12 attributes** per vertex (`AttrInfo_AddLoader` returns -1 beyond that) and up to 12 buffer configurations (`C3D_BufInfo`) [documented: `attribs.c`, `buffers.h`].
 - Attribute component types are `GPU_BYTE`, `GPU_UNSIGNED_BYTE`, `GPU_SHORT` and `GPU_FLOAT`. Bytes and shorts arrive in the shader as numbers you scale with a uniform: a 16-bit position plus a scale/offset uniform, a byte normal and byte colours can make a vertex a third the size of an all-float one. Fewer bytes means less CPU writing (for dynamic data) and less memory traffic for the GPU.
+- The two bits next to the type in each attribute's format nibble hold the component count minus one, not a bit width, even though 3dbrew labels them 8/16/24/32 bits ([conflict and resolution](pica200-command-pipeline.md#technical-details)).
 - The buffer stride must exactly equal the real vertex size, including padding — otherwise the GPU hangs ([GPU pitfalls](../hardware/gpu.md#known-pitfalls)).
 - **Fixed attributes** (`AttrInfo_AddFixed` + `C3D_FixedAttribSet`) supply a value that is constant for a draw (a tint colour, a normal) without storing it per vertex.
 - **Indexed drawing** (`C3D_DrawElements` with 8- or 16-bit indices in linear memory) avoids transforming shared vertices twice and shrinks meshes; it does not reduce the per-draw cost above.
@@ -132,6 +133,19 @@ Plan around these instead of discovering them late:
 - **No instancing, no compute.** Batch geometry yourself; use the geometry shader for simple expansion.
 - **Small VRAM.** 6 MB holds render targets and a few textures; most textures live in linear FCRAM.
 - **24-bit floats in shaders.** Large world coordinates lose precision; keep coordinates relative to the camera or object.
+
+### Render-target memory budget
+
+Work out the VRAM bill before choosing resolutions. The numbers below are plain arithmetic from the formats (4 bytes per pixel for `GPU_RB_RGBA8` and for `GPU_RB_DEPTH24_STENCIL8`), not measurements:
+
+| Target | Colour RGBA8 | Depth24/stencil8 | Total |
+| ------ | ------------ | ---------------- | ----- |
+| Top, one eye, 400x240 | 384,000 B | 384,000 B | 768,000 B |
+| Top, both eyes | 768,000 B | 768,000 B | 1,536,000 B |
+| Bottom, 320x240 | 307,200 B | 307,200 B | 614,400 B |
+| Top 2x2 supersampled (800x480), one eye | 1,536,000 B | 1,536,000 B | 3,072,000 B |
+
+VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.15 MB) leaves room for textures, while a supersampled top plus bottom (about 3.7 MB) leaves much less, and both eyes supersampled do not fit with a bottom target. A 16-bit colour format (`GPU_RB_RGB565`, `GPU_RB_RGBA5551`, `GPU_RB_RGBA4`) halves the colour column. Whether 6 MiB is split in two banks that constrain placement is covered on [memory](../hardware/memory.md); how `C3D_RenderTargetCreate` places the buffers is in Technical details below.
 
 ## Render to texture
 

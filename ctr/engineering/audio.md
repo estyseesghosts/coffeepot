@@ -111,6 +111,12 @@ Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libm
 
 `ndspGetFrameCount()` (sound frames processed) and `ndspGetDroppedFrames()` (sound frames ndsp reports as dropped) are useful counters to log.
 
+## What ndsp does not cover
+
+- **AAC.** Some DSP firmware builds contain an AAC decoder reached through the DSP binary pipe 3 (3dbrew *DSP AAC Decoder*: modes 0 none, 1 decode, 2 encode; the page says parts still need testing). libctru 2.7.1 has no AAC API (no match in its headers), so homebrew decodes AAC, MP3 or Vorbis on the CPU. Whether a given dumped `dspfirm.cdc` includes the AAC component varies with the game it was dumped from per 3dbrew `[reverse-engineered]`.
+- **CSND.** The older DS-style sound hardware path is a separate service; this page and libctru's current audio API use ndsp ([hardware audio](../hardware/audio.md)).
+- **Microphone.** Capture is a different service (`audio/mic` example), not ndsp.
+
 ## Technical details
 
 - Sleep and HOME: ndsp suspends and resumes the DSP itself, saving its state across sleep [documented: `source/ndsp/ndsp.c`].

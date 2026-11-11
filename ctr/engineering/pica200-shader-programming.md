@@ -165,7 +165,7 @@ Assembled: 14 words, 8 descriptors, four uniforms in the table. It is a contrive
 
 - Out-of-range relative addressing: an offset outside -128..127 is ignored; the index is masked with `0x7F`; if the result is above 95 the read gives (1, 1, 1, 1).
 - Never put two `mova` back to back, and avoid `break` inside a nested if/call inside a loop (3dbrew). picasso inserts padding `nop`s after block ends unless told `-n`.
-- Control-flow stacks are small: 3dbrew lists a 4-deep call stack, an 8-deep if stack and a 4-deep loop stack, and says an overflow silently discards the oldest entry. `break` on an empty loop stack hangs the GPU `[reverse-engineered: 3dbrew, authorship not stated on the page]`.
+- Control-flow stacks are small: 3dbrew lists a 4-deep call stack, an 8-deep if stack and a 4-deep loop stack (it says "four stacks" but names three; see the conflict in Technical details), and says an overflow silently discards the oldest entry. `break` on an empty loop stack hangs the GPU `[reverse-engineered: 3dbrew, authorship not stated on the page]`.
 
 ## 4. A geometry shader
 
@@ -328,9 +328,13 @@ Components get consecutive semantic numbers in write-mask order. Only outputs pr
 
 Opcodes: `add 0x00`, `dp3 01`, `dp4 02`, `dph 03`, `dst 04`, `ex2 05`, `lg2 06`, `litp 07`, `mul 08`, `sge 09`, `slt 0A`, `flr 0B`, `max 0C`, `min 0D`, `rcp 0E`, `rsq 0F`, `mova 12`, `mov 13`, `dphi 18`, `dsti 19`, `sgei 1A`, `slti 1B`, `break 20`, `nop 21`, `end 22`, `breakc 23`, `call 24`, `callc 25`, `callu 26`, `ifu 27`, `ifc 28`, `loop 29`, `emit 2A`, `setemit 2B`, `jmpc 2C`, `jmpu 2D`, `cmp 2E-2F`, `madi 30-37`, `mad 38-3F`. Operand descriptor (a word per distinct operand pattern): destination mask bits 0-3 (x = bit 3), then per source a negate bit and an 8-bit swizzle (x=0..w=3, component 0 in the top two bits; `0x1B` = `.xyzw`). Source numbers 0x00-0x0F inputs, 0x10-0x1F scratch, 0x20-0x7F float uniforms. Destinations 0x00-0x0F outputs, 0x10-0x1F scratch. Comparison operators: eq, ne, lt, le, gt, ge (6 and 7 appear to be "true"). Conditions: `condop` 0 or, 1 and, 2 x only, 3 y only.
 
-Limits: "not more than 512 instructions and 128 operand descriptors" is an inference from debug text in the *Ironfall: Invasion* binary quoted by 3dbrew, not a documented hardware figure. Operand descriptors are referenced by 7 bits (5 for `mad`), so `mad` can only use the first 32 descriptors; picasso handles descriptor allocation `[hypothesis: not checked in picasso source]`.
+Limits: "not more than 512 instructions and 128 operand descriptors" comes from debug text in the *Ironfall: Invasion* binary quoted by 3dbrew and matches picasso's constants (see the conflict below); it is not a documented hardware figure. Operand descriptors are referenced by 7 bits (5 for `mad`), so `mad` can only use the first 32 descriptors; picasso handles descriptor allocation `[hypothesis: not checked in picasso source]`.
 
-> Discrepancies: 3dbrew's register table lists eight boolean uniforms (`b0-b7`) while picasso's manual and libctru's `GPUREG_VSH_BOOLUNIFORM` handling expose `b0-b15`. 3dbrew's Control Flow section says "four independent stacks" and lists three. Unresolved here; test before relying on `b8-b15`.
+> Conflict: boolean uniform count (b0-b7 vs b0-b15). 3dbrew contradicts itself: the register table on its Shader Instruction Set page lists `b0-b15`, the prose a few paragraphs later says "eight boolean constant registers (b0-b7)", and its Internal Registers page documents `GPUREG_SH_BOOLUNIFORM` bits for `b0` through `b15`. picasso's manual says `b0` through `b15`; libctru and citro3d write `0x7FFF0000 | bits` to `GPUREG_VSH_BOOLUNIFORM` / `GSH_BOOLUNIFORM` (`shaderProgram.c`, `uniforms.c`), and citro3d clears `b15` for the geometry-shader run flag. Resolution: the register definition and both toolchains say 16; the "eight" sentence looks like stale prose. Follow 16 for register layout `[documented: libctru, citro3d, picasso Manual.md]`. Whether `b8-b15` work as branch conditions in every shader unit is untested here `[hypothesis]`; a one-branch test shader per bit would settle it.
+
+> Conflict: number of control-flow stacks. 3dbrew's Control Flow section says "four independent stacks" and then lists only CALL (4-deep), IF (8-deep) and LOOP (4-deep); its priority list (LOOP, IF, CALL, JMP, original PC) also names only those three plus the jump. Resolution: treat it as three stacks; "four" may count the PC path or be a leftover, and the page does not say. The depths, the oldest-entry-discarded overflow rule, the hang on `BREAK` with an empty loop stack and the note that the fourth consecutive CALL pop is missed ("probably a hardware bug") are 3dbrew `[reverse-engineered]`, with no author or hardware revision stated. picasso and libctru contain no stack-depth limits to cross-check. Unresolved: whether a fourth stack exists, and the exact depths.
+
+> Conflict: the 512-instruction limit. 3dbrew says debug text in the *Ironfall: Invasion* `code.bin` "suggests" at most 512 instructions and 128 operand descriptors. The local sources split the claim: picasso defines `MAX_VSH_SIZE 512` and rejects a *vertex* shader above it ("instruction outside vertex shader code memory"; geometry shaders skip that check), and `MAX_OPDESC 128` for every shader ("too many operand descriptors") (`picasso.h`, `picasso_assembler.cpp`). Against that, `GPUREG_SH_CODETRANSFER_INDEX` and `OPDESCS_INDEX` are 12-bit fields (bits 0-11, 3dbrew Internal Registers), which could address 4096 words. Resolution: 512 / 128 are real toolchain limits and match the game's own assertion, so stay inside them; that they are hardware limits is shown by no local source, and the wider index field only shows the register is wider than the limit. Unresolved without a hardware test of a 513-word shader.
 
 ### Float24 behaviour
 
@@ -368,7 +372,7 @@ Consequence: 1.0 can be halved 63 times before reaching zero. `mad` is not a fus
 
 - **Uniform as second source.** Rejected by picasso; swap operands.
 - **Reading a different input register in one instruction.** Rejected by picasso; the hardware gives wrong results otherwise.
-- **Counting on `b8-b15`.** See the discrepancy above.
+- **Counting on `b8-b15`.** See the boolean-count conflict above.
 - **Copying shader snippets between vertex and geometry shaders.** `o7-o15` exist in vertex shaders only.
 
 ## Open questions

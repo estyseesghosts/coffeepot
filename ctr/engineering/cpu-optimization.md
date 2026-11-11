@@ -136,6 +136,14 @@ Interpreting the numbers:
 - Many mispredicted branches: data-dependent branching in an inner loop.
 - High "stall by data hazard": long dependency chains (each step waits for the previous result).
 
+### Counters versus the system tick
+
+The two clocks are different things. `svcGetSystemTick()` counts at the fixed base rate of 268,111,856 Hz on every model and clock mode ([performance](performance.md#cpu-time-the-system-tick)); 3dbrew describes it as the CPU ticks elapsed since power-on [documented: 3dbrew SVC page]. The CP15 cycle counter (`CCNT`) counts core cycles, or every 64th cycle with `PERFCOUNTEREVT_CORE_CYCLE_COUNT_64` [documented: libctru `svc.h`; DDI 0360E §3.4.27]. So on a New 3DS in 804 MHz mode you would expect `CCNT` to advance about 3 times faster than the tick, and on an Old 3DS about 1:1. That ratio is `[hypothesis]` until a run records both over the same interval; never mix the two units in one table, and convert with the measured ratio, not an assumed one.
+
+### Availability under Luma3DS (not yet verified)
+
+What the sources show: the Luma3DS loader grants `.3dsx` programs an SVC access list covering numbers `0x00`–`0x7F` (`sysmodules/loader/source/hbldr.c`, "SVC ACL 0 to 0x7F"), and the Luma3DS source tree contains no code that uses or patches `svcControlPerformanceCounter` (searched at the pinned commit) [documented: absence in source, not proof of behaviour]. 3dbrew lists SVC `0x3E` ([3dbrew: SVC](https://www.3dbrew.org/wiki/SVC)) but this wiki has not seen a published run of it from a `.3dsx`. Whether the kernel accepts `PERFCOUNTEROP_ENABLE` for a normal process, whether it is already locked by something else, and whether the counters are saved and restored across context switches are all unknown. Treat the helper above as untested code and first run the open experiment below.
+
 Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a core, not to your thread, so they also count the kernel, interrupts and any other thread that runs on that core during the measurement; keep measured regions short and repeat them. Which core's counters `GET_VALUE` reads when called from another core is not documented in the sources used — read them from the thread you measure.
 
 ## Technical details
@@ -158,6 +166,7 @@ Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a c
 - Real per-event numbers for common workloads on Old and New 3DS (sprite update, vertex generation, decompression).
 - Whether the 3DS kernel enables the MPCore's unaligned-access support for user processes.
 - Whether counter values read from one core can be affected by threads on another.
+- Whether `svcControlPerformanceCounter` works from a `.3dsx` under Luma3DS v13.5 on Old and New 3DS. Experiment: call `PERFCOUNTEROP_ENABLE`, print the result code, then run a loop of known size (for example 1,000,000 `nop`-like register adds, and a sequential versus a random walk over 256 KiB) and compare `CCNT`, `svcGetSystemTick` and the data-cache-miss event over the same interval. Expected if it works: cycles per add near 1, miss counts near zero for the sequential walk. Record the result code and the `CCNT`/tick ratio on both models, with and without `osSetSpeedupEnable(true)`.
 
 ## Sources
 

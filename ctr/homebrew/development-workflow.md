@@ -298,6 +298,35 @@ Install a package by its actual name (`pacman -S package-name` on Windows, `sudo
 
 Do not put every asset into a giant C array or draw all graphics pixel-by-pixel on the CPU. The detailed references are [GPU rendering](../engineering/gpu-rendering.md), [asset pipeline](../engineering/asset-pipeline.md), and [memory and cache](../engineering/memory-and-cache.md).
 
+### Icon, name and banner (SMDH)
+
+Every homebrew app carries an **SMDH** file: icon, short name, long description and author. The Homebrew Menu shows it for a `.3dsx`; the HOME Menu shows it for an installed title. The template's Makefile builds it for you from `APP_TITLE`, `APP_DESCRIPTION`, `APP_AUTHOR` and `ICON` (otherwise `<TARGET>.png`, then `icon.png`, then libctru's `default_icon.png`) and passes it to `3dsxtool`; set `NO_SMDH` to skip it [documented: 3ds-examples `templates/application/Makefile`, read at the pinned commit]. The WikiTemp guide (last edited February 2017) gives the icon as a 48x48 PNG and shows a manual route with Steveice10's `bannertool makesmdh -s "Short" -l "Long" -p "Author" -i icon.png -o app.smdh` `[reverse-engineered]` (community guide, command not run here).
+
+Expected result: the menu entry shows your name and icon. Failure modes: a missing or wrongly sized icon falls back to the default one; a space in the path of the project breaks the Makefile (the WikiTemp "common errors" list names this, with `No rule to make target '/c/Users/...'`).
+
+A `.cia` or `.3ds` additionally needs a **banner** (the image and sound shown on the HOME Menu top screen). The WikiTemp guide describes a 256x128 PNG (transparency allowed) plus a 16-bit WAV, combined with `bannertool makebanner -i banner.png -a banner.wav -o banner.bin`.
+
+> Conflict: the WikiTemp guide (2017) says a CIA can be installed only "on a 3DS below 9.2" and builds with `makerom -target t ... -exefslogo`, a `strip`ped ELF and an RSF file; today CIAs are installed on a Luma3DS console with a title manager such as FBI ([custom firmware](custom-firmware.md)). This page follows the current practice and does not reproduce the old commands because the wiki has not run `makerom`. For what the formats contain see [file formats](../software/file-formats.md).
+
+### Other libraries and tools
+
+3dbrew's *Homebrew Libraries and Tools* list (mirror read November 2026) adds these beside the core packages; the "maintained" column is 3dbrew's, not verified by this wiki:
+
+| Name | What it is | Author (per 3dbrew) | Maintained? |
+| ---- | ---------- | ------------------- | ----------- |
+| `citro2d` | 2D drawing on the PICA200 | fincs | yes |
+| `sf2dlib` | Simple 2D library on libctru and citro3d | xerpi | deprecated |
+| `libkhax` | Kernel-memory modification library | Myria et al. | no |
+| `cpp3ds` | C++ game library, SFML port | Cruel et al. | no |
+| `3ds-cmake` | CMake files for devkitARM | Lectem | no |
+| `nihstro` | Shader assembler and disassembler | neobrain | no |
+| `aemstro` | Original shader tools ([picasso and citro3d](picasso-and-citro3d.md#related-shader-tools)) | smea | no |
+| `makerom` | Builds NCCH, CCI and CIA files | 3dsguy, maintained by profi200 | yes |
+| `bannertool` | Builds banners and SMDH | Steveice10 | no |
+| `braindump`, `uncart` | Dump ExeFS/RomFS and cartridges | neobrain (et al.) | no |
+
+The Lua route mentioned by WikiTemp (Lua Player Plus) is not covered here; its status is unknown.
+
 ### `.3dsx` versus `.cia`
 
 | | `.3dsx` | `.cia` |
@@ -339,7 +368,9 @@ See [debugging](../engineering/debugging.md), [performance](../engineering/perfo
 | `3dslink`: no response from 3DS | Enable netloader with **Y**, use `-a <3DS-IP>`, check both devices are on the same LAN, and check local firewall / guest Wi-Fi isolation. |
 | Builds in Docker but not on host | The container's toolchain and environment differ from the host. Compare environment variables, package versions and project dependencies. |
 | Docker output files belong to root on Linux | Use the host UID/GID with `docker run --user "$(id -u):$(id -g)" ...` on Linux. |
-| `uses VFP register arguments` link error | Object files disagree on ARM float ABI. Rebuild everything with the template's hard-float settings. |
+| `uses VFP register arguments` link error | Object files disagree on ARM float ABI. Rebuild everything with the template's hard-float settings (`-mfloat-abi=hard`; WikiTemp lists the same error and says never to use `softfp`). |
+| `cannot find 3dsx_crt0.o` | WikiTemp's fix: the Makefile has `-mfloat-abi=softfp`; change it to `hard`. The current template already uses hard float. |
+| `unknown field 'rmdir_r' specified in initializer` | WikiTemp: devkitARM is out of date; update it. |
 | Works in emulator but fails on hardware | Verify on the target Old/New 3DS, inspect errors and resources, and use [hardware testing](../engineering/testing-on-hardware.md). |
 
 If a project still fails, first build **the untouched `templates/application` example**. If that works, your installation is probably fine and the failure is in the project's Makefile, dependencies or source. If it fails, fix the environment before editing application code.
@@ -367,4 +398,6 @@ If a project still fails, first build **the untouched `templates/application` ex
 - [devkitPro getting started](https://devkitpro.org/wiki/Getting_Started) — installer and pacman setup
 - [devkitPro/3ds-examples](https://github.com/devkitPro/3ds-examples) — template project and examples
 - [libctru](https://github.com/devkitPro/libctru) — library and `3dslink` tooling
+- [WikiTemp: 3DS Homebrew Development](https://wiki.gbatemp.net/wiki/3DS_Homebrew_Development) (GBAtemp, revision 65702, last edited 25 February 2017) — historical setup guide; used for SMDH/banner/common-error coverage and flagged where outdated.
+- [3dbrew: Homebrew Libraries and Tools](https://www.3dbrew.org/wiki/Homebrew_Libraries_and_Tools) — tool and library list.
 - [Luma3DS homebrew loader](https://github.com/LumaTeam/Luma3DS/blob/master/sysmodules/loader/source/hbldr.c) — extended header generated for 3DSX

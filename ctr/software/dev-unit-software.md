@@ -37,6 +37,8 @@ A NAND application (title `00040000-0ff40002`) that shows firmware/revision, fre
 
 A text-mode NAND application (`00040000-0ff40102`) with settings that retail units lack: choose between Home Menu and Test Menu; set the **system mode** (memory allowance): `Prod` 64 MB (default; Home Menu normally runs only in this mode), `Dev1` 96 MB (no browser or Miiverse), `Dev2` 80 MB, `Dev3` 72 MB, `Dev4` 32 MB, and on New 3DS `snake Prod` 124 MB, `snake dev1` 178 MB (no browser/Miiverse), `snake dev2` 124 MB; exception-handler and break-stop behavior; debug mode (always disabled on retail); Download Play debug/force-import; filesystem latency emulation (0–2550 ms in 10 ms steps); country/region/user-name settings; touch-screen and circle-pad calibration; screen flicker bias, backlight and brightness; and hardware RTC setting (which can change the clock without a game detecting the change via `GetUserTimeOffset()`).
 
+Which units may change the mode differs: all CTR debuggers and prototype units can, while on Developer Test Units the ability depends on the unit (most retail-looking units cannot leave `Prod`). Outside `Prod`, memory-hungry software such as the web browser cannot be launched from the Home Menu. Config also has an EULA "Agree Version" setting (two bytes, `00.00` means not accepted; commonly set to `ff.ff` to skip the agreement) [documented: 3dbrew Dev Unit Software].
+
 The memory modes match the retail [APPMEMTYPE table](../hardware/memory.md#fcram-regions-appmemtype).
 
 ### CTR-SDK tools and others
@@ -45,7 +47,7 @@ Test tools shipped on dev units include: Downloadplay Client, Network Settings, 
 
 ## Technical details
 
-Dev units use distinct signing/certificate sets: development RSA key data exists beside the retail data in Boot9 ([security hardware](../hardware/security-hardware.md)), TMD and ticket certificates have "debug" names (`CP0000000a`, `XS00000009`, `CA00000004`; see [titles](titles.md)). Boot9 chooses retail or dev keys by checking `CFG_UNITINFO`. Dev Menu installs CTR applications to NAND with title variation `0x02`.
+Dev units use distinct signing/certificate sets: development RSA key data exists beside the retail data in Boot9 ([security hardware](../hardware/security-hardware.md)), TMD and ticket certificates have "debug" names (`CP0000000a`, `XS00000009`, `CA00000004`; see [titles](titles.md)). Boot9 chooses retail or dev keys by checking `CFG_UNITINFO`: for example it sets AES key slot `0x3F` from a pointer at `0xFFFFD6E0` on retail and `0xFFFFD700` on a dev unit, and non-NAND FIRM boot uses separate retail/dev RSA public keys and AES-CBC normal keys [documented: 3dbrew Bootloader]. Dev Menu installs CTR applications to NAND with title variation `0x02`.
 
 ## Homebrew notes
 

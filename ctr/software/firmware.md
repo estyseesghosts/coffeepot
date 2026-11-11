@@ -4,7 +4,7 @@ Firmware is the software that brings a 3DS to life and decides what mode it is i
 
 Only one of the four lives in a raw NAND partition. The two `FIRM` partitions of the [NAND](../../glossary.md#nand), `firm0` and `firm1`, hold the bootable `NATIVE_FIRM` (two copies, so a corrupted one can fall back to the other). `TWL_FIRM`, `AGB_FIRM` and `SAFE_MODE_FIRM` are not stored in those partitions: they are firmware system titles in the NAND filesystem (title ID high word `00040138`, see [titles](titles.md)), which `NATIVE_FIRM` loads and boots into when the console needs another mode.
 
-> Unknown: the exact title IDs and loading path come from the title list cited in Sources and were not re-checked against 3dbrew for this wording.
+3dbrew's title list has a `00040138` "System Firmware" category and states that `SAFE_MODE_FIRM` is, in its initial versions, exactly `NATIVE_FIRM` apart from core-version fields, and that on retail it is only used to run the System Updater; a launched GBA Virtual Console title is handled by `AGB_FIRM` [documented: 3dbrew Title list]. The exact title-ID list per firmware is not reproduced here.
 
 ## Behavior
 

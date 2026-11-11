@@ -4,6 +4,19 @@ Where can a 3DS program read assets and keep its progress, and how do you write 
 
 The short answer: homebrew `.3dsx` programs use the SD card with ordinary `fopen`; installed `.cia` titles can also have real save data, which needs an explicit commit. Never overwrite your only good save in place; write the other copy, check every return value, and let a checksum decide which copy is valid at load time.
 
+## The whole thing in 10 lines
+
+1. A `.3dsx` program should keep its data on the SD card under `sdmc:/3ds/<yourapp>/` with plain `fopen`.
+2. Bundled read-only assets go in RomFS (`romfsInit()`, then `romfs:/...`).
+3. Real save data and extdata belong to installed titles (`.cia`); save data needs `archiveCommitSaveData()`.
+4. Extdata cannot be written through `fopen` (`ENOTSUP`); use `FSUSER_*`/`FSFILE_*`.
+5. Never overwrite your only good save: keep two slots, write the older one.
+6. Put a magic number, a format version, a generation counter, the size and CRC-32s in a header.
+7. Check `fopen`, `fwrite`, `fflush`, `fsync` and `fclose`; any failure means "this save failed".
+8. At load, read both slots, drop invalid ones, keep the highest generation.
+9. Do not rely on `rename` being crash-safe; nothing in libctru promises it.
+10. Save from the main thread, before the loop ends; never in an exit hook ([lifecycle](application-lifecycle.md#exit)).
+
 ## Before you start
 
 - Checked against libctru 2.7.1 at the commit pinned on [source versions](source-versions.md) (`62b7c42c88b1ee837f513358409d2e5c8f9001a9`), devkitARM r68. Source links are at that commit.
@@ -54,7 +67,7 @@ FS calls return a libctru `Result`; stdio converts it to `errno`. The table in `
 
 ## Committing save data
 
-Save-data archives buffer changes until you commit them. libctru's `archiveCommitSaveData(deviceName)` runs `FSUSER_ControlArchive(archive, ARCHIVE_ACTION_COMMIT_SAVE_DATA, NULL, 0, NULL, 0)`, and the header states: "Not done automatically at unmount" [documented: `archive.h`, `archive_dev.c`, `fs.h` (`ARCHIVE_ACTION_COMMIT_SAVE_DATA = 0`, "Commits save data changes")]. Closing a file or unmounting does not commit. So:
+Save-data archives buffer changes until you commit them. libctru's `archiveCommitSaveData(deviceName)` runs `FSUSER_ControlArchive(archive, ARCHIVE_ACTION_COMMIT_SAVE_DATA, NULL, 0, NULL, 0)`, and the header states: "Not done automatically at unmount" [documented: `archive.h`, `archive_dev.c`, `fs.h` (`ARCHIVE_ACTION_COMMIT_SAVE_DATA = 0`, "Commits save data changes")]. The header documents that unmounting does not commit; libctru's `fclose` path only calls `FSFILE_Close`, which does not mention a commit either [documented: `archive.h`, `archive_dev.c`]. So:
 
 ```c
 // title with save data (not tested; shown for shape)
@@ -65,6 +78,10 @@ archiveCommitSaveData("save");   // without this, the changes may be lost
 ```
 
 What "lost" means exactly when you forget the commit (rolled back at next mount, versus partially visible) is not stated in the files read; assume the whole uncommitted batch can vanish `[hypothesis]`. Commit after each logical save, not after each file, and check the `Result`. Do not commit on the SD card: `sdmc:` has no commit action in libctru, and the example passes `NULL` as the device for that case.
+
+### Lower-level calls
+
+stdio is a convenience layer over the file service. When you need extdata, a path type the device layer does not build, or a raw `Result`, call the `FSUSER_OpenArchive(&archive, id, path)`, `FSUSER_OpenFile`, `FSFILE_Read`, `FSFILE_Write`, `FSFILE_Close`, `FSUSER_ControlArchive` and `FSUSER_CloseArchive` functions declared in `fs.h` yourself; the stdio layer is exactly these calls plus path conversion [documented: `fs.h`, `archive_dev.c`]. This page's example uses stdio only.
 
 ## Do not assume rename is crash-safe
 
@@ -303,6 +320,23 @@ Record the console model, firmware, card brand and size, and number of repetitio
 | Free space | `FSUSER_GetFreeBytes(&bytes, archive)` | `fs.h` |
 
 All files are under `https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/` (`include/3ds/services/fs.h`, `include/3ds/archive.h`, `include/3ds/romfs.h`, `source/archive_dev.c`, `source/system/appInit.c`, `source/system/appExit.c`).
+
+## Troubleshooting
+
+| Symptom | Likely cause | Check |
+| ------- | ------------ | ----- |
+| `fopen` for write returns NULL on `sdmc:/...` | Parent directory missing (`mkdir` first), or a path longer than the limit | `errno`: `ENOENT`, `ENAMETOOLONG` |
+| `fopen` for write on an extdata device fails with `ENOTSUP` | stdio cannot write extdata | Use `FSUSER_*`/`FSFILE_*` |
+| Save-data changes gone after restart | No `archiveCommitSaveData` | Commit after each logical save, check the `Result` |
+| Save always loads defaults | Both slots rejected: wrong magic, header size changed, version newer than the build, payload over the cap | Print which check fails in `read_slot` |
+| Old save lost after a failed write | Overwrote the only copy, or one-slot design | Use two slots |
+| Write fails only on some cards | Card full or failing | `errno == ENOSPC`, `FSUSER_GetFreeBytes` |
+| Works from `.cia`, fails from `.3dsx` (or the reverse) | Save-data archives exist only for titles | Use the SD card for `.3dsx` |
+| Edited save rejected | PC tool wrote big-endian fields or forgot the CRC | Fields are little-endian; recompute both CRCs |
+
+## Not covered yet
+
+Interrupt-during-write results on real hardware, SD versus title-save comparisons, `FSFILE_Flush` durability and what an uncommitted save archive loses are all open (see [Open questions](#open-questions)). The `.3dsx` versus `.cia` permission differences are only partly established. Input devices and sensors, and local wireless, are outside this page; see [networking](networking.md#not-covered-yet).
 
 ## Pitfalls
 

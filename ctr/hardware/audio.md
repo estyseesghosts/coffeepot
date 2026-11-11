@@ -27,7 +27,9 @@ CSND has 32 channels (double the DS) and is also used by 3DS software as an exte
 | DMA | Dedicated | — |
 | Registers | `0x10203000` (DSP), `0x10103000` (CSND) | — |
 
-The DSP was first introduced as an optional accelerator in the Nintendo DSi; here it is the designated audio processor.
+> Conflict: DSP origin. Copetti says the same DSP was previously bundled with the Nintendo DSi as an optional accelerator; 3dbrew's Hardware page only describes the 3DS DSP (CEVA TeakLite, 134 MHz) and says nothing about the DSi, though its IO Registers page refers to a "DSi XpertTeak" section in the no$gba documentation for the DSP registers. This page does not assert the DSi origin; the XpertTeak reference is weak support for it. Unresolved.
+
+Confirmed by 3dbrew IO Registers: the CSND register block is at `0x10103000` and the DSP register block at `0x10203000`.
 
 ### DSP firmware (component binary)
 
@@ -53,11 +55,11 @@ The firmware alternates between two 0x8000-byte areas (at `0x1FF50000` and `0x1F
 
 ## Homebrew notes
 
-`libctru` ships `ndsp`, a userland driver for the DSP; its `NDSP_SAMPLE_RATE` and channel/filter functions (ADPCM, PCM8/PCM16 buffers, auxiliary output callbacks) mirror the voice model described above. [Userland homebrew](../homebrew/exploits.md) historically had no DSP access, and the hacking workflow even asks users to dump the Home Menu's DSP firmware so homebrew can load it. The original 3DS also had hardware speaker noise issues that Nintendo documented separately.
+`libctru` ships `ndsp`, a userland driver for the DSP; its `NDSP_SAMPLE_RATE` and channel/filter functions (ADPCM, PCM8/PCM16 buffers, auxiliary output callbacks) mirror the voice model described above. [Userland homebrew](../homebrew/exploits.md) historically had no DSP access, and the hacking workflow even asks users to dump the Home Menu's DSP firmware so homebrew can load it.
 
 ## Open questions
 
-- Sample rate: Copetti says "up to 32 kHz" and 3dbrew "32728 Hz"; the libctru definition (16,756,991 Hz ÷ 512 = 32,728.498 Hz) fixes the exact value used by the output.
+- Sample rate: Copetti says "up to 32 kHz" and 3dbrew "32728 Hz" (Hardware page: 24 channels); the libctru definition (16,756,991 Hz ÷ 512 = 32,728.498 Hz) fixes the exact value used by the output.
 - DSP architecture is only known through emulator work (the "Teakra" project); no official documentation is public.
 
 ## Sources

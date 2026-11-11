@@ -63,9 +63,9 @@ Top-screen registers start at physical `0x10400400`, bottom at `0x10400500`. All
 | `0x4C` | Overscan colour | 24-bit fill colour for areas outside the image |
 | `0x50`, `0x54` | HCount, VCount | Beam position counters |
 | `0x68`, `0x6C` | Framebuffer A (first, second) | Top screen: left-eye buffers |
-| `0x70` | Format | Bits 2–0 colour format; 5–4 interlace mode; 6 alternative pixel mode; 9–8 DMA burst size (0 = 32 B, 1 = 64 B, 2 = 128 B) |
+| `0x70` | Format | Bits 2–0 colour format; 5–4 interlace mode; 6 alternative pixel mode; 9–8 DMA burst size (0 = 32 B, 1 = 64 B, 2 = 128 B; 3 unsupported, FCRAM bursts at most 128 B and the screen goes black) |
 | `0x74` | PDC control | Bit 0 enable; bits 8/9/10 mask H-blank/V-blank/error IRQs; 16 output enable |
-| `0x78` | Select/status | Bit 0 next framebuffer; 4 current; 16/17/18 IRQ acknowledge |
+| `0x78` | Select/status | Bit 0 next framebuffer; 4 current (3dbrew: "?"); 8 reset FIFO (?); 16/17/18 H-blank/V-blank/error IRQ status, write 1 to acknowledge |
 | `0x80`, `0x84` | Colour lookup table | Index write-only, auto-increment; RGB8 `0x00BBGGRR` |
 | `0x90` | Stride | Bytes between rows (multiple of 8); zero repeats the first row; negative flips vertically |
 | `0x94`, `0x98` | Framebuffer B (first, second) | Top screen: right-eye buffers |
@@ -73,6 +73,8 @@ Top-screen registers start at physical `0x10400400`, bottom at `0x10400500`. All
 **Colour formats** (bits 2–0): 0 `RGBA8`, 1 `RGB8`, 2 `RGB565`, 3 `RGB5A1`, 4 `RGBA4`. Components are stored most-significant-bit first with little-endian pixels. Formats 5–7 are blocked by the GSP service but behave as pixel-doubled `RGBA8` outside userland.
 
 **Interlace modes** (bits 5–4): 0 A (none), 1 AA (scanline doubling), 2 AB (interleave A and B), 3 BA. The bottom screen always uses mode A; the top screen uses AB in 3D mode and A in 2D mode. The GSP service enables the parallax barrier only when interlacing bit 5 = 1 and alternative-mode bit 6 = 0.
+
+3D mode is decided by software: per 3dbrew, the GSP service enables stereoscopy only when interlace bit 5 = 1 and bit 6 = 0 (GSP mode 2), mode 1 is the full 240×800 output with both off, and bit 6 alone (bit 5 = 0) selects 2D (mode 0, the default). Bit 6 behaves differently per panel: on the bottom screen it doubles every pixel; on the top screen it appears to receive two pixels per clock; on a 2DS it only shifts the bottom framebuffer two pixels right. Interlacing and scan-doubling cannot both be enabled in userland but work on bare metal.
 
 ### Transfer engine
 
@@ -89,7 +91,7 @@ Homebrew normally uses `libctru`'s `gfx` API (which wraps the GSP service) rathe
 ## Open questions
 
 - Several display registers (`0x20`, `0x28`–`0x38`, `0x44`, `0x48`, `0x5C`, `0x64`) are only partly understood.
-- How the controller selects true interleaving vs line skipping for 3D is unknown.
+- How the controller selects true interleaving vs line skipping for 3D is unknown (3dbrew: other PDC registers decide whether both framebuffers are treated as 240×400 or 240×800).
 
 ## Sources
 

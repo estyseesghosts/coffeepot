@@ -14,7 +14,16 @@ Normal ARM11 programs cannot reach any of this except the `twlp` photo partition
 
 ### Sizes and encryption
 
-The chip varies by vendor (see [models](../hardware/models.md)), but the firmware always uses the same partition table sizes: `0x3AF00000` bytes (**943 MiB**) on Old 3DS and `0x4D800000` bytes (**1240 MiB**) on New 3DS. A bigger chip leaves the rest unused.
+The chip varies by vendor (see [models](../hardware/models.md)), but the firmware always uses the same partition table sizes: `0x3AF00000` bytes (**943 MiB**) on Old 3DS and `0x4D800000` bytes (**1240 MiB**) on New 3DS. A bigger chip leaves the rest unused. 3dbrew's physical-size list [documented: 3dbrew Flash Filesystem]:
+
+| Device | Maker | Chip size |
+| ------ | ----- | --------- |
+| Old 3DS / 2DS | Toshiba | `0x3AF00000` |
+| Old 3DS / 2DS | Samsung | `0x3BA00000` |
+| New 3DS | Toshiba | `0x76000000` |
+| New 3DS | Samsung | `0x4D800000` and `0x74800000` (both listed) |
+
+3dbrew's list also gives `0x76000000` (Toshiba) and `0x4D800000` (Samsung) rows for 2DS; the 2DS was an Old-3DS-class design with a New-3DS-sized chip in those rows, which the source does not explain.
 
 | Property | Value |
 | -------- | ----- |
@@ -40,7 +49,7 @@ A NAND image cannot simply be re-encrypted and used on another console: some fil
 | `0x0B930000` | `0x2F5D0000` (Old) / `0x41ED0000` (New) | | CTR-NAND partition; key slot `0x04` (Old) or `0x05` (New) |
 | `0x0B95CA00` (Old) / `0x0B95AE00` (New) | `0x2F3E3600` / `0x41D2D200` | `nand` | CTR FAT16 filesystem |
 
-Some Old 3DS XL units also have a plaintext FAT16 boot record at `0x4000`. The New 3DS key store at `0x12C00` (0x200 bytes, AES-ECB) contains normal-keys used to derive the New 3DS key slots (`0x15`–`0x1F`) and is identical on all retail New 3DS (and all dev) units.
+On some systems (3dbrew names the 3DS XL) there is a plaintext FAT16 boot record at `0x4000`; it does not exist on launch-day systems and is the only plaintext block. The New 3DS key store at `0x12C00` (0x200 bytes, AES-ECB) contains normal-keys used to derive the New 3DS key slots (`0x15`–`0x1F`) and is identical on all retail New 3DS (and all dev) units.
 
 ### CTR-NAND directory tree
 
@@ -73,6 +82,7 @@ Reading the chip needs its pinout (documented on 3dbrew) and keys from [OTP](../
 ## Open questions
 
 - Several offsets refer to "unknown" content (kernel-local files in `nand`).
+- The 2DS chip-size rows above look inconsistent with the Old/New split; unresolved.
 - Region-changing procedure and NAND redirection are documented on 3dbrew pages outside this source set.
 
 ## Sources

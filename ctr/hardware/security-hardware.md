@@ -31,11 +31,11 @@ The ARM9 boot ROM carries RSA public-key data and AES key material. Separate dat
 | 2 | Non-NAND (SPI flash) FIRM signature |
 | 3 | NAND NCSD-header FIRM signature |
 
-After a firmware is successfully loaded, Boot9 overwrites all four RSA key slots with modulus and private-exponent pairs from its data section and copies related blobs to ARM9 internal RAM at `0x07FFB800+0x500` and `+0x900`. The ROM also stores the key data that decrypts the OTP (via AES slot `0x3F`), a block of AES key material (`0x400` bytes each for retail and dev units), and the initial DTCM image.
+After a firmware is successfully loaded, Boot9 overwrites all four RSA key slots with modulus and private-exponent pairs from its data section and copies related blobs to the ARM9's instruction TCM (boot-ROM view) at `0x07FFB800+0x500` (moduli, `0x400` bytes) and `+0x900` (modulus plus private exponent, `0x800` bytes) per 3dbrew. The ROM also stores the key data that decrypts the OTP (via AES slot `0x3F`), a block of AES key material (`0x400` bytes each for retail and dev units), and the initial DTCM image.
 
 Boot9 data layout (retail starts at `0xFFFFB088`): a 0x38-byte FIRM-section memory blacklist, 0x2F80 bytes of keys (0x2600 bytes of RSA key data, retail first then dev; 0x40 bytes of OTP-decryption keydata; further AES blobs), a 0x230-byte initial DTCM image.
 
-Boot9 uses **AES slot `0x06`** for NAND FIRM crypto; **slot `0x3F`** decrypts the OTP.
+Boot9 uses **AES slot `0x06`** for NAND FIRM crypto; **slot `0x3F`** decrypts the OTP and is also used for the AES-CBC layer on FIRM images booted from non-NAND (SPI flash / cartridge); that slot is overwritten afterwards only if non-NAND boot fails (3dbrew Bootloader).
 
 ### Known weaknesses in these blocks
 

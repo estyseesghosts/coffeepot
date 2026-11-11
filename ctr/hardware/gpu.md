@@ -33,9 +33,9 @@ The GPU is not stereoscopic-aware. A game renders the top screen twice (slightly
 | API compatibility | OpenGL ES 1.1 with extras; some OpenGL ES 2.0 ideas |
 | Vertex processors | 4 (3 vertex + 1 "Primitive Engine"/geometry unit when enabled) |
 | Shader number format | 24-bit floats (not IEEE 754), 4-component vectors (96 bits) |
-| Shader program limits | ≤ 512 instructions, ≤ 128 operand descriptors (inferred from SDK debug data) |
+| Shader program limits | ≤ 512 instructions, ≤ 128 operand descriptors (3dbrew, Shader Instruction Set: debug information in the `code.bin` of *Ironfall: Invasion* "suggests" these maximums; a single-game inference, not a documented limit) |
 | Shader registers | 16 inputs (`v0`–`v15`), 16 outputs, 16 scratch (`r0`–`r15`), 96 float uniforms (`c0`–`c95`), 4 integer and 16 boolean uniforms (per picasso) |
-| Vertex output cache | "Sync control" block, 384 bytes (32 × 96-bit vectors) |
+| Vertex output cache | "Sync control" block, 384 bytes (32 × 96-bit vectors, 32 × 12 B = 384) — Copetti's figure; 3dbrew does not state it |
 | Texture units | 4: three can do 2D textures; one of those (unit 0 — per fincs's PICA200 RE notes only unit 0 supports shadow textures) also does shadow, cube and projective mapping; the fourth (unit 3) is used only for procedural textures |
 | Texture cache | 256 B L1 per unit, 8 KB shared L2 |
 | Colour combiners | 6 (each takes 3 inputs: previous combiner, texture unit or constant) |
@@ -43,7 +43,7 @@ The GPU is not stereoscopic-aware. A game renders the top screen twice (slightly
 | Bus | Open Core Protocol (OCP) on the GPU side, bridged to AXI |
 | Output | 2 × 400×240 (top left/right eye), 1 × 320×240 (bottom); 8-bit-per-channel colour |
 
-> Discrepancy: Copetti says the shader instruction set resembles Microsoft's `vs_2_0`; 3dbrew says it was heavily inspired by `vs_3_0`/Direct3D shader code. Both agree it is Direct3D-shader-like.
+> Conflict: Copetti says the shader instruction set is very similar to Microsoft's `vs_2_0`; 3dbrew says it was heavily inspired by `vs_3_0`/Direct3D shader code. Both agree it is Direct3D-shader-like. This page follows 3dbrew's wording for the hardware and uses neither version as a compatibility claim, because the PICA instruction set is documented directly on 3dbrew's Shader Instruction Set page. Unresolved.
 
 ### Maestro features (DMP extensions)
 
@@ -95,7 +95,9 @@ DMP's CEDEC 2012 talk gives the reasoning: the PICA200 was announced in 2006 as 
 
 - Vertex attributes are aligned to their element size; the stride in `GPUREG_ATTRIBBUFFERi_CONFIG2` must exactly equal the real vertex size (use padding attributes) or the GPU hangs or draws nothing.
 - Output map registers (`GPUREG_SH_OUTMAP_O*`) consume slots only for outputs enabled in `GPUREG_SH_OUTMAP_MASK`.
-- Texture unit 1 can corrupt or become unstable in some configurations.
+- Texture unit 1 (`TEXUNIT1`): per 3dbrew's Pitfalls page, binding an L4-format (4-bit, probably any 4-bit format) texture located in **VRAM** can make the GPU unstable (freezing after a random time). If the texture is 8×16 or larger the display also shows corrupt visuals until reboot, even in other software. It was not seen with other texture units or with FCRAM textures. `[reverse-engineered]` by one 3dbrew author, who could reproduce it only once; treat as unconfirmed.
+- Vertex attributes are read aligned to their element size; padding attributes (component type > 11) are always 4-byte aligned, and the stride passed to the GPU is the unaligned size (3dbrew GPU/Pitfalls).
+- Two consecutive `MOVA` instructions freeze the GPU; a `NOP` between them (or reordering) avoids it.
 - Shader outputs configured must be written exactly once; `MOVA` (address-register) instructions cannot be adjacent.
 - After changing a shader program, the attribute-buffer and vertex-input registers must be configured again, and a draw-elements sequence must end with two dummy writes to `GPUREG_PRIMITIVE_CONFIG`, otherwise the GPU can crash ([shading features](gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)).
 

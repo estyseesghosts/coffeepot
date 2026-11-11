@@ -98,8 +98,8 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [3dbrew](https://www.3dbrew.org/) — the primary community technical reference for hardware, kernel, formats and exploits.
 - [ARM11 MPCore Processor Technical Reference Manual (DDI 0360E)](https://developer.arm.com/documentation/ddi0360/e) — CPU core details.
 - [Hacks Guide Wiki: History of 3DS Hacking](https://wiki.hacks.guide/wiki/3DS:History_of_3DS_Hacking) — timeline.
-- [WikiTemp: 3DS Homebrew Development](https://wiki.gbatemp.net/w/index.php?title=3DS_Homebrew_Development) — homebrew build workflow.
-- Citra project wiki (kernel synchronization, CRO, CEC, PICA200 notes) — the repository has been removed from GitHub, so pages are cited by title without links.
+- [WikiTemp: 3DS Homebrew Development](https://wiki.gbatemp.net/wiki/3DS_Homebrew_Development) (revision 65702, 25 February 2017; historical, superseded in places) — homebrew build workflow.
+- Citra project wiki (pages "Kernel synchronization", "3DS CRO Information", "3DS CEC (StreetPass) Documentation"; "GPU_LUTINPUT_CP" and "Random PICA200 RE Notes" survive as author gists) — the repository was removed from GitHub and no archived copy of the first three was found; see [Research index](homebrew/research-index.md#looking-for-the-vanished-citra-wiki-pages).
 - [4Gamer.net CEDEC 2012 PICA200 report](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's talk on the GPU.
 - Project sources: [Luma3DS](https://github.com/LumaTeam/Luma3DS), [libctru](https://github.com/devkitPro/libctru), [citro3d](https://github.com/devkitPro/citro3d), [citro2d](https://github.com/devkitPro/citro2d), [picasso](https://github.com/devkitPro/picasso), [3ds-examples](https://github.com/devkitPro/3ds-examples), [3ds-hbmenu](https://github.com/devkitPro/3ds-hbmenu), [aemstro](https://github.com/smealum/aemstro).
 - [fincs, Random PICA200 RE Notes](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) — procedural textures, shadows, GPU quirks.

@@ -52,7 +52,7 @@ Only one multiplier other than 1× exists in the official New 3DS kernel: 3×. O
 
 ### The MP11 core (from ARM's manual)
 
-The ARM11 MPCore is documented in ARM's technical reference manual DDI 0360E (r1p0). The 3DS uses a two- or four-core instance of it. The manual describes a configurable design (1–4 cores, 16/32/64 KB caches); the sizes above are what the 3DS actually uses.
+The ARM11 MPCore is documented in ARM's technical reference manual DDI 0360E (r1p0). The 3DS uses a two- or four-core instance of it. Checked against DDI0360E `[documented]`: eight-stage pipeline (section 1.7), 128-entry BTAC and static prediction (6.2), three-entry return stack (6.3), 64-entry two-way unified main TLB with eight lockable entries (7.4 and CP15 TLB Type Register), 8-word cache lines (CP15 Cache Type Register), duplicated tag RAMs and migratory lines in the SCU. The manual describes a configurable design (1–4 cores, 16/32/64 KB caches); the sizes above are what the 3DS actually uses.
 
 | Feature | Detail (ARM11 MPCore r1p0) |
 | ------- | -------------------------- |
@@ -77,8 +77,11 @@ Everything shared across cores sits in two 4 KB pages reached through a dedicate
 | `0x0100–0x01FF` | Per-core interrupt interface (each core sees its own at the same address) |
 | `0x0200–0x05FF` | Aliased interrupt interfaces for cores 0–3 (debug aliasing) |
 | `0x0600–0x06FF` | Per-core timer and watchdog (each core sees its own) |
-| `0x0700–0x09FF` | Aliased timer/watchdog for cores 0–3 |
+| `0x0700–0x0AFF` | Aliased timer/watchdog for cores 0–3 (`0x0700`, `0x0800`, `0x0900`, `0x0A00`; the manual's table is badly laid out in the PDF text, so this reading is inferred) |
+| `0x0B00–0x0FFF` | Reserved |
 | `0x1000–0x1FFF` | Global interrupt distributor |
+
+Verified against DDI0360E Table 9-1 (section 9.1), Software Interrupt Register (section 10.5.10, offset `0xF00`) and timer interval equation (section 10.7.1).
 
 The **distributed interrupt controller** routes hardware interrupts to cores and lets one core interrupt another by writing the Software Interrupt Register at distributor offset `0xF00` (bits 9:0 interrupt ID, 23:16 target-core list, 25:24 target filter: `00` list, `01` all but requester, `10` requester only). This is the "inter-core interrupt" mechanism used by the 3DS kernel.
 
@@ -92,7 +95,9 @@ Each core's **timer** and **watchdog** have a 32-bit down-counter, an 8-bit pres
 
 ### DMA engines
 
-ARM CoreLink DMA-330 controllers act as bus masters: **XDMA** next to the ARM9 (two channels at `0x1000C000`, 32-bit bus width as documented on 3dbrew; Copetti's article lists four) and **CDMA** next to the ARM11 (eight channels, `0x10200000`). On the New 3DS another DMA-330 revision (`0x10206000`) is used by the ARM11 kernel; the original CDMA is used only by the boot ROM there. There is also a simple AHB "NDMA" on the ARM9 side (`0x10002000`).
+ARM CoreLink DMA-330 controllers act as bus masters: **XDMA** next to the ARM9 (two channels at `0x1000C000`, 32-bit bus width, DMA-330 r0p0) and **CDMA** next to the ARM11 (eight channels, `0x10200000`). On the New 3DS another DMA-330 revision (`0x10206000`) is used by the ARM11 kernel; the original CDMA is used only by the boot ROM there. There is also a simple AHB "NDMA" on the ARM9 side (`0x10002000`).
+
+> Conflict: XDMA channel count. 3dbrew's IO Registers page says XDMA has two channels and a 32-bit bus width; Copetti's article lists four. This page follows 3dbrew because it gives a register block, revision (r0p0) and bus width that match the hardware description, whereas the Copetti figure is unreferenced. Unresolved: no hardware read-out of the channel count was found in the sources.
 
 ### New 3DS extra cores
 
@@ -105,7 +110,6 @@ Homebrew code is ordinary ARMv6K code built with `devkitARM` (see [development w
 ## Open questions
 
 - The ARM11 distributor/timer behaviour above is from ARM's generic manual; which interrupt IDs the 3DS wires to which devices is not covered by the sources used here.
-- XDMA channel count differs between sources (2 vs 4).
 - Exact clock-multiplier registers for the New 3DS are not documented in the sources used.
 
 ## Sources

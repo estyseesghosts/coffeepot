@@ -6,7 +6,7 @@ Background: [GPU rendering](gpu-rendering.md) (draw-call costs, combiners, citro
 
 ## Before you start
 
-- Checked against citro2d 1.7.0, citro3d 1.7.1 and libctru 2.7.1 headers and sources. API names are real; the techniques are standard GPU practice applied to this hardware, labelled where a performance claim has not been measured on a 3DS. Measure your own scenes with [drawbench](../benchmarks/README.md#drawbench) and the [frame breakdown](performance.md#a-frame-level-breakdown).
+- Checked against citro2d 1.7.0, citro3d 1.7.1 and libctru 2.7.1 headers and sources. API names are real; the techniques are standard GPU practice applied to this hardware, labelled where a performance claim has not been measured on a 3DS. Function names and signatures (`C2D_DrawText`, `C2D_Fade`, `C2D_SetTintMode`, `C2D_ViewTranslate`, `C2D_TextBufClear`, `C2D_DEFAULT_MAX_OBJECTS`, ...) were re-read in the installed citro2d 1.7.0 headers; the batching rules come from citro2d `source/base.c` on upstream `master`, which is not cloned locally. Measure your own scenes with [drawbench](../benchmarks/README.md#drawbench) and the [frame breakdown](performance.md#a-frame-level-breakdown).
 
 ## The rules that matter
 
@@ -91,6 +91,19 @@ The PICA200 cannot look up a colour in a palette per pixel ([GPU rendering](gpu-
 | Palette cycling (water, lava) | A few pre-converted frames swapped by UV offset, or redraw the affected tiles into a texture when the palette changes |
 | Fades to black or white | `C2D_Fade` or a constant-colour combiner stage |
 | Emulating a palette-based original exactly (ports) | Convert tiles on the CPU when their source data or palette changes, cache the result, upload only changed 8×8 tiles ([memory and cache](memory-and-cache.md#texture-uploads)) |
+
+## Porting a tile- and palette-based original
+
+Ports of DS-style games (tile backgrounds, palette banks, sprite tables) hit a specific problem: the original's pixels are produced from tiles *plus* palettes *plus* registers, so GPU textures must be derived from all three. The rules below come from one project's engineering notes (an unreleased HGSS port; local notes, not published, not reproduced by this wiki) and are `[hypothesis]` for other projects until measured:
+
+- **Key every cached texture by tile data and effective palette.** A 4-bit tile drawn with palette bank 4 is a different texture from the same tile with bank 2. Expand to RGBA5551 or RGB565 only when the tile data or its palette changes, then reuse the result while the camera scrolls.
+- **Track writers, and invalidate conservatively.** If you cannot observe every path that changes the source memory (CPU store, DMA, bank remap), treat the whole bank as dirty. Equal pointers do not mean equal content after a remap.
+- **Scroll by changing UVs or a transform, not pixels.** Rebuild only the newly exposed row or column of tiles.
+- **Keep the original's layer order.** Sort sprites by texture only inside runs where order does not matter; end the batch whenever priority, blend or clipping state changes, otherwise duplicated or missing sprites appear.
+- **A cached static menu is valid only while the effect state is identical** (fade, window, blend) to the state it was rendered under.
+- **Mind gutters.** Nearest sampling at non-integer scale (for example 1.25x to fill 400x240) gives uneven pixel widths; pad atlas tiles when you use bilinear.
+
+Verify such a path by comparing both renderers on the same captured state, then on an Old 3DS and a New 3DS; an emulator pass is not enough ([testing on hardware](testing-on-hardware.md)).
 
 ## Pixel-perfect scaling
 

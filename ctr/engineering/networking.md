@@ -4,10 +4,23 @@ A 3DS program reaches the internet through two system services: a **socket** ser
 
 The services themselves are listed in [CTR services](../software/services.md); how a request travels to them is on [IPC and services](ipc-and-services.md).
 
+## The whole thing in 10 lines
+
+1. Wi-Fi must be connected, or `httpcInit` fails.
+2. For plain HTTP(S) downloads use `httpcInit(0)`, then per request `httpcOpenContext`, `httpcBeginRequest`, `httpcGetResponseStatusCodeTimeout`, `httpcReceiveDataTimeout` in a loop, `httpcCloseContext`; `httpcExit` at the end.
+3. Add a root CA you trust to every HTTPS context (`httpcAddTrustedRootCA`); a new context trusts nothing.
+4. Never set `SSLCOPT_DisableVerify`, as the devkitPro example does.
+5. Cap the bytes you accept, stream to the SD card in fixed chunks, and give every wait a timeout.
+6. Follow redirects yourself, with a hop limit, and never from HTTPS to HTTP.
+7. Close every context on every path (each one is a session).
+8. For raw sockets: `memalign(0x1000, n)` buffer, `socInit`, use BSD calls, `socExit`, then free the buffer.
+9. Use non-blocking sockets with `poll` deadlines.
+10. Run network code on a worker thread so the frame loop keeps drawing.
+
 ## Before you start
 
 - Checked against libctru 2.7.1 at commit `62b7c42c88b1ee837f513358409d2e5c8f9001a9` (local clone) and the `3ds-examples` commit pinned on [source versions](source-versions.md); 3dbrew pages *HTTPC Services* and *SSL Services* fetched in November 2026.
-- All four code examples build with devkitARM r68-1 (GCC 16.1.0) and libctru 2.7.1-1, `-Wall -Wextra`, no warnings. **None has been run** on hardware or in an emulator; behaviours that need a network are listed under Open questions.
+- All three code examples build with devkitARM r68-1 (GCC 16.1.0) and libctru 2.7.1-1, `-Wall -Wextra`, no warnings. **None has been run** on hardware or in an emulator; behaviours that need a network are listed under Open questions.
 - Terms: a **root CA** is the certificate authority at the top of a chain of trust; a server's certificate is accepted only if it chains up to a root you trust. **TLS** is the encryption layer under HTTPS. **Non-blocking** means a call returns at once with "would block" instead of waiting.
 - A connected Wi-Fi network is required. Without one, `httpcInit` fails (see [Technical details](#technical-details)).
 
@@ -311,7 +324,26 @@ What could **not** be verified here:
 - Whether a context really starts with verification enabled and zero roots on every firmware (3dbrew says so; no libctru source states it).
 - Whether `httpcAddDefaultCert` roots are still valid certificates today. Several in the list are old; certificates in the system's store are not updated by homebrew.
 - Which TLS versions and cipher suites the 3DS stack supports. `SSLCOPT_TLSv10` and 3dbrew's description of option bit 11 suggest an old stack; modern servers that require newer TLS may refuse the connection regardless of certificates.
-- 3dbrew notes that the certificate not-before/not-after dates may not be checked against the system clock [reverse-engineered: 3dbrew SSL Services]. Do not rely on expiry checking; see Open questions.
+- 3dbrew notes that the certificate not-before/not-after dates are not validated against the system date (and possibly not at all), and that the option mask set on a new sslc context, `0x1B`, does not include the "verify date" bit (`0x4`) [reverse-engineered: 3dbrew SSL Services, raw wikitext read 10 November 2026]. So an expired certificate may be accepted, and a wrong console clock should not cause a validation failure by itself. Do not rely on expiry checking; if freshness matters, check dates yourself or pin the exact server certificate. This is unmeasured; see Open questions.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Check |
+| ------- | ------------ | ----- |
+| `httpcInit` fails with `0xd8a0a046` | No network connection (Wi-Fi off or no DNS) | Wi-Fi state in system settings [reverse-engineered: 3dbrew] |
+| HTTPS request fails with `0xd8a0a03c` | Certificate did not verify: no root added, wrong root, or wrong host | Add the right DER root; check host name |
+| `socInit` fails at once | Buffer not `0x1000`-aligned or size not a multiple, or `soc:` already initialised (returns -1) | `memalign(0x1000, n)`; call `socInit` once |
+| Crash (data abort) after `socInit` | Your code touched the soc buffer | Do not access it until `socExit` returned |
+| `httpcCloseContext` hangs | Body not fully read | Read to the end; see Open questions about `httpcCancelConnection` |
+| Download works for small files, out of memory on big ones | Unbounded `realloc` as in the example | Use the bounded download |
+| Screen freezes during a request | Blocking call on the main thread | Worker thread or non-blocking `poll` |
+| `connect` returns `EINPROGRESS` forever | You never `poll` for `POLLOUT` | Use `connectTimeout` |
+| Requests stop working after a few contexts | Contexts not closed (session leak) | `httpcCloseContext` on every path |
+| Modern server refuses the connection | Old TLS stack, certificates, or cipher suites | Unresolved; see Open questions |
+
+## Not covered yet
+
+Local wireless between consoles (`nwm::UDS`: `udsInit`, `udsCreateNetwork`, `udsScanBeacons`, `udsConnectNetwork`, `udsSendTo`/`udsPullPacket`) is a different stack from the sockets above and has no engineering page yet; the only upstream starting point is the `network/uds` example in [3ds-examples](https://github.com/devkitPro/3ds-examples/tree/be2001fee08cf8ec7d3366e095e83f6f75da8942/network) and the service entry in [CTR services](../software/services.md). Input devices and sensors likewise have no engineering page yet. A controlled test server with expired and truncated responses, and measured timing logs, have not been built; all behaviour here is from source and 3dbrew only. What the sockets and HTTP service do across HOME and sleep is unmeasured: see [application lifecycle](application-lifecycle.md#open-questions).
 
 ## Technical details
 
@@ -351,7 +383,7 @@ What could **not** be verified here:
 
 ## Verification status
 
-All four examples (`soc` init, non-blocking connect, bounded download, plus the IPC pages' examples) build against libctru 2.7.1-1 with devkitARM r68-1; emulator, Old 3DS and New 3DS: not run. No `[measured]` numbers appear on this page.
+The three examples (`soc` init, non-blocking connect, bounded download) build against libctru 2.7.1-1 with devkitARM r68-1; emulator, Old 3DS and New 3DS: not run. No `[measured]` numbers appear on this page.
 
 ## Sources
 

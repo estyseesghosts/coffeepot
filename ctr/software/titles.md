@@ -45,13 +45,13 @@ TWL titles carry over the DSi category masks, so TWL system titles have `0x8001`
 
 **Unique ID ranges** (known for developer titles, retail appears to follow): System `0x0–0x2FF`, Application `0x300–0xF7FFF`, Evaluation `0xF8000–0xFEFFF`, Prototype `0xFF000–0xFF3FF`, Developer `0xFF400–0xFF7FF`. The high nibble of the low 32 bits of the program ID relates to the hardware a title may run on; a value of `0x2` means the title runs only on a New 3DS.
 
-Regions are not stored in the title ID. Region ordering appears sequential (JPN, USA, EUR, then KOR, CHN, and TWN is 3DS-only).
+Prototype-range unique IDs appear on the Home Menu after install without the usual gift fanfare. 3dbrew calls the Evaluation and Developer ranges uncertain (`?`). Regions are not stored in the title ID. Region ordering appears sequential (JPN, USA, EUR, then KOR, CHN, and TWN is 3DS-only).
 
 **Common title ID prefixes** (a data-only example is the [country/region archive](country-region-data.md), `0004009B00010402`): `00040010` system applications, `0004001B` system data archives, `00040030` system applets, `0004009B` shared data archives, `000400DB` system data archives, `00040130` system modules, `00040138` system firmware; `00040001` Download Play titles; `0004800*` TWL titles.
 
 ### Version numbers
 
-A 16-bit version: 6-bit major (matches the NCCH remaster version), 6-bit minor, 4-bit micro. Example: v2069 = `0b000010 000001 0101` = v2.1.5.
+A 16-bit version: 6-bit major (matches the NCCH remaster version), 6-bit minor, 4-bit micro. Dev Menu installs CTR applications to NAND with variation `02`; variation is ignored for TWL titles (carried over from the DSi ID and used for region lock). Normally SAFE_MODE ARM11 CXI titles cannot be launched on retail, because the system core version does not match the CXI exheader's. The version's micro part is called "build" in some contexts; the CVer title's RomFS build field has always been zero regardless of the TMD, so firmware-version prediction must account for that [documented: 3dbrew Titles]. Example: v2069 = `0b000010 000001 0101` = v2.1.5.
 
 ### Storage layout
 
@@ -60,7 +60,7 @@ A 16-bit version: 6-bit major (matches the NCCH remaster version), 6-bit minor, 
 | Title data | `nand/title` | `sdmc/Nintendo 3DS/<ID0>/<ID1>/title` |
 | Save data | `nand/data/<ID0>/sysdata` | per-title `data` directory |
 
-Per-title structure: `<Title ID High>/<Title ID Low>/{00000000.ctx, content/{<ContentID>.app, <ContentID>.tmd, cmd/<ContentID>.cmd}}`; SD titles add `data/00000001.sav`. DLC titles (`0004008C`) use a different layout with an index separator. Title data on the SD card is encrypted with a console-unique key; NAND title data is cleartext. The initial counter for each file is derived from its path and never changes. When a newer version installs, the old files remain until the install is finalised.
+Per-title structure: `<Title ID High>/<Title ID Low>/{00000000.ctx, content/{<ContentID>.app, <ContentID>.tmd, cmd/<ContentID>.cmd}}`; SD titles add `data/00000001.sav`. DLC titles (`0004008C`) use a different layout with an index separator. Title data on the SD card is encrypted with a console-unique key; NAND title data is cleartext. The initial counter for each file is derived from its path and never changes. When a newer version installs, the new `.app`, `.tmd`, `.cmd` (and `.ctx` on NAND) are written beside the old ones; on finalising, the entry in `import.db` moves to `title.db`, the system switches to the new files, and then the old files are deleted. The `<ContentID>.tmd` filename's content ID starts at `00000000` and rises by 1 per update; the file is redundant after install (data lives in `title.db` and `.cmd`) but is kept. The decrypted TMD is also served by Nintendo's CDN with a certificate chain appended; stripping the chain gives the plain TMD. Unlike TMDs, CDN NCCH files are only available encrypted [documented: 3dbrew Titles].
 
 ### Title metadata (TMD)
 

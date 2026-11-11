@@ -26,6 +26,8 @@ This page explains the design; the individual attacks are in the [exploit catalo
 
 ### Later changes
 
+> Conflict/unverified: this paragraph follows Copetti. Only the "OTP readable on firmware before 3.0.0" point was confirmed in 3dbrew's System Flaws page (OTP dumping "required a boot of < 3.0.0-X"). The 7.0.0 RSA-engine and 11.0.0 anti-downgrade statements were not found there and should be read as [hypothesis] until checked against the flaw tables.
+
 Nintendo reworked the chain over time: system version 7.0.0 added the RSA engine to the NCCH decryption path (keys cleared after Kernel9 loads, so earlier exploits could not read newer games); 3.0.0 hid the OTP after boot; the New 3DS added a loader stage (**arm9loader**) with OTP-derived keys (fixed in 9.5.0/9.6.0 after flaws); title downgrade protection was added later (11.0.0 closed the anti-downgrade list gap).
 
 ## Technical details
@@ -51,6 +53,8 @@ Nintendo reworked the chain over time: system version 7.0.0 added the RSA engine
 | arm9loader | Console-unique keysector keys derivable from Boot9 + ITCM data; NAND keystore encrypted with AES-ECB so blocks can be rearranged; uncleared New 3DS key slot `0x11` and OTP hash key data |
 | Process9 | Leaks of normal-key / key-scrambler data; RSA padding checks; DSiWare import/export validation flaws; unchecked PXI parameters and buffer overruns; title downgrading via AM; `FIRM launch` not checking target FIRM version; SD mount permission flag ignored; gamecard transfer size unchecked |
 | Kernel9 / Kernel11 | ARM9 and ARM11 privilege escalations (e.g. memchunk-based kernel exploits) |
+
+Two further entries from the same page: `srv:pm` was a globally reachable port until 7.0.0-13, letting any process re-register itself and bypass the exheader service-access list (since then it is a service restricted to PIDs below 6, one session at a time) [documented: 3dbrew System Flaws]; and because FIRM partitions are AES-CTR encrypted with a fixed keystream, knowing a FIRM binary reveals keystream that enables minor FIRM downgrades and, with sighax, arbitrary FIRM installation. Downgrading titles via AM worked by deleting the installed title first so Process9 had nothing to compare against.
 
 The full tables, with credit and fix versions, are on that page.
 

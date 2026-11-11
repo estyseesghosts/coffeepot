@@ -121,7 +121,7 @@ The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate 
 
 ## Technical details
 
-- `SYSCLOCK_ARM11` = 268,111,856 Hz; `CPU_TICKS_PER_MSEC` = `SYSCLOCK_ARM11 / 1000.0`; New 3DS clocks are 2× and 3× that ([libctru](../homebrew/libctru.md#clocks-and-the-new-3ds-speed-up)). The system tick does not change rate with the New 3DS clock.
+- `SYSCLOCK_ARM11` = 268,111,856 Hz; `CPU_TICKS_PER_MSEC` = `SYSCLOCK_ARM11 / 1000.0`; New 3DS clocks are 2× and 3× that ([libctru](../homebrew/libctru.md#clocks-and-the-new-3ds-speed-up)). The system tick does not change rate with the New 3DS clock (libctru defines it from `SYSCLOCK_ARM11`; the claim is read from the headers, not measured on a New 3DS in 804 MHz mode).
 - `C3D_FrameBegin(flags)`: `C3D_FRAME_SYNCDRAW` = bit 0, `C3D_FRAME_NONBLOCK` = bit 1. Returns `false` if already in a frame or (non-blocking) if the GPU is busy.
 - `C3D_FrameRate(fps)` accepts `0 < fps ≤ 60`; implemented as a per-screen accumulator decremented by `fps` on each V-blank, incrementing the frame counter whenever it crosses zero.
 - `GSPGPU_PerfLogEntry` = `{ u32 lastDurationUs; u32 totalDurationUs; }`, one per `GSPGPU_Event` (`PSC0`, `PSC1`, `VBlank0`, `VBlank1`, `PPF`, `P3D`, `DMA`).
@@ -139,6 +139,7 @@ The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate 
 ## Open questions
 
 - No wiki-run measurements yet of: CPU write bandwidth to heap vs linear memory vs VRAM on each model; cost of `C3D_FrameEnd`'s full linear-heap flush as a function of heap size; `GSPGPU_FlushDataCache` latency versus core-1 time limit; benefit of LTO. The [benchmark suite](../benchmarks/README.md) contains programs for these; none has been run on hardware yet.
+- Whether the CP15 cycle counter and the system tick advance 1:1 on an Old 3DS and 3:1 in New 3DS 804 MHz mode (see [CPU optimisation](cpu-optimization.md#counters-versus-the-system-tick)); the tick is the only one this page relies on.
 - The 25 ms slice model of core-1 scheduling comes from untested notes; a hardware measurement (a core-1 thread recording `svcGetSystemTick` gaps at several percentages) would settle it.
 
 ## Sources

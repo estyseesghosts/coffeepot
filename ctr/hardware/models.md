@@ -8,7 +8,7 @@ Every other hardware page assumes the Old 3DS as the baseline and calls out New 
 
 ## How it works
 
-| Model | Year | Group | Notes |
+| Model | Year (first release; regional dates differ and were not checked) | Group | Notes |
 | ----- | ---- | ----- | ----- |
 | Nintendo 3DS (CTR-001) | 2011 | Old | The original; 3D top screen |
 | Nintendo 3DS XL (SPR-001) | 2012 | Old | Bigger screens; same architecture |

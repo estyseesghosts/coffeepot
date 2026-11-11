@@ -102,3 +102,9 @@ Facts re-checked against primary sources in this pass (November 2026), all consi
 
 - Local clones of the repositories above at the listed commits; `pacman -Q` output from the devkitPro installation used to build the examples.
 - [citro2d `source/base.c`](https://github.com/devkitPro/citro2d/blob/master/source/base.c) — batching behaviour.
+
+## Additional sources read in the November 2026 review pass
+
+- 3dbrew mirror pages behind [PICA200 command pipeline](pica200-command-pipeline.md) and [PICA200 shader programming](pica200-shader-programming.md): GPU/Programming Guide (oldid 22469, 16 Dec 2023); other GPU pages as in the private mirror.
+- picasso `d522455`: constants `MAX_VSH_SIZE` 512 and `MAX_OPDESC` 128 read from source.
+- `tex3ds` 2.3.0 and `mkbcfnt` (general-tools 1.4.4): `--help` output re-read from the installed binaries; accepted format spellings were not exercised by running conversions.

@@ -21,8 +21,8 @@ A DVLE is a **vertex shader** by default; the `.gsh` directive makes it a **geom
 | Mode | Meaning |
 | ---- | ------- |
 | `point` | Called per input according to the configured stride and permutation; data starts at `v0`. Works with array drawing and element drawing |
-| `variable` (a.k.a. subdivision) | Processes variable-size primitives: `vtxNum` vertices with full attributes plus one or more extra vertices with positions only |
-| `fixed` (a.k.a. particle) | Processes fixed-size primitives with `vtxNum` vertices; data arrives in float uniform registers starting at `arrayStartReg` |
+| `variable` (a.k.a. subdivision) | Processes variable-size primitives: `vtxNum` vertices with full attributes plus one or more extra vertices with positions only. On entry `c0` holds the primitive's total vertex count in all components. Element drawing only; each primitive in the index array is prefixed with its vertex count |
+| `fixed` (a.k.a. particle) | Processes fixed-size primitives with `vtxNum` vertices; data arrives in float uniform registers starting at `arrayStartReg`. Element drawing only |
 
 Registers (all hold 4-component vectors of 24-bit floats, except integer and boolean uniforms):
 
@@ -36,7 +36,7 @@ Registers (all hold 4-component vectors of 24-bit floats, except integer and boo
 | `b0`–`b15` | Boolean uniforms (in geometry shaders, `b15` is set to true after each run) |
 | `a0.x`, `a0.y`, `aL` | Indexing registers for relative addressing |
 
-Components can be named `xyzw`, `rgba` or `stpq` and swizzled (`r0.wwxy`); outputs take a write mask. Directives include `.proc`/`.end` (procedures), `.alias`, `.fvec`/`.ivec`/`.bool` (uniforms), `.constf`/`.consti`/`.constfa` (preloaded constants), `.in` (inputs), `.out` (wires an output to a property), `.entry`, `.nodvle`, `.gsh`, `.setf`/`.seti`/`.setb`. Output properties: `position`, `normalquat` (the quaternion used in fragment lighting), `color`, `texcoord0`/`texcoord0w`, `texcoord1`, `texcoord2`, `view` (for lighting) and `dummy`. Uniform names starting with `_` are kept private.
+Components can be named `xyzw`, `rgba` or `stpq` and swizzled (`r0.wwxy`); outputs take a write mask. Directives include `.proc`/`.end` (procedures), `.alias`, `.fvec`/`.ivec`/`.bool` (uniforms), `.constf`/`.consti`/`.constfa` (preloaded constants), `.in` (inputs), `.out` (wires an output to a property), `.entry`, `.nodvle`, `.gsh`, `.setf`/`.seti`/`.setb`. Output properties: `position`, `normalquat` (the quaternion used in fragment lighting), `color`, `texcoord0`/`texcoord0w`, `texcoord1`, `texcoord2`, `view` (for lighting) and `dummy`. Uniform names starting with `_` are kept private (not exposed in the DVLE uniform table), and `$` in a name is translated to `.`. Vertex-shader uniforms with the same name are shared across source files in one `.shbin`; geometry shaders each get their own uniform map; constants are never shared. Relative addressing (`a0.x`, `a0.y`, `aL`, e.g. `arr[aL+2]`) works only on floating-point vector uniforms. `.gsh` forms: `.gsh point firstReg`, `.gsh variable firstReg vtxNum`, `.gsh fixed firstReg arrayStartReg vtxNum`. Older picasso names `a0`/`a1`/`a2`/`lcnt` for the index registers are still accepted [documented: picasso `Manual.md`].
 
 **Caveats the assembler works around** (from the manual):
 
@@ -44,6 +44,10 @@ Components can be named `xyzw`, `rgba` or `stpq` and swizzled (`r0.wwxy`); outpu
 - Two consecutive `mova` instructions freeze the GPU.
 - Only one *input* register can be referenced reliably in the source operands of an instruction (referring to the same register several times is fine).
 - Uniforms (`c0`–`c95`) can only be used where the instruction encoding has a wide source slot: in an ordinary two-operand instruction such as `add`, the uniform must be the **first** source. `add r0.xyz, inpos.xyz, offset.xyz` fails with "invalid source2 register"; `add r0.xyz, offset.xyz, inpos.xyz` assembles [documented: picasso 2.7.2 error, found while writing the [drawbench](../benchmarks/README.md#drawbench) shader]. For `dph`, `sge`, `slt` and `mad`, picasso picks an alternative encoding automatically when the operands allow it (see Technical details).
+
+### Related shader tools
+
+`aemstro` (smealum, last commit January 2015) is the "original" PICA200 shader disassembler/assembler in Python, written while the instruction set was still being reverse engineered; its own README says it is experimental, its assembler is out of date and cannot reassemble its own disassembly, and it recommends neobrain's `nihstro` or picasso for real projects. Treat it as history ([history](history.md)), not as a reference for the instruction encoding; use 3dbrew's shader instruction set page for that.
 
 ### citro3d: GPU library
 
@@ -87,4 +91,5 @@ Three behaviours of the frame API matter for performance and correctness [docume
 - [picasso (devkitPro)](https://github.com/devkitPro/picasso) — `Manual.md`: registers, directives, geometry-shader modes, caveats.
 - [citro3d (devkitPro)](https://github.com/devkitPro/citro3d) — headers and sources: module list, limits, frame API.
 - [3dbrew: Homebrew Libraries and Tools](https://www.3dbrew.org/wiki/Homebrew_Libraries_and_Tools) — `citro3d`, `citro2d`, `picasso`, `nihstro`, `aemstro` descriptions.
+- [aemstro (smealum)](https://github.com/smealum/aemstro) — README: scope and status of the original shader (dis)assembler.
 - [3dbrew: GPU/Shader Instruction Set](https://www.3dbrew.org/wiki/GPU/Shader_Instruction_Set) — instruction encoding.

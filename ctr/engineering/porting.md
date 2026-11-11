@@ -57,6 +57,17 @@ These are the porters' own statements, useful as examples of decisions rather th
 
 The common thread: both expose presentation options (resolution, wide mode, anti-aliasing, stereo) rather than one fixed configuration, put audio on a separate core, and treat Old 3DS memory as a hard limit.
 
+## Lessons reported by one large port
+
+An engineering-notes set for a Pokemon HeartGold/SoulSilver 3DS port (local, unpublished; the claims are the project's own and not reproduced here) records what cost it time. They fit the advice above, but treat them as `[hypothesis]` until you measure your own game:
+
+- Moving unrelated work (an audio thread) to Old 3DS core 1 reportedly starved geometry and display work under the application's CPU share limit; measure New 3DS separately ([threading](threading.md)).
+- Merging draw batches across texture, stencil or blend changes reportedly produced duplicated sprites and halos; batch only runs where order and state cannot change.
+- A fixed 30 Hz cap used as game-speed control halved the game clock; keep presentation cadence separate from simulation ([frame pacing](frame-pacing.md)).
+- A fast path that is rejected on most frames saves nothing; count how often it is actually taken before tuning it.
+- Use three oracles for a renderer rewrite: fixtures against a reference render, same-state replay of both renderers, and real Old plus New 3DS runs; the emulator is extra coverage only.
+- Plan stereo and supersampling as optional: never make them mandatory on Old 3DS ([render-target budget](gpu-rendering.md#render-target-memory-budget)).
+
 ## Porting checklist
 
 - [ ] Builds with `-march=armv6k -mtune=mpcore -mfloat-abi=hard`, no warnings about `double` promotion in hot code.
