@@ -228,6 +228,10 @@ What has not been measured or verified, and what experiment would settle it.
 - [Title](URL) — what this source covers
 ```
 
+## Console setup and development scope
+
+For 3DS custom-firmware installation, updates, recovery and backup procedures, direct readers to the [3DS Hacks Guide](https://3ds.hacks.guide/); do not maintain parallel installation instructions here. Keep historical and technical explanations of exploits, bootloaders and firmware. Coffeepot covers the development toolchain and writing, running, debugging and testing homebrew once the console is ready; emulator-based development can begin without a modified console.
+
 ## Console models: Old 3DS is the default
 
 For `ctr/`, every statement, number, example and recommendation describes the **Old 3DS** unless it says otherwise. Never assume a New 3DS. Anything that applies only to the New 3DS, or that differs on it, goes in an explicit **New 3DS** disclaimer after the Old 3DS statement.

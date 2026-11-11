@@ -4,11 +4,9 @@
 
 The flaw underneath it is called **[sighax](../glossary.md#sighax)**; **ntrboot** is a related trick that boots such a firmware from a DS flash cartridge, which also doubles as the best unbrick tool. All three descend from the 2016 33C3 and 2017 33.5C3 talks (derrek; SciresM and Myria).
 
-## What you need
+## Console setup
 
-- Any Nintendo 3DS-family console (3DS, 3DS XL, 2DS, New 3DS, New 3DS XL, New 2DS XL) on any firmware version — the boot ROM is identical on all of them.
-- Some way to write boot9strap's signed firmware into the console's NAND, which needs code running with ARM9 or NAND access: any of the ARM9-level entries in the [exploit catalogue](exploits.md) (for example MSET9, or the Safe Mode route on Old 3DS), or a hardware route such as ntrboot with a compatible DS flashcart (a magnet is used to simulate the closed shell; the Start + Select + X key combination is held (on Old 3DS/2DS the power button then works even with the shell closed or faked by a magnet, per 3dbrew: Bootloader)).
-- Back up your SD-card contents before starting and preserve any existing NAND backups. On a stock console, follow the [3DS Hacks Guide](https://3ds.hacks.guide/) for your model and firmware; after boot9strap is installed, create the SysNAND and essential-file backups during [final setup](https://3ds.hacks.guide/finalizing-setup). A separate raw OTP dump is not a prerequisite to first-time installation.
+For installation, troubleshooting, recovery and backup procedures, follow the [3DS Hacks Guide](https://3ds.hacks.guide/). Once the console is ready, use the [development workflow](development-workflow.md) to build and run homebrew. This page describes the boot mechanism and its history.
 
 ## How it works
 
@@ -22,7 +20,7 @@ Because boot9strap runs before Boot9 hides its ROM, it can keep access to the bo
 
 ### ntrboot
 
-During boot, Boot9 asks whether a specific key combination is pressed and the shell is closed; if so it redirects to a DS card in the slot with full privileges ([boot process](../software/boot-process.md)). `ntrboot` therefore writes a sighax-signed firmware onto a compatible DS flashcart ("3DS mode" switch on some carts), closes the shell with a magnet and boots it. This gives instant installation and an extremely potent recovery tool, since it bypasses the normal boot chain entirely.
+During boot, Boot9 asks whether a specific key combination is pressed and the shell is closed; if so it redirects to a DS card in the slot with full privileges ([boot process](../software/boot-process.md)). `ntrboot` uses a compatible DS flashcart to supply a sighax-signed firmware at boot. The mechanism can support recovery because it bypasses the normal NAND boot path; consult the [3DS Hacks Guide](https://3ds.hacks.guide/) for current procedures.
 
 ## Technical details
 
@@ -38,7 +36,7 @@ During boot, Boot9 asks whether a specific key combination is pressed and the sh
 
 - Installing it modifies the FIRM partitions: an incorrect installation can still brick a console. Per the community history, boot9strap itself carries near-zero brick risk; ntrboot is described as an extremely potent unbricking tool because it bypasses the normal boot chain.
 - It is not removed by system updates in the sense that the vulnerable boot ROM cannot be changed, but the sources do not describe what happens to an installed copy during an update, so treat that as unverified.
-- It gives total control of the console and access to every secret on it (OTP, boot ROMs). Dump and keep backups before doing anything else.
+- It gives privileged code access to sensitive console data (including OTP and boot ROMs). Follow the [3DS Hacks Guide](https://3ds.hacks.guide/) for backup and recovery guidance.
 - Its predecessor `arm9loaderhax` could be unsafe to install and required a prior OTP dump.
 - Online bans are moot since online services ended in April 2024 ([history](history.md)).
 

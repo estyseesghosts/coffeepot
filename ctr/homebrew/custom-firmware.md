@@ -2,12 +2,9 @@
 
 A **[custom firmware](../../glossary.md#cfw)** (CFW) on the 3DS is a patched version of the system software that is loaded in place of — or on top of — the normal one. It removes the signature checks that normally stop unofficial software from running, and adds features such as a layered file system for game mods, region-free play and an in-game menu. The dominant CFW today is **[Luma3DS](../glossary.md#luma3ds)** (full description on the [Luma3DS page](luma3ds.md)), usually started by [boot9strap](boot9strap.md).
 
-Required console: any 3DS-family model. Required firmware: depends on the loader; with boot9strap, any version. Outcome: normal system with signature checks disabled and extras.
+## Console setup
 
-## What you need
-
-- A way to get code running early at startup: [boot9strap](boot9strap.md) (current standard), or historically `arm9loaderhax`, a flashcart-based loader, or a kernel/ARM9 exploit chain ([exploits](exploits.md)).
-- A CFW payload on the SD card.
+For installation and console preparation, follow the [3DS Hacks Guide](https://3ds.hacks.guide/). For writing and running software after setup, start with the [development workflow](development-workflow.md). This page explains the firmware concepts and their history.
 
 ## How it works
 

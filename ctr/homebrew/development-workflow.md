@@ -2,6 +2,8 @@
 
 This is a start-to-finish guide to building a **`.3dsx` homebrew application**. It covers installing devkitPro on Windows, macOS and Linux, building with its official Docker image, testing in an emulator or on a real 3DS, and fixing common setup problems.
 
+To prepare a console for homebrew, follow the [3DS Hacks Guide](https://3ds.hacks.guide/); its [CFW check](https://3ds.hacks.guide/checking-for-cfw) helps if you are unsure whether yours is already modified. You can build and try examples in an emulator without preparing a console.
+
 **Fast path:** install the **`3ds-dev`** package group, build an example with `make`, then launch the resulting `.3dsx` in the Homebrew Menu or an emulator. You do **not** need to build the compiler, libctru, or the 3DS SDK from source.
 
 ## 1. Pick your environment
@@ -237,7 +239,7 @@ Open `hello-3ds.3dsx` with [Azahar](https://github.com/azahar-emu/azahar). An em
 
 ### On a real 3DS: SD card
 
-You need a console that already runs [Luma3DS](luma3ds.md) and the [Homebrew Menu](https://github.com/devkitPro/3ds-hbmenu). This page does not cover modifying a stock console; see [boot9strap](boot9strap.md) and [Luma3DS](luma3ds.md).
+You need a console ready to run the [Homebrew Menu](https://github.com/devkitPro/3ds-hbmenu). For console modification, existing CFW checks and setup, follow the [3DS Hacks Guide](https://3ds.hacks.guide/). For background on the loader and firmware, see [boot9strap](boot9strap.md) and [Luma3DS](luma3ds.md).
 
 1. Turn off the console before removing its SD card.
 2. Copy `hello-3ds.3dsx` to `sdmc:/3ds/hello-3ds/hello-3ds.3dsx` (that is `/3ds/hello-3ds/hello-3ds.3dsx` on the SD card).

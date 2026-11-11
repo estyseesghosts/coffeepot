@@ -61,6 +61,8 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 
 ## Homebrew
 
+For console modification and setup, use the [3DS Hacks Guide](https://3ds.hacks.guide/). If the console is already prepared, start with the [development workflow](homebrew/development-workflow.md) to build and run homebrew; an emulator is another way to begin. The pages below document how the hardware and software work.
+
 - [History](homebrew/history.md) — thirteen years of hacking, from flashcarts to MSET9.
 - [Exploit catalogue](homebrew/exploits.md) — the privilege ladder and the named exploits.
 - [boot9strap, sighax and ntrboot](homebrew/boot9strap.md) — the boot-ROM break behind today's standard setup.

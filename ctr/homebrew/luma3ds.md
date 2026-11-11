@@ -4,11 +4,9 @@
 
 Who it is for: players who want homebrew, game modding and debugging features, and developers who want a GDB debugger and a system they can extend. This page describes how it is built and what it changes, from its public source repository (GPLv3).
 
-## What you need
+## Console setup and development
 
-- A console with boot9strap installed ([boot9strap](boot9strap.md)).
-- The Luma3DS release archive copied to the root of the SD card (it bundles the `3ds-hbmenu` homebrew menu and certificates). Luma3DS compiles into one file, `boot.firm`.
-- To build it yourself: `git`, `makerom`, `firmtool`, and current `devkitARM`/`libctru` (`3ds-dev` packages); releases are kept in sync with libctru ([libctru](libctru.md)).
+For console modification, updating an existing setup and recovery, follow the [3DS Hacks Guide](https://3ds.hacks.guide/). Once your console is ready, the [development workflow](development-workflow.md) covers the toolchain and running your own programs. Luma3DS's [upstream repository](https://github.com/LumaTeam/Luma3DS) documents its source and builds.
 
 ## How it works
 
@@ -99,7 +97,7 @@ Facts worth knowing as a developer:
 ## Limits and risks
 
 - **Known issues:** the cheat engine crashes some applications, particularly Pokémon games, because of a race condition in Nintendo's Kernel11 (attaching a `KDebugThread` to a `KThread` on creation while another thread dereferences `thread->debugThread`); such games need a dedicated game plugin instead. The Rosalina combination is polled at intervals, so a game can see the same button press; change the combination in "Miscellaneous options" and save settings.
-- It is a patched system: bugs in a patch can crash the console. Keep NAND and OTP backups ([boot9strap](boot9strap.md)).
+- It is a patched system: bugs in a patch can crash the console. For backups and recovery, follow the [3DS Hacks Guide](https://3ds.hacks.guide/).
 - The project wiki is described as "very outdated" by its authors.
 
 ## Sources

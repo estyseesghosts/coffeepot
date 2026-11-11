@@ -78,7 +78,7 @@ A key progression is the **ladder** each generation climbed:
 
 ## Homebrew notes
 
-For present-day use, the shape of the journey is: get any entry point (see [exploits](exploits.md) for what still works), install `boot9strap` ([boot9strap](boot9strap.md)), then use a custom firmware like Luma3DS ([custom firmware](custom-firmware.md)). Development is covered in the [workflow page](development-workflow.md).
+For current console setup, use the [3DS Hacks Guide](https://3ds.hacks.guide/). Once the console is ready, the [development workflow](development-workflow.md) covers building and running homebrew. The exploit catalogue and firmware pages are historical and technical references.
 
 ## Open questions
 
