@@ -358,3 +358,31 @@ The power and play-time service (battery, lid, steps, play history). See [system
 ### Service group {#service-group}
 
 libctru's one-header, one-init/exit-pair wrapper around a system service. See [libctru service groups](engineering/service-groups.md).
+
+### Atlas (sprite sheet) {#atlas}
+
+One texture that holds many small images (sprites or tiles), so they can be drawn together without switching textures. tex3ds builds one with `--atlas` and gives each image its own texture coordinates. See [2D rendering](engineering/rendering-2d.md).
+
+### Draw call {#draw-call}
+
+One request to the GPU to draw a list of triangles with the current state. On the 3DS each call also makes the CPU write changed state into the command buffer, so fewer, larger calls are cheaper. See [GPU rendering](engineering/gpu-rendering.md).
+
+### Batch {#batch}
+
+A run of quads that citro2d submits in one draw call; it ends when the texture, tint, fade, view or drawing mode changes. See [2D rendering](engineering/rendering-2d.md).
+
+### Quad {#quad}
+
+A rectangle made of two triangles with four corners; the unit of 2D drawing on the PICA200. See [2D rendering](engineering/rendering-2d.md).
+
+### Render target {#render-target}
+
+A buffer the GPU draws into: a screen's colour and depth buffers, or a texture used for render-to-texture. citro3d creates them in VRAM. See [GPU rendering](engineering/gpu-rendering.md).
+
+### Morton order {#morton-order}
+
+The interleaved-bits pixel order inside each 8x8 block of a 3DS texture (x bits at even positions, y bits at odd); the blocks themselves are row-major. See [2D rendering](engineering/rendering-2d.md).
+
+### Wide mode {#wide-mode}
+
+A top-screen mode (`gfxSetWide`) that shows 800x240 non-square pixels; exclusive with stereoscopic 3D and not available on every model. See [2D rendering](engineering/rendering-2d.md).

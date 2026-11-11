@@ -50,15 +50,18 @@ The first packs many sprites into one atlas texture; the second makes one compre
 | Option | Choices | Notes |
 | ------ | ------- | ----- |
 | `-f` format | `rgba8888` (default; also `rgba`, `rgba8`), `rgb888` (`rgb`, `rgb8`), `rgba5551`, `rgb565`, `rgba4` (also `rgba444`), `la88` (`la`, `la8`), `hilo88` (`hilo`, `hilo8`), `l8` (`l`), `a8` (`a`), `la44` (`la4`), `l4`, `a4`, `etc1`, `etc1a4`, `auto-l8`, `auto-l4`, `auto-etc1` | `auto-*` picks the alpha variant only when the image has alpha |
-| `-a` | atlas | Pack all listed images into one texture; sub-images retrievable by index |
+| `-a`, `--atlas` | atlas | Pack all listed images into one texture; sub-images retrievable by index |
 | `-m` filter | `point`, `box`, `triangle`, `cubic`, `lanczos`, `mitchell`, … | Generate a mipmap chain with that filter |
 | `-z` compression | `auto` (default), `none`, `huff`, `lzss`/`lz10`, `lz11`, `rle` | Compresses the *file*; data is decompressed on load. Not the same as ETC1, which stays compressed in GPU memory |
 | `-q` | `low`, `medium` (default), `high` | ETC1 encoder quality (build time only) |
-| `-b` | `none`, `transparent`, `edge` | 1-pixel border around atlas images to stop filtering bleed |
+| `-b`, `--border` | `none`, `transparent`, `edge` | 1-pixel border around atlas images to stop filtering bleed |
 | `-t` | | Trim transparent edges of atlas images |
 | `-c`, `-s` | | Cube map / skybox from a cross-shaped image |
 | `-r` | | Raw image data only, no `.t3x` header |
 | `-d`, `-H`, `-p`, `-i` | file names | Dependency file for `make`, generated C header with sub-texture indices, a preview image of the converted result, and an options file to include |
+
+> Conflict: `tex3ds --help` (2.3.0) lists the short options `-a`, `-b` and `-c`, but the installed Windows binary rejected them with "unknown option" in a test conversion, while `--atlas`, `--border` and `--cubemap` worked. Use the long forms in scripts until this is understood. Not tested on other platforms.
+
 
 [documented: `tex3ds --help`, version 2.3.0, re-read from the installed binary]. The help text lists the spellings above (`rgba4`/`rgba444`, not `rgba4444`); this page previously wrote `rgba4444`, which the help does not list.
 

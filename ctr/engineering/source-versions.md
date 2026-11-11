@@ -63,7 +63,10 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | citro3d lighting fragment | [citro3d fixed-function API](citro3d-fixed-function-api.md) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
 | Fixed-step main loop | [frame pacing](frame-pacing.md#separating-simulation-from-rendering) | yes | not run | not run | not run |
 | ndsp streaming setup | [audio](audio.md#setting-up-a-channel) | yes | not run | not run | not run |
-| citro2d sprite and text fragments | [2D rendering](rendering-2d.md) | yes (inside a minimal program) | not run | not run | not run |
+| Sprite demo (procedural sheet, animation, touch) | [2D rendering](rendering-2d.md#5-a-complete-example-animated-sprite-with-touch) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`, devkitARM r68, citro2d 1.7.0-1) | not run | not run | not run |
+| citro2d render-target, stereo-eye and text fragments | [2D rendering](rendering-2d.md) | yes (inside a stub `main`, linked) | not run | not run | not run |
+| 2D tile renderer (direct, `USE_TILE_CACHE=1`, and with `CACHE_FLIP_V=1`) | [2D tile renderer](2d-tile-renderer.md#verification-status) | yes (`-Wall -Wextra`, linked to ELF) | not run | not run | not run |
+| Texture swizzle function | [2D rendering](rendering-2d.md#generating-a-texture-in-code) | yes; algorithm matches `tex3ds -r` output for a 16x16 RGBA8 image (host check) | not run | not run | not run |
 | Frame and render-target fragments | [GPU rendering](gpu-rendering.md#anatomy-of-a-frame) | taken from `3ds-examples/graphics/gpu/simple_tri`, which builds | — | — | — |
 
 Fragments that are not complete programs were compiled inside a minimal `main` with stub functions.
@@ -110,3 +113,4 @@ Facts re-checked against primary sources in this pass (November 2026), all consi
 - 3dbrew mirror pages behind [PICA200 command pipeline](pica200-command-pipeline.md) and [PICA200 shader programming](pica200-shader-programming.md): GPU/Programming Guide (oldid 22469, 16 Dec 2023); other GPU pages as in the private mirror.
 - picasso `d522455`: constants `MAX_VSH_SIZE` 512 and `MAX_OPDESC` 128 read from source.
 - `tex3ds` 2.3.0 and `mkbcfnt` (general-tools 1.4.4): `--help` output re-read from the installed binaries; accepted format spellings were not exercised by running conversions.
+- citro2d 1.7.0: `base.o` of the installed `libcitro2d.a` disassembled with `arm-none-eabi-objdump` (screen target creation, `C2D_Prepare` depth test, `C2D_Init` buffer sizes, `C2D_TargetClear`, `C2D_DrawRectangle` capacity check); `tex3ds` 2.3.0 test conversions (raw layout, `.t3x` subtexture values; the short options -a, -b and -c are rejected by the installed Windows binary although `--help` lists them).

@@ -86,7 +86,8 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Threading](engineering/threading.md) — which cores you can use, core-1 time sharing, priorities, synchronisation, a worker pattern.
 - [Frame pacing](engineering/frame-pacing.md) — the CPU/GPU/display timing model, locking to 60 or 30, fixed-step simulation, missed frames.
 - [Audio](engineering/audio.md) — ndsp setup and the DSP firmware file, formats, buffer sizing, streaming, diagnosing crackles.
-- [2D rendering](engineering/rendering-2d.md) — sprites, tilemaps, layers, transparency, text and palette effects on a 3D GPU.
+- [2D rendering](engineering/rendering-2d.md) — end-to-end guide to 2D on the PICA200: setup and frame loop, screens and depth, textures and memory, citro2d beyond sprites, performance decisions and troubleshooting.
+- [2D tile renderer](engineering/2d-tile-renderer.md) — a complete compile-checked scrolling tilemap with sprites, cached text, a debug overlay and a render-to-texture background variant.
 - [Porting](engineering/porting.md) — planning a port, desktop-to-PICA200 concept mapping, SDL and portlibs, what published ports chose.
 - [Application lifecycle](engineering/application-lifecycle.md) — how a program handles HOME, sleep, resume, the software keyboard and exit, with a complete logging example.
 - [Files and saves](engineering/filesystem-and-saves.md) — SD card, RomFS, save data and extdata, commit rules, write errors, and a two-copy checksummed save manager.
