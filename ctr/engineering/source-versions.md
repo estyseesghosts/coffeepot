@@ -52,6 +52,13 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | Job queue / worker thread (bounded shutdown rewrite) | [threading](threading.md#a-worker-thread-pattern) | yes (stub `main`, `-Wall -Wextra`) | not run | not run | not run |
 | APT hook logger, worker pause, software keyboard | [application lifecycle](application-lifecycle.md#a-complete-example) | yes (direct `arm-none-eabi-gcc` link to ELF, `-Wall -Wextra`) | not run | not run | not run |
 | Two-generation checksummed save manager (+ fault-injection build) | [filesystem and saves](filesystem-and-saves.md#a-two-generation-save-manager) | yes (same method) | not run | not run | not run |
+| Raw `cfg:u` client, session wrapper, negative-test harness (`ipc.h` arithmetic also asserted on a PC) | [IPC and services](ipc-and-services.md) | yes (`-Wall -Wextra`, linked to ELF) | not run | not run | not run |
+| `socInit` helper, non-blocking connect with `poll` | [networking](networking.md#socu-initialisation) | yes | not run | not run | not run |
+| Bounded-memory httpc download | [networking](networking.md#bounded-memory-download) | yes | not run | not run | not run |
+| Command-list capture hook | [pipeline](pica200-command-pipeline.md#host-side-command-list-decoder) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
+| Shader load/draw fragment | [shader programming](pica200-shader-programming.md#2-scale-rotate-translate-with-uniforms) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
+| Shaders s1-s5 (`.pica`) | [shader programming](pica200-shader-programming.md) | assembles with picasso 2.7.2 (syntax only) | not run | not run | not run |
+| `tools/pica_cmdlist_decode.py` | [pipeline](pica200-command-pipeline.md#host-side-command-list-decoder) | self-test passes on synthetic lists only | n/a | n/a | n/a |
 | Fixed-step main loop | [frame pacing](frame-pacing.md#separating-simulation-from-rendering) | yes | not run | not run | not run |
 | ndsp streaming setup | [audio](audio.md#setting-up-a-channel) | yes | not run | not run | not run |
 | citro2d sprite and text fragments | [2D rendering](rendering-2d.md) | yes (inside a minimal program) | not run | not run | not run |

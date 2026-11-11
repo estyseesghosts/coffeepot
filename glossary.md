@@ -189,3 +189,19 @@ The short pause between finishing one screen refresh and starting the next; the 
 ### Lookup table (LUT) {#lut}
 
 A table of precomputed answers: instead of calculating a result, hardware or software uses the input as an index and reads the answer. The 3DS GPU uses LUTs for lighting, fog and procedural textures. See [CTR GPU shading features](ctr/hardware/gpu-shading-features.md).
+
+### Thread-local storage (TLS) {#thread-local-storage}
+
+A small memory page private to each thread. On the 3DS, offset `0x80` holds the IPC command buffer and `0x180` the static buffer table. See [IPC and services](ctr/engineering/ipc-and-services.md).
+
+### Handle {#handle}
+
+A number a process uses to refer to a kernel object it owns, such as a session or memory block. It is released with `svcCloseHandle`. See [IPC and services](ctr/engineering/ipc-and-services.md#session-lifetime-and-closing).
+
+### Root certificate authority (root CA) {#root-ca}
+
+The top of a certificate chain. A TLS client accepts a server only if the server's chain ends at a root the client trusts. See [networking](ctr/engineering/networking.md#certificate-validation).
+
+### Transport Layer Security (TLS) {#tls-protocol}
+
+The encryption layer under HTTPS. See [networking](ctr/engineering/networking.md).

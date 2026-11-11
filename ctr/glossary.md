@@ -202,3 +202,55 @@ Private per-title storage on an installed title. Changes must be committed expli
 ### Extdata {#extdata}
 
 Larger storage that a title creates on the SD card. libctru's stdio layer treats it as read-only. See [files and saves](engineering/filesystem-and-saves.md).
+
+### Command buffer {#command-buffer}
+
+The 64-word per-thread area at TLS offset `0x80` where an IPC request is written and the reply is read back. See [IPC and services](engineering/ipc-and-services.md).
+
+### Session {#session}
+
+A private client/server message channel to a service, referred to by a handle and opened through `srv:` `GetServiceHandle`. See [IPC and services](engineering/ipc-and-services.md).
+
+### httpc (http:C) {#httpc}
+
+The system HTTP/HTTPS service; libctru wraps it in `httpc.h`. See [networking](engineering/networking.md).
+
+### Command list {#command-list}
+
+A buffer of register writes that the GPU's command processor (P3D) executes to draw. citro3d builds one per frame. See [PICA200 command pipeline](engineering/pica200-command-pipeline.md).
+
+### P3D {#p3d}
+
+The part of the PICA200 that reads and runs a command list; it raises an interrupt when the list ends. See [PICA200 command pipeline](engineering/pica200-command-pipeline.md).
+
+### GX command {#gx-command}
+
+A request queued to the GSP service, such as processing a command list or copying a framebuffer. See [PICA200 command pipeline](engineering/pica200-command-pipeline.md).
+
+### FINALIZE {#finalize}
+
+The `GPUREG_FINALIZE` register write that ends a command list. See [PICA200 command pipeline](engineering/pica200-command-pipeline.md).
+
+### Operand descriptor {#operand-descriptor}
+
+A table entry in a shader binary giving the swizzle and negation for an instruction's operands. See [PICA200 shader programming](engineering/pica200-shader-programming.md).
+
+### DVLB / DVLE / DVLP {#dvlb}
+
+The container parts of a compiled shader (`.shbin`): the bundle, each entry point, and the shared program and descriptor data. See [PICA200 shader programming](engineering/pica200-shader-programming.md).
+
+### Uniform {#uniform}
+
+A shader constant set by the CPU before drawing. See [PICA200 shader programming](engineering/pica200-shader-programming.md).
+
+### Address register {#address-register}
+
+The shader registers `a0.x`, `a0.y` and `aL` used for indexed register access and loops. See [PICA200 shader programming](engineering/pica200-shader-programming.md).
+
+### Geometry shader {#geometry-shader}
+
+An optional shader stage after the vertex shader that can emit extra vertices. See [PICA200 shader programming](engineering/pica200-shader-programming.md).
+
+### Outmap {#outmap}
+
+The configuration that maps shader output registers to position, colour, texture coordinates and so on. See [PICA200 shader programming](engineering/pica200-shader-programming.md).

@@ -77,6 +77,10 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Porting](engineering/porting.md) — planning a port, desktop-to-PICA200 concept mapping, SDL and portlibs, what published ports chose.
 - [Application lifecycle](engineering/application-lifecycle.md) — how a program handles HOME, sleep, resume, the software keyboard and exit, with a complete logging example.
 - [Files and saves](engineering/filesystem-and-saves.md) — SD card, RomFS, save data and extdata, commit rules, write errors, and a two-copy checksummed save manager.
+- [IPC and services](engineering/ipc-and-services.md) — how to write a correct service client: message layout, transport versus service results, buffers, handles, sessions and failure tests, with `cfg:u` GetSystemModel as the worked example.
+- [Networking](engineering/networking.md) — starting `soc:U`, non-blocking sockets, bounded-memory HTTP downloads with httpc, and HTTPS with certificate validation left on.
+- [PICA200 command pipeline](engineering/pica200-command-pipeline.md) — what draw calls write, how command lists are encoded and reach the GPU, a hang/overflow/cache checklist, and a command-list decoder.
+- [PICA200 shader programming](engineering/pica200-shader-programming.md) — picasso shaders from one triangle to lighting, instruction encoding, float24 behaviour and a debugging tree.
 - [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
 - [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush and draw-call costs (not yet run on hardware).
 
