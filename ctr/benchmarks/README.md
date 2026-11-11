@@ -18,7 +18,7 @@ Small, self-contained 3DS programs that measure costs the wiki's engineering pag
 | [`flushbench`](#flushbench) | yes (r68) | not run | 5 sessions, no errors | 3 sessions, 268 MHz mode, no errors |
 | [`drawbench`](#drawbench) | yes (r68) | not run | 2 standalone sessions at 1000 quads, 3 suite sessions over 125-4096 quads, no errors | 3 suite sessions, 268 MHz mode, no errors |
 | [`icachebench`](#icachebench) | yes (r68; also compiled directly with `-Wall -Wextra`) | not run | 5 sessions, counters worked; corrected control run in 3 | 3 sessions, counters worked, 268 MHz mode |
-| [`tile-renderer`](../engineering/PICA200/2d-tile-renderer.md) | default builds (r68) | not run | 4 strategies x 2 standalone sessions; the 20-variant suite x 1 session, no errors | the 20-variant suite x 1 session, 268 MHz mode, no errors |
+| [`tile-renderer`](../engineering/PICA200/2d-tile-renderer.md) | default builds (r68) | [picture check](#picture-equivalence-emulator): 17 variants, identical | 4 strategies x 2 standalone sessions; the 20-variant suite x 1 session, no errors | the 20-variant suite x 1 session, 268 MHz mode, no errors |
 | [`coffeebench`](#building-and-running) (micro suite) | yes (r68) | not run | 3 sessions | 3 sessions, 268 MHz mode |
 | [tile suite](#tile-renderer-suite) (20 chained binaries) | yes (r68) | not run | 1 session; the chain ran all 20 | 1 session; the chain ran all 20 |
 | [New 3DS full-speed suites and `corebench`](#new-3ds-full-speed-suites) | yes (r68) | not run | n/a | not run |
@@ -167,7 +167,7 @@ The `*_written` flush rows (`svc_flush_written`, `gsp_flush_written`) have the s
 
 **Variants to run:** default (works on an Old 3DS, which is the primary target); with `APT_SetAppCpuTimeLimit(80)` added before the run; and, **New 3DS:** with `-DBENCH_SPEEDUP=1`.
 
-**Results:** not run on hardware. One row per console and variant (min / med / max in microseconds):
+**Results:**
 
 `[measured]` Old 3DS, system 11.17.0-50U, Luma3DS 13.0.2, default variant only (the 80% core-1 limit variant has not been run). Medians in microseconds; two sessions (`o3ds-0` / `o3ds-1`), 31 runs each; the full min / median / max rows are in the CSV files.
 
@@ -346,9 +346,53 @@ Twenty builds of the [2D tile renderer](../engineering/PICA200/2d-tile-renderer.
 
 Not in the suite: `TILE=12` and 24, `NPC_COUNT=0`, other speeds and edit rates, `TEX_MODE` with a raised command buffer. Add lines to `suite.txt`; the build script derives the count.
 
-Per variant the suite writes two files. `tile-<id>.csv` has the usual `meta`, `result` and `summary` lines (and the suite index, id, session and provenance in `meta`). `tile-<id>-frames.csv` has one row per measured frame with every phase in microseconds (`period_us`, `update_us`, `build_us`, `record_us`, `framebegin_us`, `frameend_us`, `c3d_proc_us`, `c3d_gpu_us`), so rebuild spikes and what they do to the loop period can be seen, not only summarised. The suite does not compare pictures; a variant that silently omits work will look fast. Two things are still unsolved and are stated on the tile page: `dropped_objects` and `cmdbuf_peak_pct` do not prove a complete frame.
+Per variant the suite writes two files. `tile-<id>.csv` has the usual `meta`, `result` and `summary` lines (and the suite index, id, session and provenance in `meta`). `tile-<id>-frames.csv` has one row per measured frame with every phase in microseconds (`period_us`, `update_us`, `build_us`, `record_us`, `framebegin_us`, `frameend_us`, `c3d_proc_us`, `c3d_gpu_us`), so rebuild spikes and what they do to the loop period can be seen, not only summarised. The suite does not compare pictures itself, because a variant that silently omits work would look fast; the [emulator picture check](#picture-equivalence-emulator) does, for 17 variants, and has found no difference. Accounting: since the hardware runs, `dropped_objects` counts every citro2d draw call that reports failure (tiles, sprites and shapes; `C2D_DrawText` returns nothing and is not counted) and `cmdbuf_peak_pct` is sampled after the final citro2d flush. The hardware CSVs recorded here predate that change: in them zero covers only the tile calls and the occupancy is a lower bound.
 
-**Status:** all 20 build without warnings (devkitARM r68) and ran on an Old 3DS and a New 2DS XL (268 MHz mode), one session each, with no errors, no missed frames and no dropped objects. Results: [tile page](../engineering/PICA200/2d-tile-renderer.md#suite-results-old-3ds-and-new-3ds). The pictures were not compared.
+**Status:** all 20 build without warnings (devkitARM r68) and ran on an Old 3DS and a New 2DS XL (268 MHz mode), one session each, with no errors, no missed frames and no dropped objects. Results: [tile page](../engineering/PICA200/2d-tile-renderer.md#suite-results-old-3ds-and-new-3ds). Pictures were compared only in an emulator ([picture equivalence](#picture-equivalence-emulator)), not on hardware.
+
+## Picture equivalence (emulator)
+
+The tile renderer's strategies are timed against each other, so they have to draw the same picture. `tools/emu_pixel_check.py` checks that in the Azahar emulator, and nothing else: **emulator output is never a timing result, and it is not a hardware picture comparison.**
+
+How it works. `tools/build_pixel_check.sh` builds 17 variants listed in [`tile-renderer/pixel-check.txt`](tile-renderer/pixel-check.txt) with `BENCH_AUTO=1 BENCH_DUMP_FRAME=300`. At frame 300 the simulation freezes (camera, sprites and animation stop; the scene is deterministic, so every variant freezes in the same state) and six frames later both screens are written to the SD card as raw RGB8. Freezing means every buffer of the display double buffer holds the same image, so it does not matter which one is read. The harness starts each variant in Azahar, copies the two files out, stops the emulator and compares each variant with its reference byte for byte.
+
+Result (17 variants, 13 comparisons, one run each):
+
+| Compared with the direct-tile picture | Result |
+| ------------------------------------- | ------ |
+| Manual, chunks (16 tiles) and cache at 16 px tiles | identical, top and bottom screens |
+| Manual, chunks and cache at 32 px tiles | identical |
+| Manual and chunks at 8 px tiles (the cache does not support 8) | identical |
+| Chunks of 8 and of 32 tiles at 16 px | identical |
+| `TEX_MODE` 1 (two atlases alternating) and 2 (two runs) | identical |
+| `SHAPE_MODE` 2 (shapes grouped) against `SHAPE_MODE` 1 (interleaved) | identical |
+| **Control:** 16 px against 32 px tiles (must differ) | 91,677 of 96,000 top-screen pixels differ, so the comparison does detect a different picture |
+
+What this establishes: in Azahar, at that frame, the four tile strategies (and the chunk size, texture-mode and shape-order variants) draw the same top-screen picture and the same bottom-screen bytes, so their timings in the tables above are timings of the same visible result. The top-screen picture was looked at: water, sand, grass, trees and sprites, not a blank or noise frame ([reference pictures](emulator-checks/), results in `emulator-checks/results.json`).
+
+What it does not establish:
+
+- **Hardware.** The PICA200 and the display transfer may round or filter differently from the emulator; the same comparison on a console (a dump from `BENCH_DUMP_FRAME` builds, compared on a PC) is still owed.
+- **One frame, one camera position.** Frame 300 of the default path, after the cache has been built. Frames with a cache rebuild, map edits (`MAP_EDIT_PERIOD`), `TILE=12` or 24, `NPC_COUNT=0` and other camera speeds were not compared.
+- **The bottom screen is compared as bytes, not as a picture.** Azahar writes the RGB8 display-transfer output so that each 4 KiB page of the framebuffer holds whole 3-byte pixels and one unused byte (found by inspecting a flat colour: its byte phase changed every 4,096 bytes); the harness removes that skew. The top screen decodes to a clear scene; the bottom screen's dump did not decode to a clean picture, and its geometry in the emulator was not worked out. Whether real hardware has the page skew is unknown (libctru code treats the framebuffer as contiguous).
+
+Run it (Windows, Azahar installed, devkitPro shell for the build):
+
+```sh
+bash tools/build_pixel_check.sh /tmp/pixel                  # builds the 17 variants
+python tools/emu_pixel_check.py /tmp/pixel out-dir          # runs each in Azahar, compares, writes out-dir/results.json
+```
+
+The same harness approach is used for a smoke test of the suites: `tools/emu_smoke.py` starts a `.3dsx` in the emulator and reports whether each expected CSV reaches `note,done` with no `error,` line ([results](#emulator-smoke-tests)).
+
+### Emulator smoke tests
+
+`tools/emu_smoke.py` runs a `.3dsx` in Azahar and checks that each expected CSV reaches `note,done` with no `error,` line. It shows that a program starts, finishes and writes its log; it says nothing about timing or counters. Azahar in this installation is configured as an Old 3DS.
+
+- **`coffeebench`** (micro suite, one run, 111 s): `membench`, `flushbench` and `drawbench` ran to `note,done errors=0`. `icachebench` ran to the end but reported 10 `error,perf_cycle_counter_zero` lines: Azahar accepts `svcControlPerformanceCounter` `ENABLE` and then every counter reads 0. That is the corrected harness doing its job (the first build would have printed the zeros as results), and it means the counters can only be checked on hardware.
+- **`coffeebench-n3ds`**: it started, advanced the session counter and wrote no CSV, which is its refusal path on an Old 3DS (the on-screen message was not looked at). The 268 and 804 MHz passes, `osSetSpeedupEnable`, and `corebench`'s threads on cores 2 and 3 were therefore **not exercised**; they need a New 3DS, or the emulator reconfigured as one.
+- **Tile-renderer suite:** the chained launch needs Luma3DS's `hb:ldr` port, which an emulator does not provide, so the chain itself was not tested in the emulator (it ran on both consoles).
+
 
 ## Planned experiments
 

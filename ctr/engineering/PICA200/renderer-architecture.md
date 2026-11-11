@@ -198,7 +198,7 @@ The CPU cannot write VRAM in homebrew; filling it takes a GPU copy from a flushe
 
 ## Planned GPU workload characterisation benchmarks
 
-This is a design only. No benchmark in this section has been written beyond the three existing programs, and **no result exists**. Each experiment states what would be varied and what would be recorded; a result is `[measured]` only after it is run on a named model and recorded in the benchmarks README ([how to record results](../../benchmarks/README.md#recording-results)). Emulator timings are never results ([testing on hardware](../testing-on-hardware.md)).
+This is a design. The programs that exist (`drawbench`, `flushbench`, `membench`, `icachebench`, `corebench` and the tile renderer) have hardware results for part of G1 (draw overhead) and G6 (flush cost); G2 to G5 have no program and no result. Each experiment states what would be varied and what would be recorded; a result is `[measured]` only after it is run on a named model and recorded in the benchmarks README ([how to record results](../../benchmarks/README.md#recording-results)). Emulator timings are never results ([testing on hardware](../testing-on-hardware.md)).
 
 | ID | Question | Independent variable | Held constant | Record |
 | --- | --- | --- | --- | --- |

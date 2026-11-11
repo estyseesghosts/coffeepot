@@ -270,6 +270,8 @@ Code examples must state what they were checked against: at minimum, that they c
 - Benchmarks live in `<console>/benchmarks/<name>/` as complete projects (Makefile + sources). Their README states the question, the method, the variants to run, and how to record results. Raw results go in the README; the page whose claim they settle gets the `[measured]` label and a link.
 - Emulator timings are never results.
 - When a claim depends on a library or firmware version, pin it: record the commit on the source-versions page and link the source file at that commit when the exact behaviour matters.
+- **When new results arrive, update every page that states the old status.** `tools/check_docs.py` keeps a list of stale status phrases (`STALE_PHRASES`): when a status changes (something is now measured, run, or compared), add the old wording to that list so a page that still repeats it fails the check. `python3 tools/check_docs.py --external` also fetches every external link; CI runs it as an informational job so a citation that stops resolving gets noticed.
+- Emulator checks (`tools/emu_pixel_check.py`, `tools/emu_smoke.py`) are recorded as `emulator-tested` for what they establish (a picture matches, a program finishes) and never as timing; the benchmark README says what each one did and did not exercise.
 - Run `python3 tools/check_docs.py` and `zensical build --strict` (and `tools/build_benchmarks.sh` if code changed) before committing. CI runs all three.
 
 ## Writing guidelines

@@ -106,7 +106,7 @@ Guidance derived from the facts above and the [measured I-cache cliff](#icachebe
 
 ## Techniques and how to check them
 
-Each row is a candidate to *test*, not a promised speed-up. "Label" is the strongest evidence this wiki has; nothing has been run on hardware.
+Each row is a candidate to *test*, not a promised speed-up. "Label" is the strongest evidence this wiki has; only the 16 KiB instruction-cache budget is `[measured]` ([above](#icachebench-on-an-old-3ds)), and none of the techniques themselves has been run on hardware.
 
 | Technique | Detail | Label | How to verify |
 | --------- | ------ | ----- | ------------- |

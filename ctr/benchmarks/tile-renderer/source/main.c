@@ -86,8 +86,14 @@
 #ifndef BENCH_WARMUP
 #define BENCH_WARMUP 120
 #endif
+#ifndef BENCH_DUMP_FRAME
+#define BENCH_DUMP_FRAME 0   /* N > 0 (needs BENCH_AUTO): the simulation freezes at frame N and, 6 frames later, both screens are written to sdmc as raw RGB8 */
+#endif
 #ifndef BENCH_FRAMES
 #define BENCH_FRAMES 600
+#endif
+#if BENCH_DUMP_FRAME > 0 && !BENCH_AUTO
+#error "BENCH_DUMP_FRAME needs BENCH_AUTO=1"
 #endif
 #define MISSED_FRAME_MS 25.0f /* a loop period longer than this counts as a missed frame (nominal period 16.7 ms) */
 
@@ -219,7 +225,8 @@ static C3D_Tex gAtlas2;                  /* an identical second texture */
 #endif
 static Tex3DS_SubTexture gSub[ATLAS_IMAGES];
 static C2D_Image gImg[ATLAS_IMAGES], gImg2[ATLAS_IMAGES];
-static int gDropped __attribute__((unused));   /* C2D tile draw calls that returned false (object limit) */
+static int gDropped __attribute__((unused));   /* citro2d draw calls that returned false (object limit): tiles, sprites and shapes; C2D_DrawText returns void and is not counted */
+#define TRACK(call) do { if (!(call)) gDropped++; } while (0)
 
 #if TILE_STRATEGY == 3
 #define CACHE_TILES (512 / TILE)             /* 32 x 16 px (or 16 x 32 px) = 512 px square */
@@ -426,6 +433,32 @@ static void dumpFrames(void)
 	if (fclose(f)) csvLine("note,frames_file_close_failed");
 }
 
+#if BENCH_DUMP_FRAME > 0
+/* Both screens as the display transfer left them (RGB8, column-major, 240x400 top and 240x320 bottom as the
+ * framebuffers are stored). With the simulation frozen, every buffer holds the same image, so it does not matter
+ * which one of the double buffer is returned. The strategies can then be compared pixel for pixel on a PC. */
+static void dumpShots(void)
+{
+	static const struct { gfxScreen_t scr; const char *name; } screens[] = { { GFX_TOP, "top" }, { GFX_BOTTOM, "bottom" } };
+	for (int k = 0; k < 2; k++) {
+		u16 w, h;
+		u8 *fb = gfxGetFramebuffer(screens[k].scr, GFX_LEFT, &w, &h);
+		size_t size = (size_t)w * h * 3;
+		GSPGPU_InvalidateDataCache(fb, size);
+		char path[128], name[96];
+		snprintf(name, sizeof name, "shot-%s-%s", COFFEE_STR(SUITE_ID), screens[k].name);
+		coffee_result_path(path, sizeof path, gSession, name);
+		char *dot = strrchr(path, '.');
+		if (dot) strcpy(dot, ".rgb");
+		FILE *f = fopen(path, "wb");
+		if (!f) { csvLine("error,shot_open,%s", screens[k].name); gCsvErrors++; continue; }
+		if (fwrite(fb, 1, size, f) != size) { csvLine("error,shot_write,%s", screens[k].name); gCsvErrors++; }
+		fclose(f);
+		csvLine("note,shot,%s,%u,%u,page_offset=%u", screens[k].name, (unsigned)w, (unsigned)h, (unsigned)((uintptr_t)fb & 0xFFF));
+	}
+}
+#endif
+
 static void csvResults(int visibleTiles, int rebuilds, int droppedBase, float cmdPeak, u32 vblanks)
 {
 	char variant[96];
@@ -614,26 +647,34 @@ int main(int argc, char **argv)
 		if (held & KEY_DRIGHT) ix = 1.0f;
 		if (held & KEY_DUP)    iy = -1.0f;
 		if (held & KEY_DDOWN)  iy = 1.0f;
+#if BENCH_DUMP_FRAME > 0
+		const bool frozen = frameNo > BENCH_DUMP_FRAME;        /* the simulation stops; only rendering continues */
+		const u32 simFrame = frozen ? BENCH_DUMP_FRAME : frameNo;
+#else
+		const bool frozen = false;
+		const u32 simFrame = frameNo;
+#endif
 #if BENCH_AUTO
 		{   /* scripted path: right, down, left, up; legs of BENCH_LEG frames */
-			int leg = (int)((frameNo / BENCH_LEG) % 4);
+			int leg = (int)((simFrame / BENCH_LEG) % 4);
 			ix = (leg == 0) ? 1.0f : (leg == 2) ? -1.0f : 0.0f;
 			iy = (leg == 1) ? 1.0f : (leg == 3) ? -1.0f : 0.0f;
 #if BENCH_PATH == 1
 			ix = iy = 0.0f;
 #endif
+			if (frozen) ix = iy = 0.0f;
 		}
 #endif
 		Actor *pl = &gActor[0];
 		pl->x = clampf(pl->x + ix * CAM_SPEED, 8, WORLD_W - 8);
 		pl->y = clampf(pl->y + iy * CAM_SPEED, 8, WORLD_H - 8);
-		pl->image = (((frameNo / 8) & 1) && (ix != 0 || iy != 0)) ? S_PLAYER1 : S_PLAYER0;
-		for (int i = 1; i <= NPC_COUNT; i++) {
+		pl->image = (((simFrame / 8) & 1) && (ix != 0 || iy != 0)) ? S_PLAYER1 : S_PLAYER0;
+		for (int i = 1; i <= NPC_COUNT && !frozen; i++) {
 			Actor *a = &gActor[i];
 			if (--a->timer <= 0) { a->timer = 30 + (int)(rnd() % 60); a->vx = ((int)(rnd() % 3) - 1) * 0.6f; a->vy = ((int)(rnd() % 3) - 1) * 0.6f; }
 			a->x = clampf(a->x + a->vx, 8, WORLD_W - 8);
 			a->y = clampf(a->y + a->vy, 8, WORLD_H - 8);
-			a->image = ((frameNo / 10) & 1) ? S_NPC1 : S_NPC0;
+			a->image = ((simFrame / 10) & 1) ? S_NPC1 : S_NPC0;
 		}
 
 		/* camera: follow the player, clamp to the world, then snap to whole pixels */
@@ -653,7 +694,7 @@ int main(int argc, char **argv)
 		int tx0 = camX / TILE, ty0 = camY / TILE;
 		int tx1 = (camX + TOP_W - 1) / TILE, ty1 = (camY + SCR_H - 1) / TILE;
 		visibleTiles = (tx1 - tx0 + 1) * (ty1 - ty0 + 1);
-		int waterFrame = T_WATER0 + (int)((frameNo / 12) & 3);
+		int waterFrame = T_WATER0 + (int)((simFrame / 12) & 3);
 
 #if !BENCH_AUTO
 		/* text caches: only when the value changed */
@@ -688,6 +729,9 @@ int main(int argc, char **argv)
 		/* ---- draw ---- */
 #if BENCH_AUTO
 		if (frameNo == BENCH_WARMUP) { vblankStart = C3D_FrameCounter(0); rebuildBase = rebuilds; droppedBase = gDropped; }
+#endif
+#if BENCH_DUMP_FRAME > 0
+		if (frameNo == BENCH_DUMP_FRAME + 6) dumpShots();
 #endif
 		u64 beginStart = svcGetSystemTick();
 		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
@@ -734,9 +778,9 @@ int main(int argc, char **argv)
 			float cx = (float)(gCacheTX * TILE - camX), cy = (float)(gCacheTY * TILE - camY);
 #if CACHE_FLIP_V
 			C2D_DrawParams p = { { cx, cy + 512.0f, 512.0f, -512.0f }, { 0, 0 }, Z_ALL, 0.0f };
-			C2D_DrawImage(cacheImg, &p, NULL);
+			TRACK(C2D_DrawImage(cacheImg, &p, NULL));
 #else
-			C2D_DrawImageAt(cacheImg, cx, cy, Z_ALL, NULL, 1.0f, 1.0f);
+			TRACK(C2D_DrawImageAt(cacheImg, cx, cy, Z_ALL, NULL, 1.0f, 1.0f));
 #endif
 			/* animated tiles cannot live in the cache: overlay only the visible water tiles */
 			for (int ty = ty0; ty <= ty1; ty++)
@@ -799,12 +843,12 @@ int main(int argc, char **argv)
 			const Actor *a = &gActor[order[n]];
 			float sx = floorf(a->x) - camX - 8, sy = floorf(a->y) - camY - 12;
 			if (sx < -CELL || sx > TOP_W || sy < -CELL || sy > SCR_H) continue;   /* cull off-screen sprites */
-			C2D_DrawImageAt(gImg[S_SHADOW], sx, sy + 4, Z_ALL, NULL, 1.0f, 1.0f);
-			C2D_DrawImageAt(gImg[a->image], sx, sy, Z_ALL, NULL, 1.0f, 1.0f);
+			TRACK(C2D_DrawImageAt(gImg[S_SHADOW], sx, sy + 4, Z_ALL, NULL, 1.0f, 1.0f));
+			TRACK(C2D_DrawImageAt(gImg[a->image], sx, sy, Z_ALL, NULL, 1.0f, 1.0f));
 		}
 
 		/* HUD: rectangles and text break the batch, so they come last */
-		C2D_DrawRectSolid(0, 0, Z_ALL, TOP_W, 14, C2D_Color32(0, 0, 0, 160));
+		TRACK(C2D_DrawRectSolid(0, 0, Z_ALL, TOP_W, 14, C2D_Color32(0, 0, 0, 160)));
 		C2D_DrawText(&title, C2D_WithColor, 4, 1, Z_ALL, 0.4f, 0.4f, C2D_Color32(255, 255, 255, 255));
 #if !BENCH_AUTO
 		C2D_DrawText(&posText, C2D_WithColor, 4, 16, Z_ALL, 0.5f, 0.5f, C2D_Color32(255, 255, 160, 255));
@@ -814,20 +858,20 @@ int main(int argc, char **argv)
 			C2D_TargetClear(bot, C2D_Color32(20, 20, 28, 255));
 			C2D_SceneBegin(bot);
 			/* world overview: the whole world scaled to 128x96 */
-			C2D_DrawRectSolid(10, 10, Z_ALL, MAP_W, MAP_H, C2D_Color32(40, 90, 60, 255));
-			C2D_DrawRectangle(10 + camX * (float)MAP_W / WORLD_W, 10 + camY * (float)MAP_H / WORLD_H, Z_ALL, TOP_W * (float)MAP_W / WORLD_W, SCR_H * (float)MAP_H / WORLD_H,
-				C2D_Color32(255, 255, 255, 120), C2D_Color32(255, 255, 255, 120), C2D_Color32(255, 255, 255, 60), C2D_Color32(255, 255, 255, 60));
-			C2D_DrawCircleSolid(10 + pl->x * (float)MAP_W / WORLD_W, 10 + pl->y * (float)MAP_H / WORLD_H, Z_ALL, 2.0f, C2D_Color32(240, 90, 60, 255));
+			TRACK(C2D_DrawRectSolid(10, 10, Z_ALL, MAP_W, MAP_H, C2D_Color32(40, 90, 60, 255)));
+			TRACK(C2D_DrawRectangle(10 + camX * (float)MAP_W / WORLD_W, 10 + camY * (float)MAP_H / WORLD_H, Z_ALL, TOP_W * (float)MAP_W / WORLD_W, SCR_H * (float)MAP_H / WORLD_H,
+				C2D_Color32(255, 255, 255, 120), C2D_Color32(255, 255, 255, 120), C2D_Color32(255, 255, 255, 60), C2D_Color32(255, 255, 255, 60)));
+			TRACK(C2D_DrawCircleSolid(10 + pl->x * (float)MAP_W / WORLD_W, 10 + pl->y * (float)MAP_H / WORLD_H, Z_ALL, 2.0f, C2D_Color32(240, 90, 60, 255)));
 #if SHAPE_MODE == 1
 			for (int i = 0; i < SHAPE_PAIRS; i++) {     /* rectangle, circle, rectangle, circle ... */
-				C2D_DrawRectSolid(150 + (i % 16) * 10, 10 + (i / 16) * 20, Z_ALL, 8, 8, C2D_Color32(200, 80, 80, 255));
-				C2D_DrawCircleSolid(154 + (i % 16) * 10, 24 + (i / 16) * 20, Z_ALL, 4, C2D_Color32(80, 80, 200, 255));
+				TRACK(C2D_DrawRectSolid(150 + (i % 16) * 10, 10 + (i / 16) * 20, Z_ALL, 8, 8, C2D_Color32(200, 80, 80, 255)));
+				TRACK(C2D_DrawCircleSolid(154 + (i % 16) * 10, 24 + (i / 16) * 20, Z_ALL, 4, C2D_Color32(80, 80, 200, 255)));
 			}
 #elif SHAPE_MODE == 2
 			for (int i = 0; i < SHAPE_PAIRS; i++)       /* all rectangles, then all circles */
-				C2D_DrawRectSolid(150 + (i % 16) * 10, 10 + (i / 16) * 20, Z_ALL, 8, 8, C2D_Color32(200, 80, 80, 255));
+				TRACK(C2D_DrawRectSolid(150 + (i % 16) * 10, 10 + (i / 16) * 20, Z_ALL, 8, 8, C2D_Color32(200, 80, 80, 255)));
 			for (int i = 0; i < SHAPE_PAIRS; i++)
-				C2D_DrawCircleSolid(154 + (i % 16) * 10, 24 + (i / 16) * 20, Z_ALL, 4, C2D_Color32(80, 80, 200, 255));
+				TRACK(C2D_DrawCircleSolid(154 + (i % 16) * 10, 24 + (i / 16) * 20, Z_ALL, 4, C2D_Color32(80, 80, 200, 255)));
 #endif
 			if (showDebug)
 				C2D_DrawText(&dbgText, C2D_WithColor, 10, 116, Z_ALL, 0.5f, 0.5f, C2D_Color32(190, 255, 190, 255));
@@ -835,6 +879,7 @@ int main(int argc, char **argv)
 
 		u64 endStart = svcGetSystemTick();
 #if BENCH_AUTO
+		C2D_Flush();   /* submit citro2d's last batch first, so the occupancy sampled below is the final one */
 		float cmdUse = C3D_GetCmdBufUsage();
 #endif
 		C3D_FrameEnd(0);

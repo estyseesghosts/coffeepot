@@ -123,7 +123,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - Source data differ in places (XDMA channel count, DSP sample rate, 176 vs 178 MB maximum application memory, MCU instruction set naming); each hardware page records the disagreement.
 - Not yet covered: individual system applications (Home Menu internals, browser), the StreetPass wire protocol (only the mailbox side is documented), the camera and NFC subsystems in detail, the Teak DSP architecture, gas rendering.
 - Kernel11 and Process9 internals beyond what 3dbrew publishes are not in the source set.
-- The engineering pages contain no measurements made for this wiki yet: costs such as the whole-linear-heap flush, draw-call overhead and heap-versus-linear write bandwidth are listed as open questions with [benchmarks](benchmarks/README.md) that build but have not yet been run on hardware.
+- Measurements exist for an Old 3DS and a New 2DS XL at its default 268 MHz clock: the whole-linear-heap flush, draw-call overhead, heap-versus-linear write bandwidth and the instruction-cache cliff are in the [benchmark README](benchmarks/README.md#suite-runs-old-3ds-and-new-3ds). Not yet measured: the New 3DS at 804 MHz with its L2 cache and cores 2 and 3 (the suites are built, see [New 3DS full-speed suites](benchmarks/README.md#new-3ds-full-speed-suites)), GPU fill-rate, vertex and texture throughput, SD and RomFS latency, and IPC cost. Most code examples on the engineering pages are compiled but not run; the [source-version ledger](engineering/source-versions.md#verification-status-of-code-on-the-wiki) lists each one's status.
 
 ## Sources
 

@@ -34,5 +34,37 @@ class AnchorChecks(unittest.TestCase):
         self.assertIn('missing anchor', result.stdout)
 
 
+class StaleStatusChecks(unittest.TestCase):
+    def run_checker(self, text, name="engineering/page.md"):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            page = root / "ctr" / name
+            page.parent.mkdir(parents=True)
+            page.write_text(text + "\n\n## Sources\n", encoding="utf-8")
+            return subprocess.run([sys.executable, str(CHECKER), str(root)],
+                                  text=True, capture_output=True, check=False)
+
+    def test_stale_phrase_is_reported(self):
+        result = self.run_checker("The engineering pages contain no measurements made for this wiki yet.")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("stale status", result.stdout)
+
+    def test_stale_ok_marker_allows_the_line(self):
+        result = self.run_checker("No measurements: contain no measurements made for this wiki. <!-- stale-ok -->")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_separate_chip_claim_is_reported(self):
+        result = self.run_checker("The GPU is a separate chip, so a frame is limited by the slower side.")
+        self.assertIn("same SoC", result.stdout)
+
+    def test_stale_phrase_in_code_block_is_ignored(self):
+        result = self.run_checker("```\nno results yet from the benchmark suite\n```")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_current_status_wording_passes(self):
+        result = self.run_checker("The suite has Old 3DS results; the 804 MHz runs are not yet done.")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,209 @@
+{
+  "t16_direct": {
+    "status": "reference"
+  },
+  "t16_manual": {
+    "reference": "t16_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t16_chunks": {
+    "reference": "t16_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t16_cache": {
+    "reference": "t16_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t32_direct": {
+    "status": "reference"
+  },
+  "t32_manual": {
+    "reference": "t32_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t32_chunks": {
+    "reference": "t32_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t32_cache": {
+    "reference": "t32_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t8_direct": {
+    "status": "reference"
+  },
+  "t8_manual": {
+    "reference": "t8_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t8_chunks": {
+    "reference": "t8_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t16_chunks8": {
+    "reference": "t16_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t16_chunks32": {
+    "reference": "t16_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t16_tex1": {
+    "reference": "t16_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t16_tex2": {
+    "reference": "t16_direct",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "t16_shape1": {
+    "status": "reference"
+  },
+  "t16_shape2": {
+    "reference": "t16_shape1",
+    "top": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "bottom": {
+      "differing_pixels": 0,
+      "max_channel_difference": 0,
+      "bounding_box_col_row": null
+    },
+    "identical": true
+  },
+  "_control_t16_vs_t32": {
+    "top": {
+      "differing_pixels": 91677,
+      "max_channel_difference": 205,
+      "bounding_box_col_row": [
+        0,
+        0,
+        399,
+        239
+      ]
+    },
+    "must_differ": true
+  }
+}

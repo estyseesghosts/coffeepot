@@ -129,7 +129,7 @@ The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate 
 
 ## Real-hardware profiling cookbook
 
-A checklist for getting numbers from an Old 3DS that someone else can trust. Every recipe here is a method; none has been run for this wiki, and no figure in it is `[measured]`. Record the results in the format on [testing on hardware](testing-on-hardware.md#benchmark-record-format).
+A checklist for getting numbers from an Old 3DS that someone else can trust. Every recipe here is a method. The benchmark programs use them and have hardware results ([benchmark README](../benchmarks/README.md#hardware-runs)), but the helper code on this page has not been run, and no figure on this page is `[measured]` except where it links to those results. Record the results in the format on [testing on hardware](testing-on-hardware.md#benchmark-record-format).
 
 ### Reliable CPU timing
 

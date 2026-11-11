@@ -556,7 +556,7 @@ For very large sprite counts beyond citro2d's limits, write quads into your own 
 
 ## 6. Performance decisions
 
-Old 3DS budget: 16.7 ms per frame at 60 fps, about 4.47 million core-0 cycles ([performance](../performance.md#the-budget)). The GPU is a separate chip, so a frame is limited by whichever of CPU recording or GPU drawing is slower. Measure before changing anything ([measure the frame](../performance.md#a-frame-level-breakdown)).
+Old 3DS budget: 16.7 ms per frame at 60 fps, about 4.47 million core-0 cycles ([performance](../performance.md#the-budget)). The GPU (the PICA200) sits in the same system-on-a-chip as the CPU cores but runs independently of the ARM11's instruction stream, so a frame is limited by whichever of CPU recording or GPU drawing is slower. Measure before changing anything ([measure the frame](../performance.md#a-frame-level-breakdown)).
 
 > **New 3DS:** the CPU runs three times faster with the speed-up enabled ([performance](../performance.md#new-3ds-turn-on-the-fast-mode-yourself)), which shrinks the recording costs in the table.
 
@@ -609,7 +609,7 @@ A plan for proving a 2D renderer correct and stable. **Every row is `not run`**:
 
 | # | Check | How | Pass criterion | Status |
 | - | ----- | --- | -------------- | ------ |
-| 1 | **Pixel equality between strategies** | Scripted camera at fixed frames (`BENCH_AUTO`, fixed seed). Dump the top-screen colour buffer to the SD card after the GPU and the display transfer have finished, and invalidate the range before the CPU reads it ([reading GPU output](../memory-and-cache.md#reading-gpu-output-on-the-cpu)). The buffer is 240 pixels wide and 400 tall, 3 bytes per pixel once transferred ([section 2](#2-screens-coordinates-and-depth)); which of the two swap buffers holds the newest frame is not established here, so verify the dump with a known pattern first. Compare dumps from `TILE_STRATEGY` 0, 1, 2, 3 on a PC | Byte-identical, or every differing pixel explained (the cached layer's V orientation, filtering at tile edges) | not run |
+| 1 | **Pixel equality between strategies** | Scripted camera at fixed frames (`BENCH_AUTO`, fixed seed). Dump the top-screen colour buffer to the SD card after the GPU and the display transfer have finished, and invalidate the range before the CPU reads it ([reading GPU output](../memory-and-cache.md#reading-gpu-output-on-the-cpu)). The buffer is 240 pixels wide and 400 tall, 3 bytes per pixel once transferred ([section 2](#2-screens-coordinates-and-depth)); which of the two swap buffers holds the newest frame is not established here, so verify the dump with a known pattern first. Compare dumps from `TILE_STRATEGY` 0, 1, 2, 3 on a PC | Byte-identical, or every differing pixel explained (the cached layer's V orientation, filtering at tile edges) | Emulator (Azahar): identical for 13 comparisons at one frame, via `BENCH_DUMP_FRAME` with the simulation frozen so every swap buffer holds the same image ([results](../../benchmarks/README.md#picture-equivalence-emulator)). Hardware: not run |
 | 2 | **Pixel equality with a reference** | The map, atlas and sprites are deterministic (`hash2`, fixed seed, `rnd`); re-implement them in a PC script, render the same frame in software, compare with the dump from check 1 | Exact match, or a listed tolerance | not run |
 | 3 | **Screenshot comparison** | Photograph or capture the screen at the same frames; an emulator screenshot is allowed for correctness only and never replaces a hardware pass ([testing on hardware](../testing-on-hardware.md)) | Same content in the same places | not run |
 | 4 | **Missed-frame counting** | `missed_frames_over_25ms` (loop periods above 25 ms) and `vblanks_elapsed` against `frames` in the `summary` lines ([output records](2d-tile-renderer.md#output-records)); keep a histogram of frame intervals rather than an average ([frame pacing](frame-pacing.md#detecting-missed-frames)) | 0 missed frames in a 600-frame scripted run, or each one explained (cache redraw, map edit) | not run |
@@ -801,7 +801,7 @@ Validate with status-only and VCOUNT-only changes, scroll/palette/OAM/VRAM write
 | Setup/teardown and frame-loop fragments | this page | yes (the same calls are used in both programs) | not run | not run | not run |
 | Manual render-target and stereo-eye fragments | this page | yes (compiled inside a stub `main`, `-Wall -Wextra`, linked) | not run | not run | not run |
 
-The tile renderer (30 configurations: four strategies, texture, shape, bottom-screen, edit and scripted-run modes) builds, and 20 of them have run with `BENCH_AUTO=1` on an Old 3DS and a New 2DS XL (268 MHz) without errors; its rows are on [its page](2d-tile-renderer.md#verification-status). Pictures were not compared. The validation checklist above is a plan; all of its rows are `not run`.
+The tile renderer (30 configurations: four strategies, texture, shape, bottom-screen, edit and scripted-run modes) builds, and 20 of them have run with `BENCH_AUTO=1` on an Old 3DS and a New 2DS XL (268 MHz) without errors; its rows are on [its page](2d-tile-renderer.md#verification-status). Pictures were compared in an emulator only (validation row 1). The validation checklist above is a plan; all of its rows are `not run`.
 
 ## Pitfalls
 

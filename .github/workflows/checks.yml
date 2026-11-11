@@ -13,6 +13,16 @@ jobs:
       - run: python3 tools/check_docs.py
       - run: python3 -m unittest discover -s tests -p "test_check_docs.py"
 
+  external-links:
+    name: External links resolve (informational)
+    runs-on: ubuntu-latest
+    # Needs the network and can be flaky, so a failure here does not fail the workflow.
+    # It is how a citation to a commit or page that disappeared gets noticed.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/check_docs.py --external
+
   site:
     name: Build the zensical site
     runs-on: ubuntu-latest
@@ -34,3 +44,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash tools/build_benchmarks.sh
+      # Also builds the pixel-equivalence variants (the emulator comparison itself runs on a developer's
+      # machine: tools/emu_pixel_check.py).
+      - run: bash tools/build_pixel_check.sh "$(mktemp -d)"

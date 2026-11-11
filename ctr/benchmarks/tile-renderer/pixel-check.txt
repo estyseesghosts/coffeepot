@@ -1,0 +1,22 @@
+# Pixel-equivalence variants (tools/build_pixel_check.sh, tools/emu_pixel_check.py).
+# Format: <name>|<extra -D flags>|<reference>   Each is built with BENCH_AUTO=1 BENCH_DUMP_FRAME=300 and dumps both
+# screens (raw RGB8) after the simulation freezes at frame 300. <reference> is the variant its pictures are
+# compared with; "-" marks a reference itself. The simulation is deterministic, so identical scenes must give
+# identical pixels unless the strategies really draw differently.
+t16_direct|-DTILE_STRATEGY=0|-
+t16_manual|-DTILE_STRATEGY=1|t16_direct
+t16_chunks|-DTILE_STRATEGY=2|t16_direct
+t16_cache|-DTILE_STRATEGY=3|t16_direct
+t32_direct|-DTILE_STRATEGY=0 -DTILE=32|-
+t32_manual|-DTILE_STRATEGY=1 -DTILE=32|t32_direct
+t32_chunks|-DTILE_STRATEGY=2 -DTILE=32|t32_direct
+t32_cache|-DTILE_STRATEGY=3 -DTILE=32|t32_direct
+t8_direct|-DTILE_STRATEGY=0 -DTILE=8|-
+t8_manual|-DTILE_STRATEGY=1 -DTILE=8|t8_direct
+t8_chunks|-DTILE_STRATEGY=2 -DTILE=8|t8_direct
+t16_chunks8|-DTILE_STRATEGY=2 -DCHUNK_TILES=8|t16_direct
+t16_chunks32|-DTILE_STRATEGY=2 -DCHUNK_TILES=32|t16_direct
+t16_tex1|-DTILE_STRATEGY=0 -DTEX_MODE=1|t16_direct
+t16_tex2|-DTILE_STRATEGY=0 -DTEX_MODE=2|t16_direct
+t16_shape1|-DTILE_STRATEGY=0 -DSHAPE_MODE=1|-
+t16_shape2|-DTILE_STRATEGY=0 -DSHAPE_MODE=2|t16_shape1

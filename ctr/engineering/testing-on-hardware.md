@@ -171,7 +171,7 @@ When you have results, add them to the relevant page with the console model, sys
 
 ## Open questions
 
-- No results yet from the benchmark suite on any console. Contributions should record model, system version, Luma3DS version, and whether fast mode or a core-1 share was active.
+- The suite has results for an Old 3DS and a New 2DS XL at 268 MHz ([benchmark README](../benchmarks/README.md#hardware-runs)); none yet for 804 MHz mode, a core-1 share, or any console other than those two. Contributions should record model, system version, Luma3DS version, and whether fast mode or a core-1 share was active.
 
 ## Sources
 
