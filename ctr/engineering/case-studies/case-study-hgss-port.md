@@ -4,7 +4,7 @@ The HeartGold/SoulSilver port translates DS graphics and audio to 3DS software a
 
 ## Before you start
 
-The entries below are the project's own reports, not measurements reproduced by Coffeepot. They describe particular development builds and scenes on Old 3DS or, where explicitly stated, Azahar or a host. Firmware, exact toolchain and run conditions are not consistently stated in the notes. The worklogs are linked at a fixed repository revision; the checkout also contained newer uncommitted November 11 notes, which are identified separately and are not represented by those pinned links. Numbers from different sessions or renderer configurations must not be combined into a single before/after result.
+The entries below are the project's own reports, not measurements reproduced by Coffeepot. They describe particular development builds and scenes on Old 3DS or, where explicitly stated, Azahar or a host. Firmware, exact toolchain and run conditions are not consistently stated in the notes. The original worklogs are linked at revision `845cae5`; newer P2–P4 findings were checked in the local HGSS checkout at revision `443a22f`. The public availability of that later commit could not be verified. Numbers from different sessions or renderer configurations must not be combined into a single before/after result.
 
 ## Establish the bottleneck and validate the counters
 
@@ -18,9 +18,11 @@ Another counter used an unsigned 64-bit accumulator as `total -= start; ...; tot
 
 A band-redraw fixture reported bit-exact results and fewer visited scanlines, but an in-game Goldenrod menu smoke recorded zero object-band and background-band takes. Build flags had also initially reached application compilation but not the library containing the optimized code; several emulator runs had tested the off-path. The team added build identifiers, invalidation markers, symbol checks and admission/rejection counters. [reported: HGSS wave-2 integration, November 6, 2026; host fixtures and Azahar, not an Old 3DS timing result]
 
-The later P3 flat-picture skip similarly recorded zero skips in a 600-tick Azahar field window in the local November 11 working notes. Its register signature changed each pass; the specific significance of each changing field and the hardware gain remain open. Do not mask a changing register merely to increase hits: first prove which pixels, metadata and future states depend on it. Track attempts, takes, reason buckets, bytes or scanlines avoided, and output disagreements. A green fixture and a zero-hit live path establish different things.
+The P3 flat-picture skip first recorded zero skips in a 600-tick Azahar field window. Later per-field diagnostics attributed a changing byte on every pass to the low byte of `VCOUNT`; the project excluded the timing fields from this *rendered-picture* signature and reported the skip engaging in that scene. This is a project-specific result, not permission to omit display timing or interrupt state from emulation: interrupt-driven writes can change effective visual state. [reported: HGSS November 2026 P3 worklog, Azahar 2126.2 Old 3DS profile; not a hardware result] Track attempts, takes, rejection reasons, work avoided and output disagreements. A green fixture and a zero-hit live path establish different things.
 
-In a separate P2 experiment, four geometry optimizations engaged and audits passed, yet the combined configuration reduced Azahar compositions by 28–33% in the specified scripts; the team reverted the bundle. [reported: HGSS P2 results in the local November 11 working notes; emulator results only, build and conditions in those notes] This establishes a regression for that bundle and test, not which individual flag caused it or what it would cost on hardware.
+The same worklog describes a post-draw hash that could label an old rendered picture with newer live VRAM contents. The project moved its retained signature before drawing, which prevents that particular association error but does not guarantee a coherent image if VRAM changes during the draw. In two reported 600-tick Azahar windows (field at rest and walking), three draws were hashed before and after and no hash difference was observed. Three matching pairs do not establish that no write occurred, rule out A → B → A, or establish a hardware race rate. [reported: HGSS P3/P4 worklog, build `9759707`; Azahar, not hardware] A coherent snapshot or equivalent synchronization remains necessary; see [visual-state signatures](../PICA200/rendering-2d.md#cache-effective-visual-state-not-raw-register-blocks).
+
+In a separate P2 experiment, four geometry optimizations engaged and audits passed, yet the combined configuration reduced Azahar compositions by 28–33% in the specified scripts; the team reverted the bundle. [reported: HGSS P2 results at local revision `443a22f`, November 2026; Azahar 2126.2 Old 3DS profile, not hardware] This establishes a regression for that bundle and test, not which individual flag caused it or what it would cost on hardware.
 
 ## State lifetime and batch boundaries
 
@@ -52,12 +54,14 @@ A different compatibility layer paired a reflected CRC table with a non-reflecte
 
 ## Pitfalls and open questions
 
-- A signature may cover the right bytes but race a writer between hashing and rendering. HGSS explicitly plans to measure this live-VRAM race; the notes do not establish its frequency or a safe general fix.
+- A signature may cover the right bytes but race a writer between hashing and rendering. The limited before/after hash observations above do not establish its frequency or a safe general fix.
 - A `0 disagreements` counter only covers the path, states and fields actually compared. It does not prove a dormant optimization or every graphics mode correct.
 - One scene or one matched pair cannot establish performance throughout the game; background loads, battle effects and hardware contention change the result.
 - The pinned project status and claim sheets contain historical entries; consult the dated worklog and exact artifact before treating a gate as complete. Coffeepot has not repeated the runs.
 
 ## Sources
+
+- [HGSS P3/P4 results at local revision `443a22f`](https://github.com/estyseesghosts/hgss-3ds/blob/443a22fdac47bc9fe03e297f2131e382fe5e79be/docs/progress/agent-notes/2026-11-10-o3ds-000-results.md) — VCOUNT signature and limited before/after draw observations; the local commit was inspected, but public availability was not verified.
 
 - [Old 3DS baseline and pacing correction](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/2026-11-10-o3ds-baseline-and-the-pacing-mistake.md) — measured field runs and reverted throttle.
 - [November 10 issues and fixes](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/2026-11-10-session-issues-and-fixes.md) — counter semantics, artifact identity, unmatched A/B and negative results.
@@ -67,4 +71,4 @@ A different compatibility layer paired a reflected CRC table with a non-reflecte
 - [Battle dialogue investigation](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/w2-battle-ui-veto-and-quad-hunt.md) — phase-dependent GPU take, full-state capture and pending hardware check.
 - [Settings V-blank callback](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s14-options-vblank.md) and [geometry shutdown](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s16-pokepics-and-quit.md) — callback and queue lifetime failures.
 - [Volume table and audio investigation](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s13-nns-volume-table.md) and [save CRC investigation](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s17-save-crc-and-tall-grass.md) — compatibility failures and verification limits.
-- Local HGSS working-tree notes dated November 10–11, 2026 (`docs/progress/agent-notes/2026-11-10-o3ds-000-results.md` and `2026-11-11-session-issues-and-fixes.md`) — P2/P3 results; uncommitted at review, not included in the pinned revision above.
+- [HGSS November 11 issues, local revision `443a22f`](https://github.com/estyseesghosts/hgss-3ds/blob/443a22fdac47bc9fe03e297f2131e382fe5e79be/docs/progress/agent-notes/2026-11-11-session-issues-and-fixes.md) — diagnostic process; the local commit was inspected, but public availability was not verified.

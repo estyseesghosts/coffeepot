@@ -59,7 +59,7 @@ Sorting opaque objects by material first (to batch) and by distance second is a 
 
 | Technique | Idea | Notes |
 | --------- | ---- | ----- |
-| Mesh LOD | Two or three versions of a model switched by distance | Triples storage and authoring; switch distances hidden by fog or small screen size |
+| Mesh LOD | Two or three versions of a model switched by distance | Storage is the sum of actual LOD resources plus overhead; sharing textures/materials changes it. A 100% + 50% + 20% geometry example totals 170%, not 300%. Authoring effort and transition visibility vary. |
 | Imposters (a flat textured quad in place of a distant model) | One quad instead of hundreds of triangles | Works on a handheld screen, where distant objects are a few pixels |
 | Skeleton LOD | Fewer bones or no skinning when far | Skinning is vertex work; whether it is on the CPU or in a shader matters |
 | Animation rate reduction | Update distant characters every 2nd or 4th frame, or use precomputed poses | The review lists this; the wiki has no measurement |
@@ -93,7 +93,7 @@ A flat character quad can be placed in a projected 3D scene (terrain and buildin
 - **Sprite layers inside 3D**: groups of 2D sprites that must keep their own order (many characters standing at different depths) can use quad depth from their ground position and rely on the depth test, avoiding a sort for opaque pixels `[hypothesis]`.
 - **Stereo**: quads at different scene depths get correct parallax automatically when drawn through the stereo projection; screen-space sprites need explicit offsets ([stereo engineering](stereo-engineering.md#hud-sprite-layers-and-parallax-offsets)).
 
-A hybrid used by Mario & Luigi: Dream Team, per a search summary of the Iwata Asks interview that this page did not read in full (3D backgrounds, 2D pixel-art characters), is the same idea; it is `[reported]` second-hand and is not relied on.
+The [direct developer interview](stereo-engineering.md#nintendos-accounts-reported) reports that stereoscopic backgrounds made earlier 2D placement shortcuts unsuitable. It does not establish a particular implementation of hybrid characters and backgrounds; a separate search-summary claim remains unverified. [reported: Iwata Asks, date and model not stated; see the linked page]
 
 ### A hybrid scene: coordinate, depth and pass contracts
 

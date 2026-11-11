@@ -48,7 +48,7 @@ Fixed modules change their header magic from `CRO0` to `FIXD`.
 
 | Offset | Size | Field |
 | ------ | ---- | ----- |
-| `0x00` | `0x20` × 4 | SHA-256 over: `0x80` to code offset; code; module name to data offset; data to end of file |
+| `0x00` | `0x20` × 4 | SHA-256 ranges: `0x80` to code offset; code offset to module-name offset; module-name offset to data offset; data offset to end of file |
 | `0x80` | 4 | Magic `CRO0` |
 | `0x84` | 4 | Name offset |
 | `0x88`, `0x8C` | 4 + 4 | Next / previous module (zero in the file; RO writes them) |
@@ -114,6 +114,6 @@ Homebrew `.3dsx` files do not use CRO; the format matters for emulators, for rev
 
 ## Sources
 
-- Citra project wiki, "3DS CRO Information" (reverse engineering by wwylele) — all of the above. The `citra-emu/citra` repository that hosted it has since been removed from GitHub, so no live link could be verified.
+- [wwylele, 3DS CRO Information](https://gist.github.com/wwylele/325d53ee6a0f1dff6aa3473377335d93/raw/cab6bdf3f3d65ecd17b86bf969f636c21df994fe/CRO_doc.md) — original-author reverse-engineering notes; the format and some terminology remain uncertain.
 - [3dbrew: Services API](https://www.3dbrew.org/wiki/Services_API) — `ldr:ro` service.
 - [3dbrew: SVC](https://www.3dbrew.org/wiki/SVC) — `Break` with CRO info, `LOAD_RO`/`UNLOAD_RO` break reasons.

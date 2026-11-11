@@ -15,7 +15,7 @@ Copy the resulting `.3dsx` to the console and follow the guide's experiment and 
 
 ## Results and verification
 
-No emulator or hardware runs or timings are recorded. The default project and strategies 1–3 with `BENCH_AUTO=1` build with devkitARM r68, libctru 2.7.1 and citro2d/citro3d 1.7.0/1.7.1; see the [guide's verification table](../../engineering/PICA200/2d-tile-renderer.md#verification-status) for the prior direct-compiler configuration checks. These builds do not establish correct rendering or performance.
+No emulator or hardware runs or timings are recorded. The current drop counter covers only selected tile calls, the command-buffer usage sample precedes the final citro2d flush, and automatic mode still draws debug text. Do not treat a zero drop count or the reported usage as proof of a complete, valid frame; see the [guide](../../engineering/PICA200/2d-tile-renderer.md#per-phase-timing). The default project and strategies 1–3 with `BENCH_AUTO=1` build with devkitARM r68, libctru 2.7.1 and citro2d/citro3d 1.7.0/1.7.1; see the [guide's verification table](../../engineering/PICA200/2d-tile-renderer.md#verification-status) for the prior direct-compiler configuration checks. These builds do not establish correct rendering or performance.
 
 ## Technical details
 

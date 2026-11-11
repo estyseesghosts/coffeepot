@@ -361,6 +361,8 @@ Do not replace a CPU DS renderer with “upload the whole 256×192 framebuffer e
 
 **Three independently useful comparisons:** (1) captured-state offline fixtures against the reference renderer, (2) same-state replay with both backends in the same build, and (3) old/new physical 3DS tests. They catch different failures. The emulator is additional debugging coverage, not a substitute for the third. [Rendering-2D](PICA200/rendering-2d.md), [testing on hardware](testing-on-hardware.md).
 
+**Cached pictures require coherent inputs.** A signature must describe the exact snapshot used for rendering; a hash taken before or after a draw is not sufficient if a writer can mutate inputs during it. Separate volatile execution/timing state from effective visual state without discarding interrupt-driven effects. The [visual-state signature plan](PICA200/rendering-2d.md#cache-effective-visual-state-not-raw-register-blocks) details dependency and race checks.
+
 **Caching decoded geometry requires its dependencies.** SM64DS Enhanced describes memoizing DS display-list decoding while preserving dynamic matrix operations [reported: project patch, revision and test model unspecified; [case study](case-studies/case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws)]. List address alone is not a sufficient key if bytes or inherited graphics state can change. Track those inputs, invalidate when they change, and compare cached execution with the uncached reference on identical captured state. Count hits, invalidations and mismatches before relying on the cache.
 
 ### 6.5 Porting 3D geometry and material pipelines
@@ -571,7 +573,7 @@ For a port, a single average FPS number is almost useless. It cannot distinguish
 | Simulation ticks and CPU update duration | Before/after each update block | Is the game too expensive on ARM11? |
 | Scene build duration, visible objects, culled objects | Renderer input generation | Is the CPU generating too much work? |
 | Draw calls, material/texture changes, vertex/index bytes | Citro3d submission | Is the batching model reasonable? |
-| `C3D_GetProcessingTime()` | After a completed frame | How expensive is recording the render frame? |
+| `C3D_GetProcessingTime()` | After `C3D_FrameEnd` | Elapsed frame processing through the end hook and command split; excludes later flush and queue start |
 | `C3D_GetDrawingTime()` | After the most recent GPU frame completes | How long is GPU work plus transfers and completion latency? |
 | Wait time around `C3D_FrameBegin` | Before/after call | Is the CPU blocked waiting for prior GPU work/vblank? |
 | GSP P3D / PPF / PSC counters | Optional GSP performance log | Are drawing, transfers or clears dominating? |
@@ -585,7 +587,7 @@ For a port, a single average FPS number is almost useless. It cannot distinguish
 
 For raw CPU sections, measure ticks surrounding a named stage and aggregate in memory. **Do not print or send one log packet per draw or tile.** Text formatting and network service traffic can change the timing you are trying to measure. Export one summary per second and keep an in-memory ring of worst-frame details for later inspection.
 
-On the pinned libraries, `C3D_GetProcessingTime()` is mostly CPU time **inside** the drawn frame after the `FrameBegin` wait; `C3D_GetDrawingTime()` includes queued GPU work and screen transfers, and refers to a **completed** frame. The default whole-linear-heap flush may not appear in either timer, so time `C3D_FrameEnd` separately when investigating it. `GSPGPU_SetPerfLogMode(true)`/`GSPGPU_GetPerfLog()` can separate P3D drawing, PPF transfer, PSC clears; follow the cautions in [performance](performance.md).
+On the pinned libraries, `C3D_GetProcessingTime()` is elapsed time after the `FrameBegin` wait through the FrameEnd hook and command split, including possible preemption; `C3D_GetDrawingTime()` includes queued GPU work and screen transfers, and refers to a **completed** frame. The default whole-linear-heap flush may not appear in either timer, so time `C3D_FrameEnd` separately when investigating it. `GSPGPU_SetPerfLogMode(true)`/`GSPGPU_GetPerfLog()` can separate P3D drawing, PPF transfer, PSC clears; follow the cautions in [performance](performance.md).
 
 ### The diagnostic decision table
 

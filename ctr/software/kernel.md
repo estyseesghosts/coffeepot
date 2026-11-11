@@ -133,7 +133,7 @@ The `Backdoor` (0x7B) call and kernel exploits turn userland control into full A
 - [3dbrew: CTR API](https://www.3dbrew.org/wiki/CTR_API) — critical sections.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — thread context pages, kernel pointers.
 - Companion pages: [kernel objects](kernel-objects.md) and the [SVC reference](svc-reference.md) hold the field-level and call-level detail from the same 3dbrew pages and Luma3DS source.
-- Citra project wiki, "Kernel synchronization" (scheduler, waitlists, rescheduling cases) — the `citra-emu/citra` repository that hosted it has since been removed from GitHub, so no live link could be verified.
+- [Subv, Kernel synchronization](https://gist.github.com/Subv/02f29bd9f1e5deb7aceea1e8f019c8f4/raw/d974d3d1b540936355c054ab7dc45658e16a8a5f/kernel_scheduling.md) — original-author scheduler, waitlist and rescheduling notes; unverified cases remain explicitly marked.
 - [libctru `svc.h`, `thread.h`, `apt.h`](https://github.com/devkitPro/libctru) — resource limit types, arbitration types, processor IDs, application CPU time limit calls.
 - [Luma3DS `k11_extension`](https://github.com/LumaTeam/Luma3DS) — the supervisor calls Luma adds or replaces ([Luma3DS](../homebrew/luma3ds.md)).
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Operating System](https://www.copetti.org/writings/consoles/nintendo-3ds/) — scheduler behavior per core and the 30% lending rule.

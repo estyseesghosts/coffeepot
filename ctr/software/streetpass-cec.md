@@ -65,13 +65,13 @@ Notation: `[command ID] (replies) Name(params)`; each parameter or reply takes o
 | Offset | Size | Field |
 | ------ | ---- | ----- |
 | `0x00` | 2 | Magic `0x6868` |
-| `0x04` | 4 | Version (always 1) |
+| `0x04` | 4 | Version? (observed as 1) |
 | `0x08` | 4 | Number of boxes |
 | `0x0C` | 16 × 24 (?) | Box names (16 characters each; usually 8-digit IDs padded with nulls) |
 
 ### `MBoxInfo____`
 
-Magic `0x6363`; title ID (matches the box directory) at `0x04`; "private ID" at `0x08` (an application-chosen value; `0x00000000`, `0x00000001`, `0xFFFFFFFF`, `0xAABBCCDD` and random values were observed); a 32-byte HMAC key at `0x10`; 12-byte timestamps for last access (`0x34`) and last receive (`0x44`); several unknown flag bytes.
+Magic `0x6363`; title ID (matches the box directory) at `0x04`; "private ID" at `0x08` (possibly application-chosen; `0x00000000`, `0x00000001`, `0xFFFFFFFF`, `0xAABBCCDD` and random values were observed); a 32-byte HMAC key at `0x10`; 12-byte timestamps for last access (`0x34`) and last receive (`0x44`); several unknown flag bytes.
 
 ### `BoxInfo_____`
 
@@ -111,6 +111,6 @@ StreetPass stores game-controlled data that other consoles can inject, and its s
 
 ## Sources
 
-- Citra project wiki, "3DS CEC (StreetPass) Documentation" — all format and function descriptions above. The `citra-emu/citra` repository that hosted it has since been removed from GitHub, so no live link could be verified.
+- [wwylele, 3DS CEC (StreetPass) Documentation](https://gist.github.com/wwylele/29a8caa6f5e5a7d88a00bedae90472ed/raw/80d12c49fd03555c0612919c69df63e37f8dc7d7/doc.md) — original-author work-in-progress notes on mailbox functions and formats.
 - [3dbrew: Services API](https://www.3dbrew.org/wiki/Services_API) — `cecd:*` and `nwm::CEC` service names.
 - [Hacks Guide Wiki: History of 3DS Hacking](https://wiki.hacks.guide/wiki/3DS:History_of_3DS_Hacking) — StreetPass-based exploit chain.

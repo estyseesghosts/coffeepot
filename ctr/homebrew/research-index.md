@@ -71,22 +71,15 @@ Sources that have already vanished or moved, and where this wiki takes them from
 | -------- | ------ | ----------------------- |
 | Citra project wiki, "GPU_LUTINPUT_CP" (author wwylele) | Wiki gone; text survives as the author's [gist](https://gist.github.com/wwylele/f61d6653620bb763ab9dc7a60a9831ce) (last active 2022-09-19) | [GPU shading features](../hardware/gpu-shading-features.md) |
 | Citra project wiki, "Random PICA200 RE Notes" (author fincs) | Wiki gone; survives as [fincs's gist](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) | [GPU shading features](../hardware/gpu-shading-features.md) |
-| Citra project wiki, "3DS CRO Information" (author wwylele; the text itself notes it is incomplete) | Wiki gone; no archived copy located | [CRO modules](../software/cro-modules.md) |
-| Citra project wiki, "Kernel synchronization" | Wiki gone; no archived copy located | [kernel](../software/kernel.md) |
-| Citra project wiki, "3DS CEC (StreetPass) Documentation" | Wiki gone; no archived copy located | [StreetPass](../software/streetpass-cec.md) |
+| Citra project wiki, "3DS CRO Information" (author wwylele; the text itself notes it is incomplete) | Original-author [CRO notes](https://gist.github.com/wwylele/325d53ee6a0f1dff6aa3473377335d93/raw/cab6bdf3f3d65ecd17b86bf969f636c21df994fe/CRO_doc.md) survive; the author marks the format incomplete | [CRO modules](../software/cro-modules.md) |
+| Citra project wiki, "Kernel synchronization" | Subv’s [scheduler notes](https://gist.github.com/Subv/02f29bd9f1e5deb7aceea1e8f019c8f4/raw/d974d3d1b540936355c054ab7dc45658e16a8a5f/kernel_scheduling.md) survive; several cases remain unverified | [kernel](../software/kernel.md) |
+| Citra project wiki, "3DS CEC (StreetPass) Documentation" | wwylele’s [CEC notes](https://gist.github.com/wwylele/29a8caa6f5e5a7d88a00bedae90472ed/raw/80d12c49fd03555c0612919c69df63e37f8dc7d7/doc.md) survive as a work in progress | [StreetPass](../software/streetpass-cec.md) |
 | Original Citra emulator | Shut down March 2024; continued in Azahar | [debugging](../engineering/debugging.md#emulators) |
 | DMP's gas-rendering patent | Japanese, poorly OCR'd; not yet decoded | [GPU shading features](../hardware/gpu-shading-features.md) |
 
 ### Looking for the vanished Citra wiki pages
 
-Checked on 2026-11-10, to keep author, original location and revision with each citation:
-
-- The original location was the `citra-emu/citra` repository's wiki (`https://github.com/citra-emu/citra/wiki/`); that URL now returns 404. The Internet Archive's CDX index lists only about 90 archived wiki URLs (the build, dumping, FAQ and developer pages, plus a "CPU" page) and none for the five titles above; a Wayback lookup of the guessed page names also returned nothing. The exact original page URLs are therefore **unconfirmed**; they are not given here rather than guessed.
-- The Azahar wiki (`github.com/azahar-emu/azahar/wiki`) carries user and build documentation only; none of the five titles exists there.
-- No revision identifiers were recoverable for any of them. The two gists carry their own dates and authors (above); the other three have none.
-- The wiki's text for the CRO page and the `GPU_LUTINPUT_CP` page was read from local copies of the text taken before the removal; those copies are not published and cannot be linked.
-
-> Unknown: whether the three unarchived pages survive elsewhere (forks of the Citra repository, Azahar's source history, or personal archives). A fork's wiki or a Wayback snapshot of the original would settle it; if one is found, add the link and its snapshot date to the table above and to the cited page's Sources.
+The original Citra wiki repository was removed. Its [archived documentation index](https://citra.azahar-emu.org/wiki/archive-of-3ds-documentation/) links original-author notes for CRO, CEC and the kernel scheduler as well as the two GPU gists above. The three raw gist URLs in the table pin the file revisions retrieved on 2026-11-11; they are surviving author documents, not proof of an identical snapshot of the removed wiki. The CRO author explicitly warns that the format is incompletely understood; the CEC note is work in progress, and the scheduler note marks some behavior unverified.
 
 ## Limits and risks
 

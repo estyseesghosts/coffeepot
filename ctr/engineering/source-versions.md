@@ -21,7 +21,7 @@ Checked in November 2026.
 | [aemstro](https://github.com/smealum/aemstro) | `51bfeef9e1a0149726dca43b50919bd45917015a` | 2015-01-02 | — | Historical shader tools |
 | [Architecture of Consoles](https://github.com/flipacholas/Architecture-of-consoles) | `9c41261f85f0a6ffdf2b1eea3f439208b11a68e8` | 2026-11-02 | — | Copetti's 3DS article source |
 
-citro2d was read from its installed headers (package 1.7.0) and, for batching behaviour, from the upstream `master` branch's `source/base.c`.
+The earlier batching review used an unpinned upstream `master` and installed citro2d 1.7.0 headers. The reproducible comparison source is [citro2d v1.7.0 `source/base.c` at `147b02aae021da61b1f620446ad2892ecc45411e`](https://github.com/devkitPro/citro2d/blob/147b02aae021da61b1f620446ad2892ecc45411e/source/base.c); this is the upstream release commit, but this wiki has not proved that its source exactly produced the installed package binary. Earlier installed-binary disassembly is not archived here; binary-only conclusions remain less reproducible.
 
 ## Installed toolchain
 
