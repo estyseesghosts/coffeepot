@@ -127,7 +127,7 @@ The colour format values are the framebuffer values (0 RGBA8, 1 RGB8, 2 RGB565, 
 | `0x1EF018E8` | Buffer physical address >> 3 |
 | `0x1EF018F0` | Bit 0 = 1 starts command processing; it appears to reset to 0 when done |
 
-These are what GX command 1 ("process command list") uses. That the GSP module programs exactly these three registers is the 3dbrew description; the wiki's own [command pipeline page](../engineering/pica200-command-pipeline.md#frame-end-gx-and-the-gsp) marks the exact GSP behaviour as unverified.
+These are what GX command 1 ("process command list") uses. That the GSP module programs exactly these three registers is the 3dbrew description; the wiki's own [command pipeline page](../engineering/PICA200/pica200-command-pipeline.md#frame-end-gx-and-the-gsp) marks the exact GSP behaviour as unverified.
 
 ### Initial values (top screen)
 

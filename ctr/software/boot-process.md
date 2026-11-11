@@ -1,6 +1,6 @@
 # CTR boot process
 
-When you press the power button, a 3DS runs a short, strict chain of programs. Two permanent programs inside the chip — **Boot9** for the ARM9 and **Boot11** for the ARM11 — wake up first, find the firmware on the internal flash, check its digital signature, copy it into memory and hand over control. The operating system then starts the system services and finally the Home Menu. The whole sequence takes about seven seconds.
+When you press the power button, a 3DS runs a short, strict chain of programs. Two permanent programs inside the chip — **Boot9** for the ARM9 and **Boot11** for the ARM11 — wake up first, find the firmware on the internal flash, check its digital signature, copy it into memory and hand over control. The operating system then starts the system services and finally the Home Menu. 3dbrew describes a roughly seven-second baseline to the Home Menu; startup varies with the console and SD-card configuration, and large cards can take substantially longer [reverse-engineered: 3dbrew].
 
 The two programs are the console's [boot ROM](../../glossary.md#boot-rom): they are identical on every 3DS model and cannot be updated, which is why mistakes in them are permanent.
 
@@ -13,7 +13,7 @@ The two programs are the console's [boot ROM](../../glossary.md#boot-rom): they 
 5. Both processors jump to the firmware's entry points. In the ARM11, extra cores park themselves in Boot11 (anything above core 2 hangs there) until the OS releases them. **New 3DS:** Kernel11 uses a `CFG11_BOOTROM_OVERLAY_CNT` register to redirect cores 3 and 4 into Kernel11 code.
 6. On the ARM9, Kernel9 starts, hides the OTP, and starts Process9. On the ARM11, Kernel11 starts and launches system processes, including `PM` (process manager), which starts `NS` (the shell). `NS` either auto-boots a title or launches the Home Menu.
 
-Approximate timeline: LCDs initialised at ~4 s; Home Menu fully loaded at ~7 s; boot ROM and firmware load in under ~1 s.
+3dbrew gives an approximate baseline timeline: boot ROM and firmware load in under ~1 s, LCDs initialise at ~4 s and the Home Menu loads at ~7 s. These are not universal timings: its hardware page reports longer startup times for different SD-card configurations [reverse-engineered: 3dbrew].
 
 Only `NATIVE_FIRM` boots usefully from power-off: the boot ROM can launch `TWL_FIRM` or `AGB_FIRM` as well, but 3dbrew says that ends in a Japanese error screen or a shutdown. The other [firmware images](firmware.md) are started afterwards by the OS. If every source fails the console shows a blue **BOOTROM** error screen.
 
@@ -128,6 +128,8 @@ The boot ROM is the root of the whole [security architecture](security-architect
 - The condition under which the Old 3DS/2DS powers on with the shell closed (3dbrew text is truncated) is not fully stated.
 
 ## Sources
+
+- [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — reported boot times by SD-card configuration.
 
 - [3dbrew: Bootloader](https://www.3dbrew.org/wiki/Bootloader) — Boot9/Boot11 flow, memory images, error codes, NAND reads.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Operating System](https://www.copetti.org/writings/consoles/nintendo-3ds/) — boot sequence, multi-core start-up, New 3DS overlay register.

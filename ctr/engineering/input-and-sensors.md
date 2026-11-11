@@ -25,7 +25,7 @@ while (aptMainLoop()) {
 
 - `hidScanInput()` copies the newest entries out of the shared memory the HID service keeps updating, then computes *down* and *up* by comparing with the previous call. The other `hid*` functions only return what the last scan stored. Calling it twice in one frame makes the second call's `hidKeysDown()` empty, because the second scan sees no change [documented: `hid.c`].
 - `hidInit()` is called for you before `main` and `hidExit()` after it ([application lifecycle](application-lifecycle.md#technical-details)); do not call them yourself unless you replaced the default startup.
-- Sample once, near the top of the frame, and use the same values for the whole frame. Input latency then depends only on where in the frame you scan (see [frame pacing](frame-pacing.md)).
+- Sample once, near the top of the frame, and use the same values for the whole frame. Input latency then depends only on where in the frame you scan (see [frame pacing](PICA200/frame-pacing.md)).
 
 ## What each input gives you
 

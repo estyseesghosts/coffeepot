@@ -4,10 +4,10 @@ A 3D scene on the Old 3DS is cheap to describe and cheap to draw only if the pro
 
 ## Before you start
 
-- Checked against citro3d v1.7.1 (`effect.c`, `base.c`, `maths.h`), libctru v2.7.1, the 3dbrew GPU register pages and the `3ds-examples` GPU samples, at the commits on [source versions](source-versions.md). Applies to the Old 3DS; the wiki has run no benchmark for anything below, so there are no `[measured]` results on this page.
+- Checked against citro3d v1.7.1 (`effect.c`, `base.c`, `maths.h`), libctru v2.7.1, the 3dbrew GPU register pages and the `3ds-examples` GPU samples, at the commits on [source versions](../source-versions.md). Applies to the Old 3DS; the wiki has run no benchmark for anything below, so there are no `[measured]` results on this page.
 - Evidence labels follow AGENTS.md. Most of the advice here is `[hypothesis]`: standard practice from other platforms that has not been measured on a 3DS. Where a source was fetched, it is named.
-- Terms: **frustum culling** is skipping an object whose bounding volume lies outside the camera's view volume; **occlusion** is one object hiding another; a **portal** is an opening between rooms used to decide which rooms can be seen; **LOD** (level of detail) is a cheaper version of an asset used when it is far away or small; **overdraw** is drawing the same screen pixel more than once. Draw calls and batches: [draw call](../glossary.md#draw-call), [batch](../glossary.md#batch). Fragment pipeline: [TEV](../glossary.md#tev), [PICA200](../glossary.md#pica200).
-- Related: [GPU rendering](gpu-rendering.md) (draw cost and state), [stereo engineering](stereo-engineering.md) (culling once for two eyes), [CPU optimisation](cpu-optimization.md), [memory and cache](memory-and-cache.md), [asset pipeline](asset-pipeline.md#asset-production-for-constrained-hardware) (baking and budgets), [2D rendering](rendering-2d.md) (sprite depth).
+- Terms: **frustum culling** is skipping an object whose bounding volume lies outside the camera's view volume; **occlusion** is one object hiding another; a **portal** is an opening between rooms used to decide which rooms can be seen; **LOD** (level of detail) is a cheaper version of an asset used when it is far away or small; **overdraw** is drawing the same screen pixel more than once. Draw calls and batches: [draw call](../../glossary.md#draw-call), [batch](../../glossary.md#batch). Fragment pipeline: [TEV](../../glossary.md#tev), [PICA200](../../glossary.md#pica200).
+- Related: [GPU rendering](gpu-rendering.md) (draw cost and state), [stereo engineering](stereo-engineering.md) (culling once for two eyes), [CPU optimisation](../cpu-optimization.md), [memory and cache](../memory-and-cache.md), [asset pipeline](asset-pipeline.md#asset-production-for-constrained-hardware) (baking and budgets), [2D rendering](rendering-2d.md) (sprite depth).
 
 ## Visibility: do not send what cannot be seen
 
@@ -21,13 +21,13 @@ The GPU is fast at triangles you give it; the Old 3DS CPU is slow at deciding th
 | Precomputed visibility | Offline, record which cells can see which; at run time look up the camera cell | A bitset lookup per frame | Fixed environments where camera paths are constrained |
 | Distance cut-off and fade | Skip or simplify beyond a range | Almost free | Outdoor, with fog hiding the edge |
 
-All of these are `[hypothesis]` for the Old 3DS as to how much they save: the technique is general graphics practice, and its benefit here depends on whether the scene is limited by CPU submission, vertex work or fill, which the wiki has not measured. Use [performance](performance.md) to find which limit you hit before building a visibility system.
+All of these are `[hypothesis]` for the Old 3DS as to how much they save: the technique is general graphics practice, and its benefit here depends on whether the scene is limited by CPU submission, vertex work or fill, which the wiki has not measured. Use [performance](../performance.md) to find which limit you hit before building a visibility system.
 
 Practical points that follow from known costs:
 
 - Cull at the level of objects or meshes (chunks of terrain), not triangles. Per-triangle CPU culling costs more than sending the triangles `[hypothesis]`.
 - Each surviving object is at least one draw call, so culling and [batching](gpu-rendering.md) interact: more, smaller chunks cull better but batch worse. The right chunk size is a measurement.
-- Keep the visible list in a flat array of indices into struct-of-arrays data, so the cull loop touches few cache lines ([CPU optimisation](cpu-optimization.md), [memory and cache](memory-and-cache.md)).
+- Keep the visible list in a flat array of indices into struct-of-arrays data, so the cull loop touches few cache lines ([CPU optimisation](../cpu-optimization.md), [memory and cache](../memory-and-cache.md)).
 - For stereo, cull once with a frustum wide enough for both eyes ([stereo engineering](stereo-engineering.md#what-the-second-eye-costs)).
 - Precomputed visibility trades authoring time and data size for run-time CPU. It breaks if geometry changes at run time `[hypothesis]`.
 
@@ -41,7 +41,7 @@ The claim in circulation is that drawing opaque objects front to back lets the d
 
 | Question | What the sources say | Label |
 | -------- | -------------------- | ----- |
-| Does the PICA200 have an early depth test? | 3dbrew lists `GPUREG_EARLYDEPTH_FUNC` (0x061, compare function), `GPUREG_EARLYDEPTH_TEST1` (0x062, enable), `GPUREG_EARLYDEPTH_CLEAR` (0x063, trigger a clear of the early depth data), `GPUREG_EARLYDEPTH_DATA` (0x06A, 24-bit clear value) and `GPUREG_EARLYDEPTH_TEST2` (0x118, enable) | `[reverse-engineered: 3dbrew GPU/Internal Registers]`, see [GPU internal registers](../hardware/gpu-internal-registers.md) |
+| Does the PICA200 have an early depth test? | 3dbrew lists `GPUREG_EARLYDEPTH_FUNC` (0x061, compare function), `GPUREG_EARLYDEPTH_TEST1` (0x062, enable), `GPUREG_EARLYDEPTH_CLEAR` (0x063, trigger a clear of the early depth data), `GPUREG_EARLYDEPTH_DATA` (0x06A, 24-bit clear value) and `GPUREG_EARLYDEPTH_TEST2` (0x118, enable) | `[reverse-engineered: 3dbrew GPU/Internal Registers]`, see [GPU internal registers](../../hardware/gpu-internal-registers.md) |
 | Does citro3d use it? | `C3D_EarlyDepthTest(enable, function, ref)` exists, and citro3d's state initialisation calls `C3D_EarlyDepthTest(false, GPU_EARLYDEPTH_GREATER, 0)` (`base.c` line 107), so it is **off by default** | `[documented: citro3d effect.c, base.c]` |
 | Does citro3d clear it? | It writes `GPUREG_EARLYDEPTH_CLEAR` when a frame is split or the framebuffer changes after a draw | `[documented: citro3d base.c]` |
 | What does the early test reject, and does ordering change fill cost? | The 3dbrew pages only say what the registers configure ("configures the early depth test function", "sets whether the early depth test is enabled"). They give no statement of when pixels are rejected, at what granularity, or whether it is a hierarchical test | Not stated |
@@ -71,12 +71,12 @@ A frame budget works better than a rule per technique: decide the milliseconds y
 
 ## Baked lighting, shadows and vertex colours
 
-Lighting a scene dynamically costs fragment-lighting work and, for each light, extra setup ([citro3d fixed-function API](citro3d-fixed-function-api.md), [GPU shading features](../hardware/gpu-shading-features.md)). Baking moves it offline.
+Lighting a scene dynamically costs fragment-lighting work and, for each light, extra setup ([citro3d fixed-function API](../citro3d-fixed-function-api.md), [GPU shading features](../../hardware/gpu-shading-features.md)). Baking moves it offline.
 
 | Technique | How | Costs |
 | --------- | --- | ----- |
-| Vertex-colour lighting | Store pre-lit colour per vertex; the [TEV](../glossary.md#tev) multiplies it with the texture | Needs a vertex attribute (4 bytes in 8-bit form); resolution limited by vertex density |
-| Lightmaps | A second texture multiplied with the base texture, using a second UV set | Extra texture unit and texture memory; the PICA200 has three texture units ([GPU](../hardware/gpu.md)), so one can carry the lightmap |
+| Vertex-colour lighting | Store pre-lit colour per vertex; the [TEV](../../glossary.md#tev) multiplies it with the texture | Needs a vertex attribute (4 bytes in 8-bit form); resolution limited by vertex density |
+| Lightmaps | A second texture multiplied with the base texture, using a second UV set | Extra texture unit and texture memory; the PICA200 has three texture units ([GPU](../../hardware/gpu.md)), so one can carry the lightmap |
 | Baked ambient occlusion | Bake into the lightmap or vertex colours for static geometry | Static only |
 | Blob or projected shadow | A translucent dark quad under the character | One more draw; sort with other translucent draws |
 | Painted highlights and fake reflections | Authored into the texture or an environment texture | Art time; no runtime cost beyond the texture |
@@ -110,7 +110,7 @@ A hybrid used by Mario & Luigi: Dream Team, per a search summary of the Iwata As
 
 ## Experiments to run later
 
-None of these has been run. Each uses an Old 3DS, a fixed scene, 60 s warm-up and median / p99 frame time from [performance](performance.md).
+None of these has been run. Each uses an Old 3DS, a fixed scene, 60 s warm-up and median / p99 frame time from [performance](../performance.md).
 
 1. **Draw-count scaling**: the same triangles in 1, 10, 100, 1000 draws, to find the CPU cost per draw (feeds the culling granularity).
 2. **Front-to-back versus back-to-front** on a stacked-opaque-quad scene, early depth off and on (see above).
@@ -133,7 +133,7 @@ Nothing on that page states a performance result, an ordering rule or a culling 
 
 | Item | Value | Source |
 | ---- | ----- | ------ |
-| Early depth registers | 0x061 func, 0x062 enable, 0x063 clear, 0x06A data, 0x118 enable (second) | `[reverse-engineered: 3dbrew]`, [GPU internal registers](../hardware/gpu-internal-registers.md) |
+| Early depth registers | 0x061 func, 0x062 enable, 0x063 clear, 0x06A data, 0x118 enable (second) | `[reverse-engineered: 3dbrew]`, [GPU internal registers](../../hardware/gpu-internal-registers.md) |
 | citro3d early depth default | disabled, function `GPU_EARLYDEPTH_GREATER`, ref 0 | `[documented: citro3d base.c]` |
 | citro3d clears early depth | on frame split / framebuffer change after a draw | `[documented: citro3d base.c]` |
 | Alpha test default | off | `[documented: citro3d base.c]` |
@@ -142,7 +142,7 @@ Nothing on that page states a performance result, an ordering rule or a culling 
 
 - **Enabling early depth test without checking images**: stale early-depth data can reject pixels incorrectly; compare against a run with it off.
 - **Culling bounds that are too small**: objects pop at screen edges; add a margin for animation and for both stereo eyes.
-- **Per-frame allocation in the visible list**: allocate once ([memory and cache](memory-and-cache.md#buffer-lifetime)).
+- **Per-frame allocation in the visible list**: allocate once ([memory and cache](../memory-and-cache.md#buffer-lifetime)).
 - **Transparent sprite edges writing depth**: use alpha test or sort.
 - **LOD popping**: switch distance too close; hide with fog or crossfade.
 
@@ -152,7 +152,7 @@ Nothing on that page states a performance result, an ordering rule or a culling 
 - What is the early depth data's resolution, and what does `GPUREG_EARLYDEPTH_TEST2` do beyond `TEST1`? A register experiment on hardware would settle it.
 - Where does CPU culling cost exceed its saving?
 - How many bone matrices fit a skinned draw, and is shader skinning faster than CPU skinning on Old 3DS?
-- **New 3DS:** do any of these thresholds change with the faster CPU and larger L2 cache ([New 3DS](new-3ds-qtm-and-mvd.md))? Not measured.
+- **New 3DS:** do any of these thresholds change with the faster CPU and larger L2 cache ([New 3DS](../new-3ds-qtm-and-mvd.md))? Not measured.
 
 ## Sources
 

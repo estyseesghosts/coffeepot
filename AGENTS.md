@@ -50,11 +50,15 @@ Rules:
 Glossary entry format:
 
 ```markdown
-### Term name {#anchor-slug}
+<a name="anchor-slug"></a>
+
+### Term name
 
 One to four sentences: what it is in plain language, then the precise sense. Ends with a link to the canonical page.
 
-Example: ### System-on-a-chip (SoC) {#soc}
+Example: <a name="soc"></a>
+
+### System-on-a-chip (SoC)
 ```
 
 ## Page types

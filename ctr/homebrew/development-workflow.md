@@ -296,7 +296,7 @@ Install a package by its actual name (`pacman -S package-name` on Windows, `sudo
 - **Textures:** **tex3ds** can convert sprites and atlases from `.t3s` descriptions into `.t3x` assets.
 - **Files loaded at runtime:** use a project `romfs/` directory and the `ROMFS` Makefile setting; use `romfsInit()` in the app before opening RomFS paths.
 
-Do not put every asset into a giant C array or draw all graphics pixel-by-pixel on the CPU. The detailed references are [GPU rendering](../engineering/gpu-rendering.md), [asset pipeline](../engineering/asset-pipeline.md), and [memory and cache](../engineering/memory-and-cache.md).
+Do not put every asset into a giant C array or draw all graphics pixel-by-pixel on the CPU. The detailed references are [GPU rendering](../engineering/PICA200/gpu-rendering.md), [asset pipeline](../engineering/PICA200/asset-pipeline.md), and [memory and cache](../engineering/memory-and-cache.md).
 
 ### Icon, name and banner (SMDH)
 
@@ -395,7 +395,7 @@ If a project still fails, first build **the untouched `templates/application` ex
 **More detailed pages in this wiki**
 
 - [libctru](libctru.md) · [picasso and citro3d](picasso-and-citro3d.md) · [Luma3DS](luma3ds.md).
-- [GPU rendering](../engineering/gpu-rendering.md) · [asset pipeline](../engineering/asset-pipeline.md) · [debugging](../engineering/debugging.md) · [performance](../engineering/performance.md) · [testing on hardware](../engineering/testing-on-hardware.md).
+- [GPU rendering](../engineering/PICA200/gpu-rendering.md) · [asset pipeline](../engineering/PICA200/asset-pipeline.md) · [debugging](../engineering/debugging.md) · [performance](../engineering/performance.md) · [testing on hardware](../engineering/testing-on-hardware.md).
 
 *Install and package instructions verified against the upstream devkitPro repositories and project examples in November 2026. Package versions and release links can change; avoid copying stale version numbers into new projects.*
 

@@ -55,24 +55,24 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | Raw `cfg:u` client, session wrapper, negative-test harness (`ipc.h` arithmetic also asserted on a PC) | [IPC and services](ipc-and-services.md) | yes (`-Wall -Wextra`, linked to ELF) | not run | not run | not run |
 | `socInit` helper, non-blocking connect with `poll` | [networking](networking.md#socu-initialisation) | yes | not run | not run | not run |
 | Bounded-memory httpc download | [networking](networking.md#bounded-memory-download) | yes | not run | not run | not run |
-| Command-list capture hook | [pipeline](pica200-command-pipeline.md#host-side-command-list-decoder) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
-| Shader load/draw fragment | [shader programming](pica200-shader-programming.md#2-scale-rotate-translate-with-uniforms) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
-| Shaders s1-s5 (`.pica`) | [shader programming](pica200-shader-programming.md) | assembles with picasso 2.7.2 (syntax only) | not run | not run | not run |
-| `tools/pica_cmdlist_decode.py` | [pipeline](pica200-command-pipeline.md#host-side-command-list-decoder) | self-test passes on synthetic lists only | n/a | n/a | n/a |
+| Command-list capture hook | [pipeline](PICA200/pica200-command-pipeline.md#host-side-command-list-decoder) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
+| Shader load/draw fragment | [shader programming](PICA200/pica200-shader-programming.md#2-scale-rotate-translate-with-uniforms) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
+| Shaders s1-s5 (`.pica`) | [shader programming](PICA200/pica200-shader-programming.md) | assembles with picasso 2.7.2 (syntax only) | not run | not run | not run |
+| `tools/pica_cmdlist_decode.py` | [pipeline](PICA200/pica200-command-pipeline.md#host-side-command-list-decoder) | self-test passes on synthetic lists only | n/a | n/a | n/a |
 | Input, camera/Y2R, microphone, NFC/IR, system-info, QTM/MVD, UDS, `ac` and service-probe examples | [input and sensors](input-and-sensors.md), [cameras](camera-and-y2r.md), [microphone](microphone.md), [NFC and IR](nfc-and-infrared.md), [system info](system-info-and-power.md), [QTM and MVD](new-3ds-qtm-and-mvd.md), [local wireless](local-wireless.md), [service groups](service-groups.md) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`) | not run | not run | not run |
 | citro3d lighting fragment | [citro3d fixed-function API](citro3d-fixed-function-api.md) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
 | `icachebench` (code-footprint probe) | [benchmarks](../benchmarks/README.md) | yes (`-Wall -Wextra` clean; devkitARM r68, libctru 2.7.1) | not run | not run | not run |
 | ARMv6 packed SIMD (`UADD8`/`QADD16`) example | [CPU optimisation](cpu-optimization.md#techniques-and-how-to-check-them) | yes (`-Wall -Wextra`) | not run | not run | not run |
 | Frame-time percentile helper | [performance](performance.md) | yes (builds with `bench.h`) | not run | not run | not run |
 | Flush-range tracker fragment (`dirtyAdd`, `frameEndTracked`) | [memory and cache](memory-and-cache.md#flush-range-tracking) | yes (`-Wall -Wextra`, inside a stub `main`, linked with `3dsx.specs`, devkitARM r68) | not run | not run | not run |
-| Stereo helper (`StereoScreenArg` / `StereoProjection`) | [stereo engineering](stereo-engineering.md) | yes (`-Wall -Wextra`, linked) | not run | not run | not run |
-| Fixed-step main loop | [frame pacing](frame-pacing.md#separating-simulation-from-rendering) | yes | not run | not run | not run |
+| Stereo helper (`StereoScreenArg` / `StereoProjection`) | [stereo engineering](PICA200/stereo-engineering.md) | yes (`-Wall -Wextra`, linked) | not run | not run | not run |
+| Fixed-step main loop | [frame pacing](PICA200/frame-pacing.md#separating-simulation-from-rendering) | yes | not run | not run | not run |
 | ndsp streaming setup | [audio](audio.md#setting-up-a-channel) | yes | not run | not run | not run |
-| Sprite demo (procedural sheet, animation, touch) | [2D rendering](rendering-2d.md#5-a-complete-example-animated-sprite-with-touch) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`, devkitARM r68, citro2d 1.7.0-1) | not run | not run | not run |
-| citro2d render-target, stereo-eye and text fragments | [2D rendering](rendering-2d.md) | yes (inside a stub `main`, linked) | not run | not run | not run |
-| 2D tile renderer (four tile strategies, texture/shape/bottom-screen/edit modes, scripted CSV mode; 30 configurations) | [2D tile renderer](2d-tile-renderer.md#verification-status) | yes (`-Wall -Wextra`, linked to ELF; strategies 1 and 2 with picasso-assembled shader) | not run | not run | not run |
-| Texture swizzle function | [2D rendering](rendering-2d.md#generating-a-texture-in-code) | yes; algorithm matches `tex3ds -r` output for a 16x16 RGBA8 image (host check) | not run | not run | not run |
-| Frame and render-target fragments | [GPU rendering](gpu-rendering.md#anatomy-of-a-frame) | taken from `3ds-examples/graphics/gpu/simple_tri`, which builds | — | — | — |
+| Sprite demo (procedural sheet, animation, touch) | [2D rendering](PICA200/rendering-2d.md#5-a-complete-example-animated-sprite-with-touch) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`, devkitARM r68, citro2d 1.7.0-1) | not run | not run | not run |
+| citro2d render-target, stereo-eye and text fragments | [2D rendering](PICA200/rendering-2d.md) | yes (inside a stub `main`, linked) | not run | not run | not run |
+| 2D tile renderer (four tile strategies, texture/shape/bottom-screen/edit modes, scripted CSV mode; 30 configurations) | [2D tile renderer](PICA200/2d-tile-renderer.md#verification-status) | yes (`-Wall -Wextra`, linked to ELF; strategies 1 and 2 with picasso-assembled shader) | not run | not run | not run |
+| Texture swizzle function | [2D rendering](PICA200/rendering-2d.md#generating-a-texture-in-code) | yes; algorithm matches `tex3ds -r` output for a 16x16 RGBA8 image (host check) | not run | not run | not run |
+| Frame and render-target fragments | [GPU rendering](PICA200/gpu-rendering.md#anatomy-of-a-frame) | taken from `3ds-examples/graphics/gpu/simple_tri`, which builds | — | — | — |
 
 Fragments that are not complete programs were compiled inside a minimal `main` with stub functions.
 
@@ -115,9 +115,9 @@ Facts re-checked against primary sources in this pass (November 2026), all consi
 
 ## Additional sources read in the November 2026 review pass
 
-- 3dbrew mirror pages behind [PICA200 command pipeline](pica200-command-pipeline.md) and [PICA200 shader programming](pica200-shader-programming.md): GPU/Programming Guide (oldid 22469, 16 Dec 2023); other GPU pages as in the private mirror.
+- 3dbrew mirror pages behind [PICA200 command pipeline](PICA200/pica200-command-pipeline.md) and [PICA200 shader programming](PICA200/pica200-shader-programming.md): GPU/Programming Guide (oldid 22469, 16 Dec 2023); other GPU pages as in the private mirror.
 - picasso `d522455`: constants `MAX_VSH_SIZE` 512 and `MAX_OPDESC` 128 read from source.
 - `tex3ds` 2.3.0 and `mkbcfnt` (general-tools 1.4.4): `--help` output re-read from the installed binaries; accepted format spellings were not exercised by running conversions.
 - citro2d 1.7.0: `base.o` of the installed `libcitro2d.a` disassembled with `arm-none-eabi-objdump` (screen target creation, `C2D_Prepare` depth test, `C2D_Init` buffer sizes, `C2D_TargetClear`, `C2D_DrawRectangle` capacity check); `tex3ds` 2.3.0 test conversions (raw layout, `.t3x` subtexture values; the short options -a, -b and -c are rejected by the installed Windows binary although `--help` lists them).
-- Third-party case-study sources (all `[reported]`, fetched November 2026, commits not pinned): the G-Diffuser postmortem (hypnotize.works/gdx-3ds/postmortem/native.html, entries dated 2026-08-11 to 2026-10-26) and `docs/NATIVE-RENDERER.md` (github.com/cruxxxxxx/gdx-3ds); the Super Mario 64 3DS port README (Wyatt-James/sm64-3ds-port); the Ocarina of Time port research (Andresac90/OOT-64-3DS-Port, `docs/3ds-native-speed-research.md`). Used on [case studies: ports](case-studies-ports.md), [renderer architecture](renderer-architecture.md) and the replay section of [PICA200 command pipeline](pica200-command-pipeline.md). Figures were matched against raw downloads of each page; the chart-label counts noted on the case-study page were not.
-- Commercial developer accounts (Nintendo Life, Digital Trends, Siliconera, Iwata Asks) used on [case studies: commercial games](case-studies-commercial.md) and [stereo engineering](stereo-engineering.md); prose only, no code.
+- Third-party case-study sources (all `[reported]`, fetched November 2026, commits not pinned): the G-Diffuser postmortem (hypnotize.works/gdx-3ds/postmortem/native.html, entries dated 2026-08-11 to 2026-10-26) and `docs/NATIVE-RENDERER.md` (github.com/cruxxxxxx/gdx-3ds); the Super Mario 64 3DS port README (Wyatt-James/sm64-3ds-port); the Ocarina of Time port research (Andresac90/OOT-64-3DS-Port, `docs/3ds-native-speed-research.md`). Used on [case studies: ports](case-studies/case-studies-ports.md), [renderer architecture](PICA200/renderer-architecture.md) and the replay section of [PICA200 command pipeline](PICA200/pica200-command-pipeline.md). Figures were matched against raw downloads of each page; the chart-label counts noted on the case-study page were not.
+- Commercial developer accounts (Nintendo Life, Digital Trends, Siliconera, Iwata Asks) used on [case studies: commercial games](case-studies/case-studies-commercial.md) and [stereo engineering](PICA200/stereo-engineering.md); prose only, no code.

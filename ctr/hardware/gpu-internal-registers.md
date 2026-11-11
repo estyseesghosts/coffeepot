@@ -8,7 +8,7 @@ Everything here is a **register of the PICA200**, the GPU in the Old 3DS and the
 
 ## Where it fits
 
-The ARM11 CPU writes commands into a buffer in memory; the GPU's command-list processor (P3D, at physical `0x104018E0`, see [external registers](gpu-external-registers.md#command-list-p3d)) reads them and updates these registers. How `citro3d` produces the command stream is on [PICA200 command pipeline](../engineering/pica200-command-pipeline.md); the high-level meaning of the blocks is on [GPU](gpu.md) and [GPU shading features](gpu-shading-features.md).
+The ARM11 CPU writes commands into a buffer in memory; the GPU's command-list processor (P3D, at physical `0x104018E0`, see [external registers](gpu-external-registers.md#command-list-p3d)) reads them and updates these registers. How `citro3d` produces the command stream is on [PICA200 command pipeline](../engineering/PICA200/pica200-command-pipeline.md); the high-level meaning of the blocks is on [GPU](gpu.md) and [GPU shading features](gpu-shading-features.md).
 
 ## How it works
 
@@ -22,7 +22,7 @@ There are three kinds of register: **configuration** registers (a rendering prop
 
 | Bits | Meaning |
 | ---- | ------- |
-| 0-15 | Command (register) id; libctru masks it to bits 0-9, see the [conflict](../engineering/pica200-command-pipeline.md#how-a-write-is-encoded) |
+| 0-15 | Command (register) id; libctru masks it to bits 0-9, see the [conflict](../engineering/PICA200/pica200-command-pipeline.md#how-a-write-is-encoded) |
 | 16-19 | Parameter mask; bit 16+k = 1 lets byte k of the word change. `0xF` writes the whole word. Commands `0x00010107` and `0x00020107` hit the same register but write different bytes |
 | 20-27 | Number of extra parameters (may be zero) |
 | 28-30 | Unused |
@@ -45,7 +45,7 @@ Number types used below: `floatS.E.M` = S sign bits, E exponent bits, M mantissa
 | `0x280-0x2DF` | Shader units: geometry shader `0x280-0x2AD`, vertex shader `0x2B0-0x2DD` |
 | `0x2E0-0x2FF` | Unknown |
 
-Names below follow 3dbrew. Where libctru's `registers.h` uses another name or none, it is noted; the [decoder tool](../engineering/pica200-command-pipeline.md#host-side-command-list-decoder) prints the libctru names plus the extra ids listed under "Names that differ".
+Names below follow 3dbrew. Where libctru's `registers.h` uses another name or none, it is noted; the [decoder tool](../engineering/PICA200/pica200-command-pipeline.md#host-side-command-list-decoder) prints the libctru names plus the extra ids listed under "Names that differ".
 
 ### Miscellaneous and rasterizer registers (`0x010`, `0x040-0x06F`)
 
@@ -303,7 +303,7 @@ Lighting LUT data: a LUT covers the input domain [-1.0, 1.0], indexed by a signe
 | `0x25E` | `PRIMITIVE_CONFIG` | bits 0-3 output map registers - 1; bits 8-9 primitive mode: 0 triangles, 1 strip, 2 fan, 3 geometry primitive |
 | `0x25F` | `RESTART_PRIMITIVE` | write 1 to restart (breaks a strip or fan) |
 
-The vertex-attribute "size" field and its encoding are disputed; see the [conflict on the command-pipeline page](../engineering/pica200-command-pipeline.md#technical-details): 3dbrew prints 8/16/24/32 bits, libctru and citro3d use components - 1.
+The vertex-attribute "size" field and its encoding are disputed; see the [conflict on the command-pipeline page](../engineering/PICA200/pica200-command-pipeline.md#technical-details): 3dbrew prints 8/16/24/32 bits, libctru and citro3d use components - 1.
 
 `FIXEDATTRIB_DATA` packing (four `float1.7.16` values X, Y, Z, W written in three words): `DATA0` (the first word written) holds Z bits 16-23 in bits 0-7 and W in bits 8-31; `DATA1` holds Y bits 8-23 in bits 0-15 and Z bits 0-15 in bits 16-31; `DATA2` holds X in bits 0-23 and Y bits 0-7 in bits 24-31. citro3d builds this as 12 bytes (x, y, z, w each 3 bytes little-endian) with the first and third words swapped (`immediate.c`) `[documented: citro3d]`.
 

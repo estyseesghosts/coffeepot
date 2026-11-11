@@ -38,7 +38,7 @@ Unaligned access: the MPCore supports unaligned word and halfword loads and stor
 ## Floating point and fixed point
 
 - libctru puts every thread's VFP into **default-NaN and flush-to-zero** mode (round to nearest): it writes `FPSCR = BIT(25) | BIT(24)` with all exception-enable bits clear, because the kernel does not initialise `fpscr` [documented: libctru `source/system/syscalls.c`, line 249-254]. That combination is exactly the manual's **RunFast** mode: every operation finishes in hardware in fixed time, with no support code and no user traps [documented: DDI0360E §16.5.4]. Denormals become zero: fast, but very small values behave differently from desktop builds. Code that turns on floating-point exception enables or leaves flush-to-zero off makes some operations bounce to software support code instead (see [ARM11 MPCore internals](../hardware/arm11-mpcore.md#vfp11-floating-point-unit)).
-- The GPU's vertex shaders compute in 24-bit floats. Doing transforms on the GPU ([GPU rendering](gpu-rendering.md#do-work-in-the-vertex-shader)) is usually cheaper than on the CPU, even though the result is less precise.
+- The GPU's vertex shaders compute in 24-bit floats. Doing transforms on the GPU ([GPU rendering](PICA200/gpu-rendering.md#do-work-in-the-vertex-shader)) is usually cheaper than on the CPU, even though the result is less precise.
 - Fixed-point integer arithmetic (e.g. 16.16) is worth it mainly when you need bit-exact results (deterministic replays, ports of DS or GBA games whose logic is integer); single-precision VFP is not slow on this core. Measure before converting float code to fixed point.
 
 ## Memory access patterns
@@ -96,7 +96,7 @@ Each row is a candidate to *test*, not a promised speed-up. "Label" is the stron
 | Fixed point only when exactness matters | Not a speed trick; single-precision VFP is not slow | `[hypothesis]` | Compare cycles per element and results |
 | ARMv6 packed SIMD | `UADD8`, `QADD16`, `USAD8`: 4 x 8-bit or 2 x 16-bit lanes in ordinary registers ([example](#armv6-packed-simd-example)) | `[documented]` (instruction set); `[reported]` once: G-Diffuser says ARMv6 SIMD made its audio synthesis 2.2x cheaper (09-29 entry, Old 3DS, its workload) | Cycles per sample against a scalar version; identical output |
 | Limit allocations | Pre-allocate scene storage, audio buffers, command lists, dynamic vertex rings; no `malloc` in the frame | `[hypothesis]` for the gain | Log the worst frame with and without |
-| Avoid repeated transforms | Cache static transforms; send object-space data to the vertex shader ([GPU rendering](gpu-rendering.md#do-work-in-the-vertex-shader)) | `[hypothesis]` | CPU record time per frame, same scene |
+| Avoid repeated transforms | Cache static transforms; send object-space data to the vertex shader ([GPU rendering](PICA200/gpu-rendering.md#do-work-in-the-vertex-shader)) | `[hypothesis]` | CPU record time per frame, same scene |
 | Inspect generated code | [Checklist](#assembly-inspection-checklist) | `[documented]` method | The checklist |
 
 ### Hot/cold field splitting

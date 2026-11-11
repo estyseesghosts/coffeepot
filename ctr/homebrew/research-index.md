@@ -23,7 +23,7 @@ Entries are grouped by area and list the person or group, what this wiki credits
 | 3dsguy, profi200 | `makerom` (author, maintainer) | [file formats](../software/file-formats.md), [development workflow](development-workflow.md#other-libraries-and-tools) |
 | Steveice10 | `bannertool` | [development workflow](development-workflow.md#icon-name-and-banner-smdh) |
 | Pierre Wendling | SDL's Nintendo 3DS port (SDL2 2.26+ and SDL3) | [porting](../engineering/porting.md#example-c-sdl-software-rendered-2d-game) |
-| Gericom | Super Mario 64 3DS port | [porting](../engineering/case-studies-ports.md) |
+| Gericom | Super Mario 64 3DS port | [porting](../engineering/case-studies/case-studies-ports.md) |
 
 ### Custom firmware and system internals
 

@@ -2,7 +2,7 @@
 
 Porting a game is not the same as recompiling it. An existing engine may expect desktop OpenGL, a programmable pixel shader, hundreds of megabytes of memory, blocking file reads, or several fast CPU threads. The 3DS provides a much smaller ARM11 CPU budget, a **[PICA200](../glossary.md#pica200)** graphics processor with vertex shaders but *no programmable fragment shader*, and an operating system whose application must yield for HOME, sleep, and applets. A successful port changes the engine's work to fit those constraints while preserving the game's behaviour.
 
-This is the **implementation guide**: start with a source tree, decide what is feasible, construct a native 3DS application, replace incompatible subsystems, bring up one representative scene, and validate it on hardware. It deliberately links to Coffeepot's detailed API and hardware pages instead of reprinting them. The most useful companions are [development workflow](../homebrew/development-workflow.md), [2D rendering](rendering-2d.md), [GPU rendering](gpu-rendering.md), [memory and cache](memory-and-cache.md), [performance](performance.md), [debugging](debugging.md), and [testing on hardware](testing-on-hardware.md).
+This is the **implementation guide**: start with a source tree, decide what is feasible, construct a native 3DS application, replace incompatible subsystems, bring up one representative scene, and validate it on hardware. It deliberately links to Coffeepot's detailed API and hardware pages instead of reprinting them. The most useful companions are [development workflow](../homebrew/development-workflow.md), [2D rendering](PICA200/rendering-2d.md), [GPU rendering](PICA200/gpu-rendering.md), [memory and cache](memory-and-cache.md), [performance](performance.md), [debugging](debugging.md), and [testing on hardware](testing-on-hardware.md).
 
 **Evidence and verification.** This revision is an engineering procedure assembled from Coffeepot's source-checked pages as they stood on **10 November 2026**. API behaviour cited below follows the versions in [source versions](source-versions.md): devkitARM r68, libctru 2.7.1, citro3d 1.7.1, citro2d 1.7.0, picasso 2.7.2, and tex3ds 2.3.0. The architecture examples and pseudocode on this page **have not been compiled or run**; they are instructions to adapt, not drop-in programs. No performance numbers here are measurements made by Coffeepot. Measurements and decisions for a particular port must be recorded separately.
 
@@ -32,11 +32,11 @@ The first playable scene is not the first success criterion. Earlier successes a
 | CPU renderer or emulated machine | First distinguish CPU-visible *emulation* work from display composition | GPU use cannot accelerate inherently serial CPU emulation; naive pixel uploads can dominate |
 | Large engine with plugins, scripts, or dynamically loaded libraries | Isolate a small playable feature slice; review each dependency | Runtime memory, executable format, unavailable platform services |
 
-A native citro3d/citro2d path is usually the target for a performance-sensitive Old 3DS game. A software path can be useful as a **correctness oracle** or for a small exceptional effect; its existence is not proof that it can sustain the intended frame rate. See [rendering strategies](gpu-rendering.md) and [2D rendering](rendering-2d.md).
+A native citro3d/citro2d path is usually the target for a performance-sensitive Old 3DS game. A software path can be useful as a **correctness oracle** or for a small exceptional effect; its existence is not proof that it can sustain the intended frame rate. See [rendering strategies](PICA200/gpu-rendering.md) and [2D rendering](PICA200/rendering-2d.md).
 
 ### Lessons reported by one large port
 
-Three public N64 ports report their techniques and results in [case studies: large 3DS ports](case-studies-ports.md). They are `[reported]` evidence only, taken on mixed models (Old 3DS hardware, New 3DS, simulated Old 3DS speed, emulator), and not reproduced here. Choose a port strategy from them with these cautions:
+Three public N64 ports report their techniques and results in [case studies: large 3DS ports](case-studies/case-studies-ports.md). They are `[reported]` evidence only, taken on mixed models (Old 3DS hardware, New 3DS, simulated Old 3DS speed, emulator), and not reproduced here. Choose a port strategy from them with these cautions:
 
 - The one source with Old 3DS hardware numbers (G-Diffuser's F-Zero X native renderer) reports its largest gains from replacing a generic display-list interpreter with specialised draw paths, not from GPU tuning.
 - A port that has only emulator or simulated-speed numbers (the Ocarina of Time research) has not shown an Old 3DS result; do not choose a design from it alone.
@@ -89,7 +89,7 @@ Create a `PORT_AUDIT.md` in the port's repository:
 
 For every library, determine whether it is (a) buildable for ARM11 and already supplied by devkitPro, (b) small enough to port, (c) replaceable by a 3DS library, or (d) inappropriate on this hardware. The [devkitPro portlibs](../homebrew/development-workflow.md) include codecs, compressors, fonts, physics and other packages; their existence does not mean a desktop integration is free.
 
-**Audit literal hardware addresses as well as SDK macros.** Redirecting an SDK register macro to emulated memory does not redirect a source file's direct pointer literal. HGSS found crashes from DS I/O and VRAM addresses that bypassed the port's arrays. Scan the port-preprocessed sources for pointer literals, parse and range-check numeric values (including forms without leading zeroes), then inspect the resulting binary and test late-loading scenes. Treat this as a targeted audit, not proof that every indirect address has been found. [reported: project S15, November 2026; [case study](case-study-hgss-port.md)].
+**Audit literal hardware addresses as well as SDK macros.** Redirecting an SDK register macro to emulated memory does not redirect a source file's direct pointer literal. HGSS found crashes from DS I/O and VRAM addresses that bypassed the port's arrays. Scan the port-preprocessed sources for pointer literals, parse and range-check numeric values (including forms without leading zeroes), then inspect the resulting binary and test late-loading scenes. Treat this as a targeted audit, not proof that every indirect address has been found. [reported: project S15, November 2026; [case study](case-studies/case-study-hgss-port.md)].
 
 ### 2.3 List non-negotiable behaviour
 
@@ -116,7 +116,7 @@ A `.3dsx` normally inherits the memory mode of the title that launches it. A `.c
 
 ### 3.2 Write budgets, including peaks
 
-At **60 Hz**, the frame period is approximately **16.7 ms** (about 4.47 million Old 3DS core-0 cycles before other work); at **30 Hz**, **33.3 ms** (about 8.94 million). These are frame deadlines, **not** CPU processing allowances. CPU simulation, CPU draw recording, GPU commands, transfers and display waits can overlap; measure the critical path rather than summing unrelated timers. See [performance](performance.md) and [frame pacing](frame-pacing.md).
+At **60 Hz**, the frame period is approximately **16.7 ms** (about 4.47 million Old 3DS core-0 cycles before other work); at **30 Hz**, **33.3 ms** (about 8.94 million). These are frame deadlines, **not** CPU processing allowances. CPU simulation, CPU draw recording, GPU commands, transfers and display waits can overlap; measure the critical path rather than summing unrelated timers. See [performance](performance.md) and [frame pacing](PICA200/frame-pacing.md).
 
 Use a planning table like this; replace `?` with measurements and make the sum fit the smallest memory mode:
 
@@ -132,17 +132,17 @@ Use a planning table like this; replace `?` with measurements and make the sum f
 | File/decompression scratch | ? | ? | Appropriate heap | Cold-load peak |
 | Margin for fragmentation / future content | ? | ? | All pools | Deliberate reservation |
 
-**Useful arithmetic:** 400×240 RGBA8 = 384,000 bytes; a 400×240 depth24/stencil8 buffer is another 384,000 bytes. A 512² RGBA8 texture is 1 MiB; RGB565 is 512 KiB; ETC1 is 128 KiB (before file/container overhead). Stereo may require both top-eye targets and extra depth/colour; count each actual allocation. A 256² RGBA8 texture with full mipmaps takes about 341 KiB, not 256 KiB. The VRAM bank layout can prevent a large allocation even when the total free count seems sufficient. [Memory and cache](memory-and-cache.md), [GPU render-target budget](gpu-rendering.md).
+**Useful arithmetic:** 400×240 RGBA8 = 384,000 bytes; a 400×240 depth24/stencil8 buffer is another 384,000 bytes. A 512² RGBA8 texture is 1 MiB; RGB565 is 512 KiB; ETC1 is 128 KiB (before file/container overhead). Stereo may require both top-eye targets and extra depth/colour; count each actual allocation. A 256² RGBA8 texture with full mipmaps takes about 341 KiB, not 256 KiB. The VRAM bank layout can prevent a large allocation even when the total free count seems sufficient. [Memory and cache](memory-and-cache.md), [GPU render-target budget](PICA200/gpu-rendering.md).
 
 Do not call the full 64 MiB an “available heap.” Read `osGetMemRegionSize(MEMREGION_APPLICATION)`, `linearSpaceFree()`, and `vramSpaceFree()` on your running build; normal-heap availability also depends on the executable and configured heap split. Default libctru heap allocation, `__ctru_heap_size`, and `__ctru_linear_heap_size` are described in [memory and cache](memory-and-cache.md).
 
 ### 3.3 Decide screen layout early
 
-The **logical** top screen is 400×240; the bottom touch screen is 320×240. citro2d uses top-left origin, x right and y down. Raw citro3d render targets for the physical LCD are commonly **240×400** and **240×320** because the panels are rotated; do not confuse those two coordinate conventions. [Display](../hardware/display.md), [2D rendering](rendering-2d.md).
+The **logical** top screen is 400×240; the bottom touch screen is 320×240. citro2d uses top-left origin, x right and y down. Raw citro3d render targets for the physical LCD are commonly **240×400** and **240×320** because the panels are rotated; do not confuse those two coordinate conventions. [Display](../hardware/display.md), [2D rendering](PICA200/rendering-2d.md).
 
 Choose and document one option for every view: native-resolution centred, aspect-preserving fit, expanded field of view, UI re-layout, or a separate bottom-screen interface. For an original 256×192 DS picture, scaling to 400×240 is **non-integer** (different horizontal and vertical factors); nearest filtering can create uneven pixel widths and bilinear filtering can blur. A 1:1 centred image is simpler and exact but leaves borders. **Never silently stretch menus, touch hitboxes and world cameras together.** Test text legibility at physical size.
 
-Treat stereoscopic 3D and 800×240 wide mode as *optional presentation features*, not free enhancements: stereo requires two top-eye views; wide mode doubles horizontal fill and is mutually exclusive with stereo. Hardware/model restrictions are in [GPU rendering](gpu-rendering.md) and [display](../hardware/display.md). Begin with one 2D top-eye target and one bottom target, or just the screen your game actually uses.
+Treat stereoscopic 3D and 800×240 wide mode as *optional presentation features*, not free enhancements: stereo requires two top-eye views; wide mode doubles horizontal fill and is mutually exclusive with stereo. Hardware/model restrictions are in [GPU rendering](PICA200/gpu-rendering.md) and [display](../hardware/display.md). Begin with one 2D top-eye target and one bottom target, or just the screen your game actually uses.
 
 ## 4. Bring up a native build before moving game code
 
@@ -263,7 +263,7 @@ Camera, microphone, infrared, NFC and local wireless are separate service integr
 
 ## 6. Replace the renderer: decide what the GPU will actually draw
 
-On the 3DS, the PICA200 executes command lists submitted through the **GSP** system service. **citro3d** is the maintained high-level interface for 3D buffers, render targets, shaders, textures and fixed-function pixel state; **citro2d** builds sprite, image, text and shape batching on top of it. [GPU command pipeline](pica200-command-pipeline.md), [GPU rendering](gpu-rendering.md), [2D rendering](rendering-2d.md).
+On the 3DS, the PICA200 executes command lists submitted through the **GSP** system service. **citro3d** is the maintained high-level interface for 3D buffers, render targets, shaders, textures and fixed-function pixel state; **citro2d** builds sprite, image, text and shape batching on top of it. [GPU command pipeline](PICA200/pica200-command-pipeline.md), [GPU rendering](PICA200/gpu-rendering.md), [2D rendering](PICA200/rendering-2d.md).
 
 Before writing a new backend, capture the **meaning** of each source draw: geometry, material, transform, clip/window, blend mode, priority, target and visibility. A raw list of old GL calls often obscures these semantics. The aim is to reproduce the resulting image using a small number of *PICA-compatible jobs*, not to emulate a desktop graphics driver call by call.
 
@@ -285,7 +285,7 @@ Before writing a new backend, capture the **meaning** of each source draw: geome
 | Instancing / compute shaders | No direct equivalent | CPU-build shared batches, reuse geometry; sometimes use PICA geometry shader |
 | A window swap | `C3D_FrameBegin`, draw targets, `C3D_FrameEnd` | GPU work runs asynchronously; screens are separate targets |
 
-This is a **design mapping**, not a complete API equivalence. For actual calls, state lifetime and quirks, read [picasso and citro3d](../homebrew/picasso-and-citro3d.md), [shader programming](pica200-shader-programming.md) and [fixed-function API](citro3d-fixed-function-api.md).
+This is a **design mapping**, not a complete API equivalence. For actual calls, state lifetime and quirks, read [picasso and citro3d](../homebrew/picasso-and-citro3d.md), [shader programming](PICA200/pica200-shader-programming.md) and [fixed-function API](citro3d-fixed-function-api.md).
 
 ### 6.2 Bring-up order for any native renderer
 
@@ -298,11 +298,11 @@ This is a **design mapping**, not a complete API equivalence. For actual calls, 
 7. Render the reference scene at real resolution. Record CPU recording and GPU timing independently.
 8. Only then turn on scene streaming, large atlases, dynamic geometry, stereo, wide mode, or multi-pass effects.
 
-Use the maintained [3DS graphics examples](../homebrew/3ds-examples.md) as the source of buildable initial programs. The [complete 2D sprite example](rendering-2d.md) and [tile-renderer example](2d-tile-renderer.md) are additional Coffeepot references; their pages state their build/test status.
+Use the maintained [3DS graphics examples](../homebrew/3ds-examples.md) as the source of buildable initial programs. The [complete 2D sprite example](PICA200/rendering-2d.md) and [tile-renderer example](PICA200/2d-tile-renderer.md) are additional Coffeepot references; their pages state their build/test status.
 
 ### 6.3 Porting ordinary 2D games
 
-For games whose frames consist mostly of sprites, tilemaps, HUD elements and text, start with **citro2d**. It draws quads on the GPU rather than rasterising each sprite on the ARM11. The core operation is to create screen targets once, build/load atlas textures, and draw visible objects between `C3D_FrameBegin`/`C3D_FrameEnd`. [2D rendering setup and complete example](rendering-2d.md).
+For games whose frames consist mostly of sprites, tilemaps, HUD elements and text, start with **citro2d**. It draws quads on the GPU rather than rasterising each sprite on the ARM11. The core operation is to create screen targets once, build/load atlas textures, and draw visible objects between `C3D_FrameBegin`/`C3D_FrameEnd`. [2D rendering setup and complete example](PICA200/rendering-2d.md).
 
 The renderer should receive a small command vocabulary, for example:
 
@@ -318,7 +318,7 @@ END_SCREEN
 
 This is **an illustrative engine-side data model**, not a citro2d API. It keeps the original game's rules from manipulating GPU state directly. The backend can then cull, reuse cached layers, batch compatible draws and expose a debug description of exactly what was submitted.
 
-**Batching discipline:** citro2d groups objects into runs; a change of texture, tint/fade, view transform, or another relevant state can end a run. It has a finite object buffer (`C2D_Init` capacity; default 4096). Draw sprites from the same atlas together **only inside sections where doing so preserves layer order, clip, blend and priority**. `C2D_Draw*` returning false may mean the object limit has been reached—track failures. See [citro2d batching](gpu-rendering.md) and [2D performance decisions](rendering-2d.md).
+**Batching discipline:** citro2d groups objects into runs; a change of texture, tint/fade, view transform, or another relevant state can end a run. It has a finite object buffer (`C2D_Init` capacity; default 4096). Draw sprites from the same atlas together **only inside sections where doing so preserves layer order, clip, blend and priority**. `C2D_Draw*` returning false may mean the object limit has been reached—track failures. See [citro2d batching](PICA200/gpu-rendering.md) and [2D performance decisions](PICA200/rendering-2d.md).
 
 **Visible-tile culling:** for `TILE`-sized map cells and a camera at `(camX, camY)`, compute the first and last visible columns/rows rather than looping through the entire map. Example for a 400×240 top-screen view:
 
@@ -329,15 +329,15 @@ tx1 = floor((camX + 400 - 1) / TILE)
 ty1 = floor((camY + 240 - 1) / TILE)
 ```
 
-Clamp the resulting indices to the map. With 16×16 tiles, a visible map window contains about 375 tiles when aligned, or up to 416 when offset; a 128×96 world contains 12,288 tiles. Reducing submitted work to what is visible matters. The full [2D tile renderer](2d-tile-renderer.md) demonstrates camera clamping, visible-cell iteration, animation, sprite sorting, cached layers, and an on-screen performance overlay.
+Clamp the resulting indices to the map. With 16×16 tiles, a visible map window contains about 375 tiles when aligned, or up to 416 when offset; a 128×96 world contains 12,288 tiles. Reducing submitted work to what is visible matters. The full [2D tile renderer](PICA200/2d-tile-renderer.md) demonstrates camera clamping, visible-cell iteration, animation, sprite sorting, cached layers, and an on-screen performance overlay.
 
-**Text:** pre-parse strings that change rarely rather than re-laying out every glyph each frame; use `C2D_Text`, `C2D_TextBuf` and a font from the system or a converted `.bcfnt`. Text is not free when interleaved with sprite atlases. Keep caches keyed to content, font, size and layout parameters. [2D rendering](rendering-2d.md), [asset pipeline](asset-pipeline.md).
+**Text:** pre-parse strings that change rarely rather than re-laying out every glyph each frame; use `C2D_Text`, `C2D_TextBuf` and a font from the system or a converted `.bcfnt`. Text is not free when interleaved with sprite atlases. Keep caches keyed to content, font, size and layout parameters. [2D rendering](PICA200/rendering-2d.md), [asset pipeline](PICA200/asset-pipeline.md).
 
 **Draw-order trap:** translucent sprite pixels and depth writes may interact differently from the original engine. Use an explicit ordered sequence for overlapping alpha-blended sprites. Treat cut-out sprites, additive effects, colour-math and clipping as separate material families and write image fixtures for each.
 
 ### 6.4 Porting a DS-style tile and palette renderer
 
-A Nintendo DS graphics engine does more than draw pre-coloured sprites. Its 2D output can depend on character/tile data, maps, palette banks, scrolling registers, sprite attributes, layer priorities, windows, blending/brightness and scanline-specific register changes. The 3DS has **no matching DS 2D hardware pipeline** in native 3DS mode. It must reconstruct the result with the PICA200. [2D rendering: porting a tile- and palette-based original](rendering-2d.md).
+A Nintendo DS graphics engine does more than draw pre-coloured sprites. Its 2D output can depend on character/tile data, maps, palette banks, scrolling registers, sprite attributes, layer priorities, windows, blending/brightness and scanline-specific register changes. The 3DS has **no matching DS 2D hardware pipeline** in native 3DS mode. It must reconstruct the result with the PICA200. [2D rendering: porting a tile- and palette-based original](PICA200/rendering-2d.md).
 
 Do not replace a CPU DS renderer with “upload the whole 256×192 framebuffer every frame” and expect a fast port. That can be a correct reference implementation, but it still rasterises the original scene on the slow CPU and pays conversion/transfer costs. Instead, identify **what changes** between frames and keep the unchanged work resident on the GPU.
 
@@ -359,9 +359,9 @@ Do not replace a CPU DS renderer with “upload the whole 256×192 framebuffer e
 
 **Fallback contract:** keep a correct software/reference renderer available while translating effects. Every GPU fast path should report the precise reason for rejection: `unsupported_window`, `untracked_palette`, `capture_mode`, `too_many_spans`, `unsupported_blend`, etc. A path taken on only 5% of frames will not rescue performance. **Count acceptance rate by scene** as well as speed. A hybrid that composes CPU and GPU layers must reproduce final priority, alpha and windows; otherwise fallback for the whole affected surface. This set of techniques is a [hypothesis] for any particular port until correctness and performance are compared on hardware.
 
-**Three independently useful comparisons:** (1) captured-state offline fixtures against the reference renderer, (2) same-state replay with both backends in the same build, and (3) old/new physical 3DS tests. They catch different failures. The emulator is additional debugging coverage, not a substitute for the third. [Rendering-2D](rendering-2d.md), [testing on hardware](testing-on-hardware.md).
+**Three independently useful comparisons:** (1) captured-state offline fixtures against the reference renderer, (2) same-state replay with both backends in the same build, and (3) old/new physical 3DS tests. They catch different failures. The emulator is additional debugging coverage, not a substitute for the third. [Rendering-2D](PICA200/rendering-2d.md), [testing on hardware](testing-on-hardware.md).
 
-**Caching decoded geometry requires its dependencies.** SM64DS Enhanced describes memoizing DS display-list decoding while preserving dynamic matrix operations [reported: project patch, revision and test model unspecified; [case study](case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws)]. List address alone is not a sufficient key if bytes or inherited graphics state can change. Track those inputs, invalidate when they change, and compare cached execution with the uncached reference on identical captured state. Count hits, invalidations and mismatches before relying on the cache.
+**Caching decoded geometry requires its dependencies.** SM64DS Enhanced describes memoizing DS display-list decoding while preserving dynamic matrix operations [reported: project patch, revision and test model unspecified; [case study](case-studies/case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws)]. List address alone is not a sufficient key if bytes or inherited graphics state can change. Track those inputs, invalidate when they change, and compare cached execution with the uncached reference on identical captured state. Count hits, invalidations and mismatches before relying on the cache.
 
 ### 6.5 Porting 3D geometry and material pipelines
 
@@ -375,7 +375,7 @@ For a fixed-function or early-shader-era 3D engine, translate mesh/material subm
 6. Draw translucent objects in an order that preserves their correct composition.
 7. Draw UI last, preferably with a separate 2D path.
 
-**Vertex streams.** `C3D_AttrInfo` describes attributes; `C3D_BufInfo` describes buffer address and stride. Do not assume that a desktop vertex struct with `float` positions/normals/UVs is the cheapest on ARM11. Where precision permits, pack colours, UVs and normals to smaller formats; verify that attribute offsets and shader input declarations match byte-for-byte. The GPU supports unsigned-byte and unsigned-short indices, not 32-bit indices; partition large meshes. Indexing only helps when vertices are *actually shared*—otherwise conversion and indirection can cost more. [GPU rendering](gpu-rendering.md), [GPU command pipeline](pica200-command-pipeline.md).
+**Vertex streams.** `C3D_AttrInfo` describes attributes; `C3D_BufInfo` describes buffer address and stride. Do not assume that a desktop vertex struct with `float` positions/normals/UVs is the cheapest on ARM11. Where precision permits, pack colours, UVs and normals to smaller formats; verify that attribute offsets and shader input declarations match byte-for-byte. The GPU supports unsigned-byte and unsigned-short indices, not 32-bit indices; partition large meshes. Indexing only helps when vertices are *actually shared*—otherwise conversion and indirection can cost more. [GPU rendering](PICA200/gpu-rendering.md), [GPU command pipeline](PICA200/pica200-command-pipeline.md).
 
 **Vertex versus pixel work.** Use the vertex shader for transformations and interpolated quantities; the fragment side uses six TEV stages and specialized fixed-function units, **not GLSL**. Typical material replacements:
 
@@ -393,13 +393,13 @@ For a fixed-function or early-shader-era 3D engine, translate mesh/material subm
 
 TEV configuration uses `C3D_GetTexEnv`, `C3D_TexEnvSrc`, `C3D_TexEnvFunc`, and other texenv calls; lighting/fog/stencil use the separate groups documented in [citro3d fixed-function API](citro3d-fixed-function-api.md). Test a single material in isolation before building an automatic translator. **Generate a lookup table of supported material combinations**; unsupported combinations should fail visibly or select an explicitly documented approximation.
 
-**Shader implementation.** Assemble `.v.pica` and, when genuinely helpful, `.g.pica` with `picasso`, load the `.shbin` via `DVLB_ParseFile`, and bind a `shaderProgram`. A 3DS vertex program has different register and output semantics from GLSL, including 24-bit floating-point values. Keep world coordinates near the camera/object origin to reduce precision loss. If you attempt geometry-shader expansion of sprites or particles, measure it against CPU-batched quads; the existence of a geometry shader is not evidence of a speedup. [Shader programming](pica200-shader-programming.md), [picasso](../homebrew/picasso-and-citro3d.md).
+**Shader implementation.** Assemble `.v.pica` and, when genuinely helpful, `.g.pica` with `picasso`, load the `.shbin` via `DVLB_ParseFile`, and bind a `shaderProgram`. A 3DS vertex program has different register and output semantics from GLSL, including 24-bit floating-point values. Keep world coordinates near the camera/object origin to reduce precision loss. If you attempt geometry-shader expansion of sprites or particles, measure it against CPU-batched quads; the existence of a geometry shader is not evidence of a speedup. [Shader programming](PICA200/pica200-shader-programming.md), [picasso](../homebrew/picasso-and-citro3d.md).
 
-**Batch within state boundaries.** `C3D_Draw*` records commands and the dirty state that precedes them. Too many small draws waste ARM11 recording time and GPU command-list space. Conversely, merging objects across texture, stencil, clip or blend changes can corrupt the image. Batch runs of compatible material/state and preserve required order. [GPU command pipeline](pica200-command-pipeline.md).
+**Batch within state boundaries.** `C3D_Draw*` records commands and the dirty state that precedes them. Too many small draws waste ARM11 recording time and GPU command-list space. Conversely, merging objects across texture, stencil, clip or blend changes can corrupt the image. Batch runs of compatible material/state and preserve required order. [GPU command pipeline](PICA200/pica200-command-pipeline.md).
 
 ### 6.6 Screen targets, depth, stereo and cached passes
 
-`C3D_RenderTargetCreate` allocates colour/depth storage; use the actual target format and dimensions to account for every byte. `C3D_RenderTargetSetOutput` associates a target with an LCD screen; off-screen targets can be used for pre-rendered scenery or additional passes. The GPU's tiled target format and display-transfer stage are not interchangeable with ordinary row-major CPU buffers. [GPU rendering: frame anatomy and render targets](gpu-rendering.md).
+`C3D_RenderTargetCreate` allocates colour/depth storage; use the actual target format and dimensions to account for every byte. `C3D_RenderTargetSetOutput` associates a target with an LCD screen; off-screen targets can be used for pre-rendered scenery or additional passes. The GPU's tiled target format and display-transfer stage are not interchangeable with ordinary row-major CPU buffers. [GPU rendering: frame anatomy and render targets](PICA200/gpu-rendering.md).
 
 For optional stereo, prepare the camera for left and right eyes and render the top scene per eye. Read `osGet3DSliderState()` or the documented stereo-enable state, and **skip the second eye when stereo is off**. A static bottom screen need not be redrawn every frame. For a cached background, render it only when content or effect state changes, then sample it in a **different** pass—never sample a texture while drawing into the same texture.
 
@@ -407,7 +407,7 @@ A render-to-texture cache is useful only if its update frequency, resolution and
 
 ## 7. Build an asset pipeline for the destination, not for the desktop
 
-The main rule is to perform predictable, repeatable conversion **on the development machine**, then make the console load resources already suited to its GPU and memory. See [asset pipeline](asset-pipeline.md) for the precise conversion options and asset types.
+The main rule is to perform predictable, repeatable conversion **on the development machine**, then make the console load resources already suited to its GPU and memory. See [asset pipeline](PICA200/asset-pipeline.md) for the precise conversion options and asset types.
 
 ### 7.1 Inventory and classify every asset
 
@@ -435,7 +435,7 @@ The names are a suggestion. Whatever you choose, make conversion deterministic a
 
 ### 7.2 Convert texture data deliberately
 
-The PICA200 samples **tiled** textures in 8×8 blocks (Morton order within a tile); it does not accept a normal row-major RGBA array as an ordinary GPU texture. The supported dimensions are powers of two, **8–1024** per side. Use `tex3ds` for source art instead of runtime swizzling whenever possible. [GPU rendering](gpu-rendering.md), [asset pipeline](asset-pipeline.md).
+The PICA200 samples **tiled** textures in 8×8 blocks (Morton order within a tile); it does not accept a normal row-major RGBA array as an ordinary GPU texture. The supported dimensions are powers of two, **8–1024** per side. Use `tex3ds` for source art instead of runtime swizzling whenever possible. [GPU rendering](PICA200/gpu-rendering.md), [asset pipeline](PICA200/asset-pipeline.md).
 
 Example `sprites.t3s` input file:
 
@@ -452,7 +452,7 @@ Example converter invocation from an asset-build rule:
 tex3ds -i sprites.t3s -H sprites.h -d sprites.d -o sprites.t3x
 ```
 
-This is the documented **tex3ds 2.3.0 command shape**; filenames depend on your project, and the images must exist relative to the input file as the converter expects. The official template can wire `.t3s` conversion into Make; see [asset pipeline](asset-pipeline.md). For this version, the wiki records a Windows build rejecting some short option aliases, so prefer `--atlas` and `--border` in scripts.
+This is the documented **tex3ds 2.3.0 command shape**; filenames depend on your project, and the images must exist relative to the input file as the converter expects. The official template can wire `.t3s` conversion into Make; see [asset pipeline](PICA200/asset-pipeline.md). For this version, the wiki records a Windows build rejecting some short option aliases, so prefer `--atlas` and `--border` in scripts.
 
 Choose memory formats by visual requirement:
 
@@ -484,7 +484,7 @@ source bytes (normal heap)
 
 ### 7.4 Avoid transition-time memory spikes
 
-Count peak residency of **old scene + next scene + decompression scratch + textures + audio**, not merely the stable state after a load. When memory is tight, unload a safe group before loading another and use a loading screen that still services audio and APT. Prefer a bounded working set and prefetch only assets a transition predicts. Record cold load time, warm load time, cache hit/miss counts, evictions and failures. [Asset pipeline: streaming and hitches](asset-pipeline.md).
+Count peak residency of **old scene + next scene + decompression scratch + textures + audio**, not merely the stable state after a load. When memory is tight, unload a safe group before loading another and use a loading screen that still services audio and APT. Prefer a bounded working set and prefetch only assets a transition predicts. Record cold load time, warm load time, cache hit/miss counts, evictions and failures. [Asset pipeline: streaming and hitches](PICA200/asset-pipeline.md).
 
 Compressed files save SD space and reads but cost CPU decompression; do not assume one codec is best. Test file reading, decompression, format conversion, swizzling, flush and upload as **separate stages**. A cache with a nominally high hit rate can still stall badly when a nearly full atlas allocator has to evict or rebuild many entries.
 
@@ -508,7 +508,7 @@ FREE -> CPU_WRITING -> READY_TO_SUBMIT -> GPU_OR_DSP_IN_FLIGHT
                           FREE <- COMPLETED -+
 ```
 
-Ownership changes at a known point. For standard citro3d frames, `C3D_FrameBegin` waits for the prior submitted frame to finish; its return is a useful ownership boundary. Data generated **before** that return must not overwrite storage still being consumed by the previous frame. A buffer queue can hold “being rendered”, “ready next”, and “being produced”; it must never allow the producer to reuse the in-flight slot. [Frame pacing](frame-pacing.md), [memory and cache](memory-and-cache.md).
+Ownership changes at a known point. For standard citro3d frames, `C3D_FrameBegin` waits for the prior submitted frame to finish; its return is a useful ownership boundary. Data generated **before** that return must not overwrite storage still being consumed by the previous frame. A buffer queue can hold “being rendered”, “ready next”, and “being produced”; it must never allow the producer to reuse the in-flight slot. [Frame pacing](PICA200/frame-pacing.md), [memory and cache](memory-and-cache.md).
 
 ### 8.2 Cache coherency: the minimum required rules
 
@@ -529,7 +529,7 @@ Use arenas or pools for transient CPU work only after identifying actual allocat
 
 ## 9. Separate simulation, rendering, presentation and sound clocks
 
-A 30 fps renderer does **not** imply the original game should advance at 30 ticks/s. Preserve the simulation's intended rate; display the most recent completed state on an independently paced output path. [Frame pacing](frame-pacing.md).
+A 30 fps renderer does **not** imply the original game should advance at 30 ticks/s. Preserve the simulation's intended rate; display the most recent completed state on an independently paced output path. [Frame pacing](PICA200/frame-pacing.md).
 
 For an engine originally tied to 60 Hz, an abstract loop is:
 
@@ -547,7 +547,7 @@ on each active outer loop:
         submit rendering of the current game state
 ```
 
-This is **pseudocode**. Use `svcGetSystemTick()` for high-resolution measurement; on the pinned libctru source its counter uses the base ARM11 clock even in New 3DS fast mode. `C3D_FrameRate(30.0f)` with `C3D_FRAME_SYNCDRAW` is one way to present at steady 30 fps; do not use that setting as a simulation-clock replacement. Read the [frame-pacing page](frame-pacing.md) for real API rules and a fixed-step example.
+This is **pseudocode**. Use `svcGetSystemTick()` for high-resolution measurement; on the pinned libctru source its counter uses the base ARM11 clock even in New 3DS fast mode. `C3D_FrameRate(30.0f)` with `C3D_FRAME_SYNCDRAW` is one way to present at steady 30 fps; do not use that setting as a simulation-clock replacement. Read the [frame-pacing page](PICA200/frame-pacing.md) for real API rules and a fixed-step example.
 
 A port of an existing console game may have a native rate slightly different from exactly 60 Hz (e.g. the DS refresh is about 59.83 Hz). Decide what must be maintained: gameplay logic timing, music sync, animation frames or display refresh. Document the compromise and test accumulated drift over minutes, not only the first second.
 
@@ -616,9 +616,9 @@ A correct debugging setup is part of the port, not an afterthought. Keep the **e
 
 **Crash or memory fault:** save the last scene/resource ID, read the exception and registers, attach GDB to identify the faulting thread and stack, and check allocations/invalid frees. On hardware, Rosalina can expose an extended-remote GDB server; the [debugging page](debugging.md) gives the exact enable and connection sequence.
 
-**GPU freeze with CPU still alive:** log command submission and the last completed frame. Bisect the draw list, not the entire program. Investigate wrong attribute stride or shader output, command-buffer overflow, misaligned/invalid transfers, GPU-inaccessible buffers, and cache coherency. `C3D_FrameBegin(C3D_FRAME_NONBLOCK)` can prevent the diagnostic loop from waiting forever and give you a place to report the stalled GPU. See [GPU hangs](debugging.md) and [PICA command pipeline](pica200-command-pipeline.md).
+**GPU freeze with CPU still alive:** log command submission and the last completed frame. Bisect the draw list, not the entire program. Investigate wrong attribute stride or shader output, command-buffer overflow, misaligned/invalid transfers, GPU-inaccessible buffers, and cache coherency. `C3D_FrameBegin(C3D_FRAME_NONBLOCK)` can prevent the diagnostic loop from waiting forever and give you a place to report the stalled GPU. See [GPU hangs](debugging.md) and [PICA command pipeline](PICA200/pica200-command-pipeline.md).
 
-**Wrong image:** render diagnostic checkerboard textures with marked corners, a constant-colour quad, a cut-out sprite, and two overlapping transparent sprites; then verify UV orientation, colour channel order, texture tiling, depth ordering, alpha/blend state, target orientation and atlas borders. The [2D rendering troubleshooting guide](rendering-2d.md) lists specific symptoms and tests.
+**Wrong image:** render diagnostic checkerboard textures with marked corners, a constant-colour quad, a cut-out sprite, and two overlapping transparent sprites; then verify UV orientation, colour channel order, texture tiling, depth ordering, alpha/blend state, target orientation and atlas borders. The [2D rendering troubleshooting guide](PICA200/rendering-2d.md) lists specific symptoms and tests.
 
 **Only breaks on HOME, sleep or load:** log the APT transition; verify worker pause/restore, service lifetime, GPU resource validity, data paths, missed audio refills, and any stale timing accumulator. Read [application lifecycle](application-lifecycle.md), not a generic desktop suspend guide.
 
@@ -643,7 +643,7 @@ These are *design walkthroughs*, not claims that a particular engine has already
 7. Re-layout top and bottom screens and update touch hitboxes in their native coordinate systems. Decide whether preserving 256×192 exactly is more important than filling the 400×240 top screen.
 8. Add audio and ROM data loading with distinct queues and cache budgets; validate long transitions and repeated map changes on Old 3DS.
 
-**Specific failure modes to test:** a palette animation that changes without tile bytes changing, a sprite crossing two layer priorities, a sprite window or fade, per-scanline scroll, a battle with many unique textures, and a map transition while audio continues. **Success** means reference-state and image fixtures match (or every difference is documented), the native path covers ordinary gameplay, fallback frequency is measured, and the simulation rate remains correct at the selected presentation rate. [Tile port techniques](rendering-2d.md), [2D tile renderer](2d-tile-renderer.md).
+**Specific failure modes to test:** a palette animation that changes without tile bytes changing, a sprite crossing two layer priorities, a sprite window or fade, per-scanline scroll, a battle with many unique textures, and a map transition while audio continues. **Success** means reference-state and image fixtures match (or every difference is documented), the native path covers ordinary gameplay, fallback frequency is measured, and the simulation rate remains correct at the selected presentation rate. [Tile port techniques](PICA200/rendering-2d.md), [2D tile renderer](PICA200/2d-tile-renderer.md).
 
 ### Example B: older desktop 3D engine with GL materials
 
@@ -660,7 +660,7 @@ These are *design walkthroughs*, not claims that a particular engine has already
 7. Replace or simplify postprocessing deliberately. Compare the cost and fidelity of baking an effect, using fixed-function state or adding a small render-to-texture pass.
 8. Tune geometry and fill separately on Old 3DS. Do not assume a scene with few polygons is cheap if it draws many full-screen translucent passes.
 
-**Success** is a scene that matches all required geometry, ordering and material features, has known per-stage cost, and has no unexpectedly retained desktop GL dependencies. [GPU rendering](gpu-rendering.md), [shader programming](pica200-shader-programming.md), [fixed-function API](citro3d-fixed-function-api.md).
+**Success** is a scene that matches all required geometry, ordering and material features, has known per-stage cost, and has no unexpectedly retained desktop GL dependencies. [GPU rendering](PICA200/gpu-rendering.md), [shader programming](PICA200/pica200-shader-programming.md), [fixed-function API](citro3d-fixed-function-api.md).
 
 ### Example C: SDL software-rendered 2D game
 
@@ -676,7 +676,7 @@ These are *design walkthroughs*, not claims that a particular engine has already
 
 For SDL2/SDL3, the upstream Nintendo 3DS README documents **software-only SDL rendering** and cooperative scheduling caveats. Confirm the current README for your exact SDL release, rather than assuming an SDL2 desktop GL backend translates to the PICA200. References: [SDL2 3DS README](https://wiki.libsdl.org/SDL2/README-n3ds), [SDL3 3DS README](https://wiki.libsdl.org/SDL3/README-n3ds), [Coffeepot development workflow](../homebrew/development-workflow.md).
 
-See the [rendering trade-off case studies](case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
+See the [rendering trade-off case studies](case-studies/case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
 
 ## 13. Release acceptance: what a complete port must prove
 
@@ -741,13 +741,13 @@ Start with a task, then follow the page that has the actual API and source evide
 | Compiler install, Makefile, Docker, 3DSX and deployment | [Development workflow](../homebrew/development-workflow.md), [3DS examples](../homebrew/3ds-examples.md) |
 | libctru services, allocators and process setup | [libctru](../homebrew/libctru.md), [application lifecycle](application-lifecycle.md) |
 | CPU limits, cache, instruction tuning | [ARM11 MPCore](../hardware/arm11-mpcore.md), [CPU optimization](cpu-optimization.md) |
-| 2D sprites, text, camera, tiles, caching, pixel accuracy | [2D rendering](rendering-2d.md), [complete tile-renderer example](2d-tile-renderer.md) |
-| citro3d setup, textures, batching, stereo, targets | [GPU rendering](gpu-rendering.md), [command pipeline](pica200-command-pipeline.md) |
-| Vertex/geometry shader assembly, uniforms and output | [Picasso and citro3d](../homebrew/picasso-and-citro3d.md), [PICA shader programming](pica200-shader-programming.md) |
+| 2D sprites, text, camera, tiles, caching, pixel accuracy | [2D rendering](PICA200/rendering-2d.md), [complete tile-renderer example](PICA200/2d-tile-renderer.md) |
+| citro3d setup, textures, batching, stereo, targets | [GPU rendering](PICA200/gpu-rendering.md), [command pipeline](PICA200/pica200-command-pipeline.md) |
+| Vertex/geometry shader assembly, uniforms and output | [Picasso and citro3d](../homebrew/picasso-and-citro3d.md), [PICA shader programming](PICA200/pica200-shader-programming.md) |
 | Lighting, fog, TEV, procedural textures, blending and stencil | [Fixed-function API](citro3d-fixed-function-api.md), [GPU shading hardware](../hardware/gpu-shading-features.md) |
-| Texture formats, atlases, RomFS, codecs, streaming | [Asset pipeline](asset-pipeline.md) |
+| Texture formats, atlases, RomFS, codecs, streaming | [Asset pipeline](PICA200/asset-pipeline.md) |
 | Heap/VRAM sizes, cache and buffer ownership | [Memory and cache](memory-and-cache.md), [hardware memory](../hardware/memory.md) |
-| Game clock, presentation and CPU/GPU overlap | [Frame pacing](frame-pacing.md) |
+| Game clock, presentation and CPU/GPU overlap | [Frame pacing](PICA200/frame-pacing.md) |
 | Audio decoding, DSP queues and deadlines | [Audio programming](audio.md), [DSP hardware](../hardware/dsp.md) |
 | Inputs, touch, C-Stick, sensors | [Input and sensors](input-and-sensors.md) |
 | SD/RomFS, robust saves and file failure handling | [Filesystem and saves](filesystem-and-saves.md) |
@@ -760,7 +760,7 @@ Start with a task, then follow the page that has the actual API and source evide
 
 ## Retail developer accounts
 
-What shipped 3DS games' developers have said about renderer rewrites, VRAM-driven art, 60 FPS targets and stereo cost is collected, with the claim-by-claim evidence, on [commercial case studies](case-studies-commercial.md). All of it is `[reported]` press material, not measurement.
+What shipped 3DS games' developers have said about renderer rewrites, VRAM-driven art, 60 FPS targets and stereo cost is collected, with the claim-by-claim evidence, on [commercial case studies](case-studies/case-studies-commercial.md). All of it is `[reported]` press material, not measurement.
 
 ## Open questions and limitations
 
@@ -775,8 +775,8 @@ Primary sources for the APIs and hardware facts on this page, as already pinned 
 
 - [devkitPro 3ds-examples](https://github.com/devkitPro/3ds-examples) — application template, shader/texture build rules, graphics/input/audio examples.
 - [devkitPro libctru](https://github.com/devkitPro/libctru) — system loop, memory, HID, NDSP, GSP, service and debug interfaces; pinned revision on [source versions](source-versions.md).
-- [devkitPro citro3d](https://github.com/devkitPro/citro3d) — render queue, draw submission, texture handling, combiner state and timers; pinned source notes on [GPU rendering](gpu-rendering.md).
-- [devkitPro citro2d](https://github.com/devkitPro/citro2d) — 2D objects, sprite sheets, batching and text; implementation evidence and verification in [2D rendering](rendering-2d.md).
+- [devkitPro citro3d](https://github.com/devkitPro/citro3d) — render queue, draw submission, texture handling, combiner state and timers; pinned source notes on [GPU rendering](PICA200/gpu-rendering.md).
+- [devkitPro citro2d](https://github.com/devkitPro/citro2d) — 2D objects, sprite sheets, batching and text; implementation evidence and verification in [2D rendering](PICA200/rendering-2d.md).
 - [devkitPro picasso](https://github.com/devkitPro/picasso) and [tex3ds](https://github.com/devkitPro/tex3ds) — PICA shader assembly and offline image conversion.
 - [3dbrew](https://www.3dbrew.org/wiki/Main_Page) — hardware registers, system services and memory-mode background; see the linked hardware/software pages for individual references.
 - [SDL2 Nintendo 3DS README](https://wiki.libsdl.org/SDL2/README-n3ds), [SDL3 Nintendo 3DS README](https://wiki.libsdl.org/SDL3/README-n3ds) — SDL 3DS backend limitations and build guidance.

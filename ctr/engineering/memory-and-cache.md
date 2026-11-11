@@ -128,7 +128,7 @@ Shader uniforms are not affected: citro3d writes them into the command list itse
 
 ### Flush-range tracking
 
-The default `C3D_FrameEnd(0)` flushes the whole linear heap; the alternative is to flush only what the CPU wrote. The exact behaviour of each flag is in the table on [renderer architecture](renderer-architecture.md#flush-range-tracking-the-c3d_frameend-flush-and-gx_cmdlist_flush); this section is the design.
+The default `C3D_FrameEnd(0)` flushes the whole linear heap; the alternative is to flush only what the CPU wrote. The exact behaviour of each flag is in the table on [renderer architecture](PICA200/renderer-architecture.md#flush-range-tracking-the-c3d_frameend-flush-and-gx_cmdlist_flush); this section is the design.
 
 1. **Record every write.** At each place the CPU writes memory the GPU will read in this frame (dynamic vertices, indices, texture tiles), call a function that records the address range. Round the range out to 32-byte cache lines first, since flushing operates on whole lines ([the functions](#the-functions)).
 2. **Merge.** Keep a small table and merge overlapping or touching ranges; if it overflows, give up for this frame and use the default flush.
@@ -184,17 +184,17 @@ static bool frameEndTracked(void)
 }
 ```
 
-Rules: call `dirtyAdd` for every CPU write to GPU-visible linear memory (including texture uploads that `memcpy` into a linear texture; a VRAM texture upload is a `GX_TextureCopy` from a source buffer that must itself be flushed); keep the default `C3D_FrameEnd(0)` path available behind a debug switch and compare frames. The saving is unmeasured: [`flushbench`](../benchmarks/README.md#flushbench) is the planned measurement of the full-heap flush, and a tracked-versus-full comparison is experiment G6 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks). `[reported]` G-Diffuser's `onesubmit_narrow` setting flushes only dirty ranges recorded by its own module at frame end instead of the whole heap; its repository document states about 0.3 ms saved on Old 3DS and 0.4 ms of GX CPU on New 3DS for that game, not a wiki measurement ([`docs/NATIVE-RENDERER.md`](https://github.com/cruxxxxxx/gdx-3ds/blob/main/docs/NATIVE-RENDERER.md), downloaded 11 November 2026).
+Rules: call `dirtyAdd` for every CPU write to GPU-visible linear memory (including texture uploads that `memcpy` into a linear texture; a VRAM texture upload is a `GX_TextureCopy` from a source buffer that must itself be flushed); keep the default `C3D_FrameEnd(0)` path available behind a debug switch and compare frames. The saving is unmeasured: [`flushbench`](../benchmarks/README.md#flushbench) is the planned measurement of the full-heap flush, and a tracked-versus-full comparison is experiment G6 in [renderer architecture](PICA200/renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks). `[reported]` G-Diffuser's `onesubmit_narrow` setting flushes only dirty ranges recorded by its own module at frame end instead of the whole heap; its repository document states about 0.3 ms saved on Old 3DS and 0.4 ms of GX CPU on New 3DS for that game, not a wiki measurement ([`docs/NATIVE-RENDERER.md`](https://github.com/cruxxxxxx/gdx-3ds/blob/main/docs/NATIVE-RENDERER.md), downloaded 11 November 2026).
 
 ### Texture uploads
 
-- `C3D_TexLoadImage` / `C3D_TexUpload` expect data already in the GPU's tiled layout (what `tex3ds` produces — see [asset pipeline](asset-pipeline.md)). For a texture in linear memory they simply `memcpy`; you must then flush the texture before the GPU samples it. For a VRAM texture they issue a `GX_TextureCopy` from your source buffer, which therefore must itself be in linear memory and flushed [documented: citro3d `texture.c`].
+- `C3D_TexLoadImage` / `C3D_TexUpload` expect data already in the GPU's tiled layout (what `tex3ds` produces — see [asset pipeline](PICA200/asset-pipeline.md)). For a texture in linear memory they simply `memcpy`; you must then flush the texture before the GPU samples it. For a VRAM texture they issue a `GX_TextureCopy` from your source buffer, which therefore must itself be in linear memory and flushed [documented: citro3d `texture.c`].
 - For dynamically changing textures, update only the 8×8 tiles that changed (16-bit formats: 128 bytes per tile; RGBA8: 256 bytes) and flush only those ranges.
 - Converting a row-major image to tiled layout on the CPU is avoidable: the transfer engine can do it (`GX_DisplayTransfer` with `GX_TRANSFER_OUT_TILED(1)`) from a linear-memory source, subject to its size and alignment rules ([display](../hardware/display.md)).
 
 ### Upload cost versus VRAM placement
 
-Putting a texture in VRAM costs something first: the CPU cannot write VRAM in homebrew, so the data goes into a flushed linear buffer and a GPU copy (`GX_TextureCopy`, via `C3D_TexUpload`/`C3D_TexLoadImage` on a VRAM texture) moves it ([texture uploads](#texture-uploads)). The possible gain is GPU texture reads from GPU-local memory. Whether sampling from VRAM is measurably faster than from linear memory is not established by any source used here `[hypothesis]`, and the benefit depends on how often the texture is sampled, how often it changes, and how much of the 6 MiB is left after render targets (a stereo top target alone takes about 1.5 MB with 24-bit depth, [GPU rendering](gpu-rendering.md#render-target-memory-budget)). Treat "VRAM is faster" as something to test per texture, not a rule; a texture that is re-uploaded every few frames pays the copy every time. The planned measurement is G4 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks).
+Putting a texture in VRAM costs something first: the CPU cannot write VRAM in homebrew, so the data goes into a flushed linear buffer and a GPU copy (`GX_TextureCopy`, via `C3D_TexUpload`/`C3D_TexLoadImage` on a VRAM texture) moves it ([texture uploads](#texture-uploads)). The possible gain is GPU texture reads from GPU-local memory. Whether sampling from VRAM is measurably faster than from linear memory is not established by any source used here `[hypothesis]`, and the benefit depends on how often the texture is sampled, how often it changes, and how much of the 6 MiB is left after render targets (a stereo top target alone takes about 1.5 MB with 24-bit depth, [GPU rendering](PICA200/gpu-rendering.md#render-target-memory-budget)). Treat "VRAM is faster" as something to test per texture, not a rule; a texture that is re-uploaded every few frames pays the copy every time. The planned measurement is G4 in [renderer architecture](PICA200/renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks).
 
 ### Reading GPU output on the CPU
 
@@ -206,7 +206,7 @@ For screenshots, readback of a render-to-texture, or software post-processing: w
 
 ### A cache key also needs a coherent snapshot
 
-A key can cover every relevant input and still race a writer between hashing and rendering. For shared emulated video memory, decide whether the consumer takes a full snapshot, synchronizes with writers, or uses a correctly synchronized generation/retry scheme that can detect writes across the entire read. Hashing or checking a generation once does not by itself make unsynchronized reads coherent. Include the cost and ownership of the chosen scheme in measurements. The HGSS team identified live VRAM reads as an open race in its [case study](case-study-hgss-port.md#pitfalls-and-open-questions); occurrence and a remedy remain unverified.
+A key can cover every relevant input and still race a writer between hashing and rendering. For shared emulated video memory, decide whether the consumer takes a full snapshot, synchronizes with writers, or uses a correctly synchronized generation/retry scheme that can detect writes across the entire read. Hashing or checking a generation once does not by itself make unsynchronized reads coherent. Include the cost and ownership of the chosen scheme in measurements. The HGSS team identified live VRAM reads as an open race in its [case study](case-studies/case-study-hgss-port.md#pitfalls-and-open-questions); occurrence and a remedy remain unverified.
 
 ## Buffer lifetime
 
@@ -216,7 +216,7 @@ Most corruption bugs are a buffer reused while another processor still reads it.
 FREE → CPU writing → flushed → queued for GPU/DSP → GPU/DSP finished → FREE
 ```
 
-With citro3d's standard frame loop, "GPU finished" for everything drawn in frame *N* is the moment `C3D_FrameBegin` returns for frame *N+1* ([performance](frame-pacing.md#overlapping-cpu-and-gpu)). Data written for the GPU *before* that point needs a second copy. When deleting textures or buffers, wait for the GPU first (`C3D_FrameBegin` returning, or `C3D_Fini`), or the GPU may read freed and reused memory.
+With citro3d's standard frame loop, "GPU finished" for everything drawn in frame *N* is the moment `C3D_FrameBegin` returns for frame *N+1* ([performance](PICA200/frame-pacing.md#overlapping-cpu-and-gpu)). Data written for the GPU *before* that point needs a second copy. When deleting textures or buffers, wait for the GPU first (`C3D_FrameBegin` returning, or `C3D_Fini`), or the GPU may read freed and reused memory.
 
 ## Technical details
 
@@ -249,5 +249,5 @@ With citro3d's standard frame loop, "GPU finished" for everything drawn in frame
 - [Luma3DS](https://github.com/LumaTeam/Luma3DS) — `sysmodules/loader/source/hbldr.c` (3DSX system mode and memory mappings), `sysmodules/rosalina/source/menus/miscellaneous.c` (hb title switch), `Makefile` (`HBLDR_DEFAULT_3DSX_TID`).
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — `audio/streaming` (wave buffer flush and queueing), `network/sockets` (socket buffer).
 - [G-Diffuser postmortem](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` narrow-flush setting; fetched November 2026.
-- [Renderer architecture](renderer-architecture.md) — what each flush flag does, decision table.
+- [Renderer architecture](PICA200/renderer-architecture.md) — what each flush flag does, decision table.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) and [Memory Management](https://www.3dbrew.org/wiki/Memory_Management) — regions and APPMEMTYPE.

@@ -2,13 +2,13 @@
 
 Stereoscopic 3D on the 3DS is two separate problems: drawing a left-eye and a right-eye image of the top screen without doubling every cost, and producing a picture that is comfortable to look at. This page covers both for Old 3DS homebrew: what the second eye costs, how to build the two cameras with citro3d and read the 3D slider, how to choose the depth plane, where HUD and sprite layers sit, and how to check comfort on a real console.
 
-> **Disclaimer: models without 3D.** The 2DS family has no stereoscopic 3D at all (Nintendo 2DS, New Nintendo 2DS XL): the top panel is flat, so only the left-eye image exists there. Code on this page must work when `osGet3DSliderState()` is 0 and on those models ([display](../hardware/display.md), [models](../hardware/models.md)). **New 3DS:** adds head-tracked "Super Stable 3D" for the same two images ([display](../hardware/display.md#head-tracking-and-super-stable-3d-new-3ds)); everything below is unchanged by it, and nothing here was checked on a New 3DS.
+> **Disclaimer: models without 3D.** The 2DS family has no stereoscopic 3D at all (Nintendo 2DS, New Nintendo 2DS XL): the top panel is flat, so only the left-eye image exists there. Code on this page must work when `osGet3DSliderState()` is 0 and on those models ([display](../../hardware/display.md), [models](../../hardware/models.md)). **New 3DS:** adds head-tracked "Super Stable 3D" for the same two images ([display](../../hardware/display.md#head-tracking-and-super-stable-3d-new-3ds)); everything below is unchanged by it, and nothing here was checked on a New 3DS.
 
 ## Before you start
 
-- Checked against libctru v2.7.1 (`gfx.h`, `os.h`), citro3d v1.7.1 (`maths.h`, `mtx_perspstereo.c`, `mtx_perspstereotilt.c`, `base.c`, `renderqueue.c`) at the commits on [source versions](source-versions.md), and `3ds-examples` `graphics/gpu/composite_scene` and `stereoscopic_2d`.
+- Checked against libctru v2.7.1 (`gfx.h`, `os.h`), citro3d v1.7.1 (`maths.h`, `mtx_perspstereo.c`, `mtx_perspstereotilt.c`, `base.c`, `renderqueue.c`) at the commits on [source versions](../source-versions.md), and `3ds-examples` `graphics/gpu/composite_scene` and `stereoscopic_2d`.
 - Applies to the Old 3DS. No stereo measurement has been made on this wiki: every cost statement below is either from source code, arithmetic, a `[reported]` third-party result, or a `[hypothesis]`.
-- Terms: **[stereoscopic 3D](../../glossary.md#stereoscopic-3d)** is the top screen's two-image mode; **parallax** is the horizontal shift of an object between the two eye images; the **reference plane** (also called the screen plane or zero-parallax plane) is the depth at which an object has no shift and appears at the screen surface; **IOD** (interocular distance) is the separation between the two virtual cameras.
+- Terms: **[stereoscopic 3D](../../../glossary.md#stereoscopic-3d)** is the top screen's two-image mode; **parallax** is the horizontal shift of an object between the two eye images; the **reference plane** (also called the screen plane or zero-parallax plane) is the depth at which an object has no shift and appears at the screen surface; **IOD** (interocular distance) is the separation between the two virtual cameras.
 - Related pages: 2D layers in stereo are in [2D rendering](rendering-2d.md#stereoscopic-2d-layers) (not repeated here); render targets and VRAM in [GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode); frame timing in [frame pacing](frame-pacing.md); the command-list side in [PICA200 command pipeline](pica200-command-pipeline.md). Scene-side reductions are in [3D scene optimisation](3d-scene-optimisation.md).
 
 ## What the second eye costs
@@ -175,7 +175,7 @@ Numbers for render-target memory are on [GPU rendering](gpu-rendering.md#stereos
 
 ## How to validate comfort on an Old 3DS
 
-A host build or emulator is not enough: parallax comfort depends on the real barrier panel, viewing distance and slider. There is no instrument for this here; the method is structured human testing on hardware, with the console in the hand and not on a stand ([testing on hardware](testing-on-hardware.md)).
+A host build or emulator is not enough: parallax comfort depends on the real barrier panel, viewing distance and slider. There is no instrument for this here; the method is structured human testing on hardware, with the console in the hand and not on a stand ([testing on hardware](../testing-on-hardware.md)).
 
 1. Make a test scene with objects at known distances: a plane at the convergence distance, one at half and double, and a horizontal ruler across the screen. Check that the reference-plane object is a single sharp image at slider 100 percent.
 2. Step the slider from 0 to 100 percent at several points. At 0 percent the image must be identical in both eyes and the scene must stay legible. Record where doubling begins for each tester and each distance.
@@ -210,7 +210,7 @@ A host build or emulator is not enough: parallax comfort depends on the real bar
 
 ## Open questions
 
-- Ratio of 3D to 2D frame time for a simple static-scene renderer on an Old 3DS. Experiment: render the same scene to one and two targets with the timing methods in [performance](performance.md), median and p99 over several hundred frames.
+- Ratio of 3D to 2D frame time for a simple static-scene renderer on an Old 3DS. Experiment: render the same scene to one and two targets with the timing methods in [performance](../performance.md), median and p99 over several hundred frames.
 - Is the zero-parallax distance really `screen * tan(fov/2) * aspect`? Draw a flat plane at that distance on a 3D screen and see whether it shows no shift at slider 100 percent.
 - Which sign of the per-eye offset pushes a 2D layer in front of or behind the screen plane (also open in [2D rendering](rendering-2d.md#stereoscopic-2d-layers)).
 - Does culling once with a widened frustum save measurable CPU time against culling per eye?

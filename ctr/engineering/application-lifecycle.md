@@ -54,7 +54,7 @@ Rules that follow from the source:
 - Call it from **one thread**, at the start of every frame. The hooks and the blocking happen on whichever thread calls it [documented: `apt.c`, `aptMainLoop` is just `aptHandleSleep(); aptHandleJumpToHome(); return !aptShouldClose();`].
 - While it is blocked (HOME menu showing, console asleep) **your main thread does not run, but every other thread you created does**. Background threads must stop themselves; see [Pausing a worker](#pausing-a-worker-thread).
 - A `false` return means "leave now", either because the system ordered a close or because a cancel arrived while you were suspended (`FLAG_ORDERTOCLOSE`/`FLAG_CANCELLED` in `aptShouldClose`) [documented: `apt.c`]. Finish your loop, release resources in reverse order and return from `main`.
-- Calling `aptMainLoop()` less often than the event rate does not lose events, but the HOME menu will not appear until you call it. A program that stops calling it for seconds looks frozen when HOME is pressed. Frame-loop structure: [frame pacing](frame-pacing.md).
+- Calling `aptMainLoop()` less often than the event rate does not lose events, but the HOME menu will not appear until you call it. A program that stops calling it for seconds looks frozen when HOME is pressed. Frame-loop structure: [frame pacing](PICA200/frame-pacing.md).
 
 ## Choosing what the user may do
 
@@ -286,7 +286,7 @@ All files are under `https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837
 | Symptom | Likely cause | Check |
 | ------- | ------------ | ----- |
 | Pressing HOME does nothing | `aptSetHomeAllowed(false)` was left on, or `aptMainLoop()` is not being called | `aptIsHomeAllowed()`, `aptCheckHomePressRejected()`; is the loop running every frame? |
-| HOME menu appears seconds late | Main loop stalled in long work | [frame pacing](frame-pacing.md); split long jobs across frames |
+| HOME menu appears seconds late | Main loop stalled in long work | [frame pacing](PICA200/frame-pacing.md); split long jobs across frames |
 | Worker thread keeps running (heat, battery) while HOME is shown | Worker not parked from `ONSUSPEND`/`ONSLEEP` | Pause flag as in the example |
 | Console never sleeps on lid close | `aptSetSleepAllowed(false)`, or a library applet launch in progress | `aptIsSleepAllowed()` |
 | Hang on exit | Worker blocked on an event nobody signals | Signal the resume event before `threadJoin` |
@@ -323,4 +323,4 @@ Interrupting the program during a GPU transfer, a file write or an audio refill 
 - [libctru `apt.c`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/source/services/apt.c) — event handler thread, hook calls, sleep, HOME jump, applet launch, `aptExit` paths.
 - [libctru `appInit.c`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/source/system/appInit.c) and [`appExit.c`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/source/system/appExit.c) — service start and shutdown order.
 - [libctru `swkbd.c`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/source/applets/swkbd.c) and [`swkbd.h`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/include/3ds/applets/swkbd.h) — keyboard launch and result codes.
-- Wiki pages: [audio](audio.md), [threading](threading.md), [frame pacing](frame-pacing.md), [testing on hardware](testing-on-hardware.md#what-to-test-beyond-it-runs), [libctru](../homebrew/libctru.md).
+- Wiki pages: [audio](audio.md), [threading](threading.md), [frame pacing](PICA200/frame-pacing.md), [testing on hardware](testing-on-hardware.md#what-to-test-beyond-it-runs), [libctru](../homebrew/libctru.md).

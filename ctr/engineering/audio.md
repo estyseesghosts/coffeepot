@@ -90,7 +90,7 @@ Latency is the queued length: three 1/30 s buffers mean up to 100 ms between dec
 
 ## Streaming compressed music
 
-Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libmodplug`) into PCM16 buffers on a worker thread, a few buffers ahead (`3ds-examples/audio/ogg-vorbis-decoding`, `opus-decoding`, `modplug-decoding`). On an Old 3DS, decoding competes with the game for core 0 unless you move it to core 1 ([threading](threading.md#core-1-borrowing-the-system-core)); on a New 3DS, core 2 is the natural place. Read the file in large chunks; small SD reads in the decoder add latency spikes ([asset pipeline](asset-pipeline.md#audio)).
+Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libmodplug`) into PCM16 buffers on a worker thread, a few buffers ahead (`3ds-examples/audio/ogg-vorbis-decoding`, `opus-decoding`, `modplug-decoding`). On an Old 3DS, decoding competes with the game for core 0 unless you move it to core 1 ([threading](threading.md#core-1-borrowing-the-system-core)); on a New 3DS, core 2 is the natural place. Read the file in large chunks; small SD reads in the decoder add latency spikes ([asset pipeline](PICA200/asset-pipeline.md#audio)).
 
 ## Effects and mixing
 
@@ -107,7 +107,7 @@ Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libm
 | Constant crackle | Buffer reused while queued/playing, or not flushed | Only refill `FREE`/`DONE` buffers; flush after writing |
 | Gaps only with a core-1 share | Slow `DSP_FlushDataCache` (third-party report of 1–5 ms at 80%) or refill thread starved | Time the flush; try `svcFlushProcessDataCache`; lower the share ([threading](threading.md)) |
 | Gaps during loading | Refill thread waits on the file system or a lock | Decode ahead before loading; refill from an independent thread |
-| Drift between music and gameplay | Game logic tied to the rendered frame rate | Fixed-step simulation ([frame pacing](frame-pacing.md#separating-simulation-from-rendering)) |
+| Drift between music and gameplay | Game logic tied to the rendered frame rate | Fixed-step simulation ([frame pacing](PICA200/frame-pacing.md#separating-simulation-from-rendering)) |
 
 `ndspGetFrameCount()` (sound frames processed) and `ndspGetDroppedFrames()` (sound frames ndsp reports as dropped) are useful counters to log.
 
@@ -115,7 +115,7 @@ Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libm
 
 Inspect the generated samples before the device handoff and again after capture. Flat-topped samples indicate saturation: reduce gain before the saturating operation, because reducing already-clipped output cannot recover peaks. If a file render is clean but device playback is not, check buffer lifetime, format, rate and DSP cache flush before changing the mixer. Calibrate any recording chain with a known signal before comparing levels.
 
-HGSS reported both a bad linked volume-table alias and a missing DSP buffer flush; its first table repair was too short for one in-game index. See the [case study](case-study-hgss-port.md#audio-and-save-compatibility-failures) for the separate symptoms and evidence [reported: project S13, November 2026; hardware conditions unspecified].
+HGSS reported both a bad linked volume-table alias and a missing DSP buffer flush; its first table repair was too short for one in-game index. See the [case study](case-studies/case-study-hgss-port.md#audio-and-save-compatibility-failures) for the separate symptoms and evidence [reported: project S13, November 2026; hardware conditions unspecified].
 
 ## Mixing deadlines and where the audio thread runs
 

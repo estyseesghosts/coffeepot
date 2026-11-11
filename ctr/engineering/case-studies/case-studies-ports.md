@@ -4,13 +4,13 @@ Three public N64-to-3DS ports have written down what they changed and what it bo
 
 ## Before you start
 
-- Evidence: every figure below is `[reported]` by the named project. Coffeepot has run no benchmark and no code from these projects. See [evidence labels](../../AGENTS.md).
+- Evidence: every figure below is `[reported]` by the named project. Coffeepot has run no benchmark and no code from these projects. See [evidence labels](../../../AGENTS.md).
 - Sources were downloaded raw and figures matched by text search on 11 November 2026 (see Technical details). The 10 -> 60 fps headline is first boot 10.4 fps (09-29) to a 60 fps median in 2D races (10-02), not one continuous run.
 - Dates are written as the sources give them (month-day). The G-Diffuser page shows no year in the parts read; the year 2026 comes from the OOT document and the review that prompted this page.
 - Old 3DS is the default model here. Where a source measured a New 3DS, or simulated Old 3DS speed on a New 3DS, that is stated in the row.
-- Companion pages: [porting](porting.md), [performance](performance.md), [CPU optimization](cpu-optimization.md), [memory and cache](memory-and-cache.md), [threading](threading.md), [audio](audio.md), [frame pacing](frame-pacing.md), [GPU rendering](gpu-rendering.md), [testing on hardware](testing-on-hardware.md).
+- Companion pages: [porting](../porting.md), [performance](../performance.md), [CPU optimization](../cpu-optimization.md), [memory and cache](../memory-and-cache.md), [threading](../threading.md), [audio](../audio.md), [frame pacing](../PICA200/frame-pacing.md), [GPU rendering](../PICA200/gpu-rendering.md), [testing on hardware](../testing-on-hardware.md).
 
-Jargon used here: the **[ARM11](../glossary.md#arm11)** is the 3DS CPU; a **[cache](../../glossary.md#cache)** is small fast memory in front of main memory; the **L1 instruction cache (L1-I)** holds recently executed code; **CPI** is cycles per instruction (lower is better); a **display list** is the N64 game's command stream describing what to draw; **[PICA200](../glossary.md#pica200)** is the 3DS GPU. CPI, L1-I and display list have no glossary entries yet.
+Jargon used here: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; a **[cache](../../../glossary.md#cache)** is small fast memory in front of main memory; the **L1 instruction cache (L1-I)** holds recently executed code; **CPI** is cycles per instruction (lower is better); a **display list** is the N64 game's command stream describing what to draw; **[PICA200](../../glossary.md#pica200)** is the 3DS GPU. CPI, L1-I and display list have no glossary entries yet.
 
 ## G-Diffuser: F-Zero X native renderer
 
@@ -38,7 +38,7 @@ A synthetic probe, not a game workload. The source also reports a render-code CP
 | 24 KB | 4.10 |
 | 32 KB | 5.62 |
 
-The postmortem itself describes the Old 3DS as "268 MHz, no L2 cache, 64 MB" and states "~219 KB of hot code against a 16 KB L1-I". That matches the review; hardware facts are on [ARM11 MPCore](../hardware/arm11-mpcore.md). Verbatim check: the probe line reads "probe CPI 1.06 at 16 KB of hot code, 4.10 at 24 KB, 5.62 at 32 KB".
+The postmortem itself describes the Old 3DS as "268 MHz, no L2 cache, 64 MB" and states "~219 KB of hot code against a 16 KB L1-I". That matches the review; hardware facts are on [ARM11 MPCore](../../hardware/arm11-mpcore.md). Verbatim check: the probe line reads "probe CPI 1.06 at 16 KB of hot code, 4.10 at 24 KB, 5.62 at 32 KB".
 
 ### CPU time per rendered 2D race frame (Old 3DS, 10-01 interpreter vs 10-02 native)
 
@@ -101,7 +101,7 @@ The 3D menu went 40.2 -> 44.6 fps on all arms (postmortem: "Old 3DS 3D menu 40.2
 | Memory | 16 MiB emulated-RAM default ran out of memory in boot preload (09-28); halved to 8 MiB; heap fragmentation after six course loads fixed with a 777,360 B reserved arena | Yes |
 | GX queue buffer 2x -> 4x citro3d default | Raised "on both consoles"; the failure it addressed was not fully read | Unknown |
 
-Related wiki pages: [audio](audio.md), [threading](threading.md), [filesystem and saves](filesystem-and-saves.md), [memory and cache](memory-and-cache.md).
+Related wiki pages: [audio](../audio.md), [threading](../threading.md), [filesystem and saves](../filesystem-and-saves.md), [memory and cache](../memory-and-cache.md).
 
 ### What did not get fixed
 
@@ -181,17 +181,17 @@ Every row is `[reported]` by the cited project, on the conditions in its section
 
 ## What to try first on an Old 3DS
 
-None of this is proven for your workload; each step ends in a measurement, so follow [performance](performance.md) and [testing on hardware](testing-on-hardware.md).
+None of this is proven for your workload; each step ends in a measurement, so follow [performance](../performance.md) and [testing on hardware](../testing-on-hardware.md).
 
-1. **Measure on the real console first.** Note that two of three sources used a New 3DS or an emulator for part of their numbers. Use the profiling steps in [performance](performance.md) and the counters in [frame pacing](frame-pacing.md).
-2. **Separate CPU frame time from GPU time.** Both ports found CPU-side display-list translation, not GPU work, to be the bottleneck (G-Diffuser: GPU busy 3.6 ms in a 96 ms frame; OOT: GPU 5-7 ms per frame). Check yours before touching shaders: [GPU rendering](gpu-rendering.md), [PICA200 command pipeline](pica200-command-pipeline.md).
-3. **Look for lock contention and synchronous I/O** between audio, render and logging; these produced the largest cheap wins in G-Diffuser. See [audio](audio.md), [threading](threading.md), [filesystem and saves](filesystem-and-saves.md).
-4. **Shrink and localise hot code and per-vertex data** before micro-tuning. See [CPU optimization](cpu-optimization.md) and [memory and cache](memory-and-cache.md).
-5. **Budget stereo submissions** if you ship stereo 3D; see [frame pacing](frame-pacing.md).
-6. **Pick one frame-rate target** and treat frame skipping as a fallback; see [frame pacing](frame-pacing.md).
-7. Keep memory ceilings explicit: [memory and cache](memory-and-cache.md).
+1. **Measure on the real console first.** Note that two of three sources used a New 3DS or an emulator for part of their numbers. Use the profiling steps in [performance](../performance.md) and the counters in [frame pacing](../PICA200/frame-pacing.md).
+2. **Separate CPU frame time from GPU time.** Both ports found CPU-side display-list translation, not GPU work, to be the bottleneck (G-Diffuser: GPU busy 3.6 ms in a 96 ms frame; OOT: GPU 5-7 ms per frame). Check yours before touching shaders: [GPU rendering](../PICA200/gpu-rendering.md), [PICA200 command pipeline](../PICA200/pica200-command-pipeline.md).
+3. **Look for lock contention and synchronous I/O** between audio, render and logging; these produced the largest cheap wins in G-Diffuser. See [audio](../audio.md), [threading](../threading.md), [filesystem and saves](../filesystem-and-saves.md).
+4. **Shrink and localise hot code and per-vertex data** before micro-tuning. See [CPU optimization](../cpu-optimization.md) and [memory and cache](../memory-and-cache.md).
+5. **Budget stereo submissions** if you ship stereo 3D; see [frame pacing](../PICA200/frame-pacing.md).
+6. **Pick one frame-rate target** and treat frame skipping as a fallback; see [frame pacing](../PICA200/frame-pacing.md).
+7. Keep memory ceilings explicit: [memory and cache](../memory-and-cache.md).
 
-**New 3DS:** a second core for rendering or audio is available; the sources report it as the largest single gain for G-Diffuser's baseline, but it is not an Old 3DS technique. See [threading](threading.md).
+**New 3DS:** a second core for rendering or audio is available; the sources report it as the largest single gain for G-Diffuser's baseline, but it is not an Old 3DS technique. See [threading](../threading.md).
 
 ## Technical details
 

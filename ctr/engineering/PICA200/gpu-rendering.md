@@ -1,8 +1,8 @@
 # GPU rendering with citro3d: a practical guide
 
-This page is a cookbook for drawing with the 3DS's **[PICA200](../glossary.md#pica200)** GPU through **citro3d**, the standard homebrew GPU library: how a frame is put together, what each draw call really costs, how to batch, how to set up textures and the colour combiners, how to handle the stereoscopic and wide screen modes, and what the hardware simply cannot do. It assumes you have built one of the `3ds-examples` GPU samples.
+This page is a cookbook for drawing with the 3DS's **[PICA200](../../glossary.md#pica200)** GPU through **citro3d**, the standard homebrew GPU library: how a frame is put together, what each draw call really costs, how to batch, how to set up textures and the colour combiners, how to handle the stereoscopic and wide screen modes, and what the hardware simply cannot do. It assumes you have built one of the `3ds-examples` GPU samples.
 
-Per-call details for lighting, fog, procedural textures, gas and render state are on [citro3d fixed-function API](citro3d-fixed-function-api.md); the choice between rendering strategies (retained or immediate, batching, specialised commands, effect reformulation) is on [renderer architecture](renderer-architecture.md). Background lives elsewhere: the pipeline and registers on [GPU](../hardware/gpu.md), lighting/procedural textures on [GPU shading features](../hardware/gpu-shading-features.md), the shader assembler and library overview on [picasso and citro3d](../homebrew/picasso-and-citro3d.md), and buffer placement and flushing on [memory and cache](memory-and-cache.md).
+Per-call details for lighting, fog, procedural textures, gas and render state are on [citro3d fixed-function API](../citro3d-fixed-function-api.md); the choice between rendering strategies (retained or immediate, batching, specialised commands, effect reformulation) is on [renderer architecture](renderer-architecture.md). Background lives elsewhere: the pipeline and registers on [GPU](../../hardware/gpu.md), lighting/procedural textures on [GPU shading features](../../hardware/gpu-shading-features.md), the shader assembler and library overview on [picasso and citro3d](../../homebrew/picasso-and-citro3d.md), and buffer placement and flushing on [memory and cache](../memory-and-cache.md).
 
 ## Before you start
 
@@ -46,7 +46,7 @@ What happens underneath [documented: citro3d `renderqueue.c`, `base.c`, `framebu
 3. Each draw call writes the *changed* GPU state plus the draw command into the command buffer.
 4. `C3D_FrameEnd` closes the command list, (by default) flushes the linear heap from the CPU cache, queues a display transfer from each used render target to its screen's LCD framebuffer, and starts the queue. The buffers are swapped when the queue finishes.
 
-The render target is **tiled** (8×8 blocks, [glossary](../../glossary.md#tiling)) and in VRAM; the LCD framebuffer is linear and in FCRAM. The display transfer converts between them, can drop alpha (RGBA8 → RGB8 in the examples) and can downscale 2×1 or 2×2 for anti-aliasing (`GX_TRANSFER_SCALING`), so rendering at 480×800 and downscaling 2×2 gives supersampled anti-aliasing at four times the fill cost.
+The render target is **tiled** (8×8 blocks, [glossary](../../../glossary.md#tiling)) and in VRAM; the LCD framebuffer is linear and in FCRAM. The display transfer converts between them, can drop alpha (RGBA8 → RGB8 in the examples) and can downscale 2×1 or 2×2 for anti-aliasing (`GX_TRANSFER_SCALING`), so rendering at 480×800 and downscaling 2×2 gives supersampled anti-aliasing at four times the fill cost.
 
 For projection matrices, citro3d provides "tilt" variants (`Mtx_OrthoTilt`, `Mtx_PerspTilt`, `Mtx_PerspStereoTilt`) that include the 90° rotation, so you can think in landscape 400×240 coordinates.
 
@@ -63,18 +63,18 @@ A citro3d draw is not free even if the GPU is idle. Calling `C3D_DrawArrays`, `C
 | Combiner (`C3D_TexEnv*`), depth/blend/alpha (`C3D_DepthTest`, `C3D_AlphaBlend`, `C3D_AlphaTest`, …) | Only the changed stages/state | Cheap per change; still group by material |
 | The draw itself | Primitive config, vertex count, offset, kick | Fewer, larger draws |
 
-The practical rule: **one draw per material, not per object**. Put many objects that share a texture, shader and combiner setup into the same vertex buffer and draw them with one call. The CPU cost of a thousand tiny draws is easily larger than the GPU cost of drawing the triangles [hypothesis — the crossover point has not been measured; use the [performance](performance.md#a-frame-level-breakdown) breakdown to see where your frame goes].
+The practical rule: **one draw per material, not per object**. Put many objects that share a texture, shader and combiner setup into the same vertex buffer and draw them with one call. The CPU cost of a thousand tiny draws is easily larger than the GPU cost of drawing the triangles [hypothesis — the crossover point has not been measured; use the [performance](../performance.md#a-frame-level-breakdown) breakdown to see where your frame goes].
 
 ### Vertex data
 
 - Up to **12 attributes** per vertex (`AttrInfo_AddLoader` returns -1 beyond that) and up to 12 buffer configurations (`C3D_BufInfo`) [documented: `attribs.c`, `buffers.h`].
 - Attribute component types are `GPU_BYTE`, `GPU_UNSIGNED_BYTE`, `GPU_SHORT` and `GPU_FLOAT`. Bytes and shorts arrive in the shader as numbers you scale with a uniform: a 16-bit position plus a scale/offset uniform, a byte normal and byte colours can make a vertex a third the size of an all-float one. Fewer bytes means less CPU writing (for dynamic data) and less memory traffic for the GPU.
 - The two bits next to the type in each attribute's format nibble hold the component count minus one, not a bit width, even though 3dbrew labels them 8/16/24/32 bits ([conflict and resolution](pica200-command-pipeline.md#technical-details)).
-- The buffer stride must exactly equal the real vertex size, including padding — otherwise the GPU hangs ([GPU pitfalls](../hardware/gpu.md#known-pitfalls)).
+- The buffer stride must exactly equal the real vertex size, including padding — otherwise the GPU hangs ([GPU pitfalls](../../hardware/gpu.md#known-pitfalls)).
 - **Fixed attributes** (`AttrInfo_AddFixed` + `C3D_FixedAttribSet`) supply a value that is constant for a draw (a tint colour, a normal) without storing it per vertex.
 - **Indexed drawing** (`C3D_DrawElements` with 8- or 16-bit indices in linear memory) avoids transforming shared vertices twice and shrinks meshes; it does not reduce the per-draw cost above.
 - **Immediate mode** (`C3D_ImmDrawBegin`, `C3D_ImmSendAttrib`, `C3D_ImmDrawEnd`) writes vertices into the command buffer itself — fine for a few debug quads, wasteful for real geometry because every attribute costs a command word on the CPU.
-- Static meshes: build once into linear memory at load time. Dynamic geometry: write it after `C3D_FrameBegin` returns, or double-buffer it ([memory and cache](memory-and-cache.md#buffer-lifetime)).
+- Static meshes: build once into linear memory at load time. Dynamic geometry: write it after `C3D_FrameBegin` returns, or double-buffer it ([memory and cache](../memory-and-cache.md#buffer-lifetime)).
 
 ### Do work in the vertex shader
 
@@ -82,15 +82,15 @@ The vertex shader units do 4-wide math on 24-bit floats in parallel with the CPU
 
 ## Textures
 
-- Dimensions are powers of two from 8 to 1024 per side ([picasso and citro3d](../homebrew/picasso-and-citro3d.md#citro3d-gpu-library)); data is stored **tiled** in 8×8 blocks, not in rows — use `tex3ds` to convert at build time ([asset pipeline](asset-pipeline.md)).
+- Dimensions are powers of two from 8 to 1024 per side ([picasso and citro3d](../../homebrew/picasso-and-citro3d.md#citro3d-gpu-library)); data is stored **tiled** in 8×8 blocks, not in rows — use `tex3ds` to convert at build time ([asset pipeline](asset-pipeline.md)).
 - Load `.t3x` files with `Tex3DS_TextureImport` (from memory), `Tex3DS_TextureImportStdio` or `Tex3DS_TextureImportFD` (from a file); the last argument chooses VRAM instead of linear memory. For atlases, `Tex3DS_GetSubTexture` returns per-image coordinates.
 - Pick the smallest format that looks right: RGB565 for opaque art, RGBA5551 for cut-out sprites, RGBA4 for soft alpha, LA8/L8/A8/LA4/L4/A4 for masks, fonts and lightmaps, **ETC1/ETC1A4** (compressed, 4 or 8 bits per pixel) for photographic and large textures. RGBA8 is four times the memory and bandwidth of a 4-bit ETC1 texture. ETC1 is lossy: not for pixel art.
 - Mipmaps (`tex3ds -m`, `C3D_TexInitMipmap`) cost a third more memory but reduce texture-cache misses for minified textures.
-- Three units sample ordinary textures (units 0–2); unit 0 also does cube, shadow and projection textures; unit 3 is procedural ([GPU](../hardware/gpu.md#summary)).
+- Three units sample ordinary textures (units 0–2); unit 0 also does cube, shadow and projection textures; unit 3 is procedural ([GPU](../../hardware/gpu.md#summary)).
 
 ## Colour combiners (TEV) recipes
 
-The fragment stage has six combiner stages ([glossary](../glossary.md#tev)). Each takes up to three sources (`GPU_PRIMARY_COLOR` = interpolated vertex colour, `GPU_TEXTURE0..3`, `GPU_CONSTANT`, `GPU_PREVIOUS`, `GPU_PREVIOUS_BUFFER`, fragment-lighting outputs), applies operand selectors and one function, for RGB and alpha separately [documented: libctru `gpu/enums.h`, citro3d `texenv.h`].
+The fragment stage has six combiner stages ([glossary](../../glossary.md#tev)). Each takes up to three sources (`GPU_PRIMARY_COLOR` = interpolated vertex colour, `GPU_TEXTURE0..3`, `GPU_CONSTANT`, `GPU_PREVIOUS`, `GPU_PREVIOUS_BUFFER`, fragment-lighting outputs), applies operand selectors and one function, for RGB and alpha separately [documented: libctru `gpu/enums.h`, citro3d `texenv.h`].
 
 ```c
 C3D_TexEnv *env = C3D_GetTexEnv(0);
@@ -128,7 +128,7 @@ citro2d sits on citro3d and batches sprites, images, text and shapes: `C2D_Init(
 
 Plan around these instead of discovering them late:
 
-- **No programmable fragment shaders.** Per-pixel effects are built from the six combiner stages, lighting LUTs, fog and procedural textures ([shading features](../hardware/gpu-shading-features.md)). A desktop pixel shader must be redesigned, not ported.
+- **No programmable fragment shaders.** Per-pixel effects are built from the six combiner stages, lighting LUTs, fog and procedural textures ([shading features](../../hardware/gpu-shading-features.md)). A desktop pixel shader must be redesigned, not ported.
 - **No palette lookup in hardware.** A texel cannot index another texture. Expand palettised art to direct-colour texture formats when the art or the palette changes, and cache the result.
 - **No instancing, no compute.** Batch geometry yourself; use the geometry shader for simple expansion.
 - **Small VRAM.** 6 MB holds render targets and a few textures; most textures live in linear FCRAM.
@@ -147,7 +147,7 @@ Work out the VRAM bill before choosing resolutions. The numbers below are plain 
 
 > Unknown: whether the stereo and render-target budget figures below were checked on an Old 3DS or a New 3DS; they come from libctru/citro3d source and format sizes, not a run. A VRAM allocation test on each model would settle it.
 
-VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.15 MB) leaves room for textures, while a supersampled top plus bottom (about 3.7 MB) leaves much less, and both eyes supersampled do not fit with a bottom target. A 16-bit colour format (`GPU_RB_RGB565`, `GPU_RB_RGBA5551`, `GPU_RB_RGBA4`) halves the colour column. Whether 6 MiB is split in two banks that constrain placement is covered on [memory](../hardware/memory.md); how `C3D_RenderTargetCreate` places the buffers is in Technical details below.
+VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.15 MB) leaves room for textures, while a supersampled top plus bottom (about 3.7 MB) leaves much less, and both eyes supersampled do not fit with a bottom target. A 16-bit colour format (`GPU_RB_RGB565`, `GPU_RB_RGBA5551`, `GPU_RB_RGBA4`) halves the colour column. Whether 6 MiB is split in two banks that constrain placement is covered on [memory](../../hardware/memory.md); how `C3D_RenderTargetCreate` places the buffers is in Technical details below.
 
 ### 16-bit or 24-bit depth
 
@@ -159,7 +159,7 @@ The table above assumes the examples' `GPU_RB_DEPTH24_STENCIL8`. citro2d's `C2D_
 | `GPU_RB_DEPTH24` | 3 | 288,000 B | 230,400 B | 16,777,216 (2^24) |
 | `GPU_RB_DEPTH24_STENCIL8` | 4 | 384,000 B | 307,200 B | 16,777,216 plus an 8-bit stencil |
 
-So a top-screen RGBA8 target with 16-bit depth is 576,000 B instead of 768,000 B (192,000 B saved per eye), and depth clears and reads move half as many bytes. Choose 16-bit depth for 2D layers and shallow scenes where depth only orders layers and ties are acceptable; choose 24-bit for 3D scenes with a deep range, where fewer than 65,536 levels across the range may make nearby surfaces tie (z-fighting). Whether the memory saving or the cheaper depth traffic changes frame time is not measured `[hypothesis]`. Shadow maps need the 24-bit-plus-8 layout described on [shading features](../hardware/gpu-shading-features.md#shadows).
+So a top-screen RGBA8 target with 16-bit depth is 576,000 B instead of 768,000 B (192,000 B saved per eye), and depth clears and reads move half as many bytes. Choose 16-bit depth for 2D layers and shallow scenes where depth only orders layers and ties are acceptable; choose 24-bit for 3D scenes with a deep range, where fewer than 65,536 levels across the range may make nearby surfaces tie (z-fighting). Whether the memory saving or the cheaper depth traffic changes frame time is not measured `[hypothesis]`. Shadow maps need the 24-bit-plus-8 layout described on [shading features](../../hardware/gpu-shading-features.md#shadows).
 
 ## Render to texture
 
@@ -178,7 +178,7 @@ The same scene can be built several ways. Each row is a strategy; the cost colum
 | citro2d sprites | Quads collected into a buffer, one draw per run | Atlas textures | Many texture or blend changes break runs |
 | Specialised compact commands | Fixed loops writing precomputed register words | Same as retained | You must own state and correctness ([warnings](renderer-architecture.md#warnings-for-bypassing-citro3d)) |
 
-To compare two strategies on the same scene, record for each: draw calls per frame, command-buffer use (`C3D_GetCmdBufUsage`), CPU recording time (`C3D_GetProcessingTime`), `C3D_FrameEnd` time, GPU time (`C3D_GetDrawingTime`) and time blocked in `C3D_FrameBegin`, on an Old 3DS first. The planned experiments are G1 to G6 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks); [`drawbench`](../benchmarks/README.md#drawbench) already covers part of G1.
+To compare two strategies on the same scene, record for each: draw calls per frame, command-buffer use (`C3D_GetCmdBufUsage`), CPU recording time (`C3D_GetProcessingTime`), `C3D_FrameEnd` time, GPU time (`C3D_GetDrawingTime`) and time blocked in `C3D_FrameBegin`, on an Old 3DS first. The planned experiments are G1 to G6 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks); [`drawbench`](../../benchmarks/README.md#drawbench) already covers part of G1.
 
 ## Technical details
 
@@ -188,7 +188,7 @@ To compare two strategies on the same scene, record for each: draw calls per fra
 - Texture unit configuration writes set bit 16 of `GPUREG_TEXUNIT_CONFIG` to clear the texture cache whenever any texture binding was marked dirty.
 - `C3D_RenderTargetClear` → `C3D_FrameBufClear` → `GX_MemoryFill` on colour and depth buffers (the PSC0/PSC1 fill units).
 
-- Colour-buffer pixel sizes written by `C3Di_FrameBufBind`: 4 bytes for RGBA8, 3 for RGB8, 2 for the 16-bit formats; depth buffers 2, 3 or 4 bytes (`framebuffer.c`). The register encoding is on [GPU internal registers](../hardware/gpu-internal-registers.md#framebuffer-gas-and-shadow-registers-0x100-0x130).
+- Colour-buffer pixel sizes written by `C3Di_FrameBufBind`: 4 bytes for RGBA8, 3 for RGB8, 2 for the 16-bit formats; depth buffers 2, 3 or 4 bytes (`framebuffer.c`). The register encoding is on [GPU internal registers](../../hardware/gpu-internal-registers.md#framebuffer-gas-and-shadow-registers-0x100-0x130).
 - Indexed drawing only saves vertex bytes when many triangles share *identical* post-transform vertices (same position, texture coordinates, colour and material). A port that had to expand each triangle with per-corner data found `C3D_DrawElements` copied as many vertex bytes as `C3D_DrawArrays` plus the index bytes `[hypothesis]`: one observation from the user's unpublished HG/SS port notes (source: `hgss_pica200_implementers_guide`), not independently measured; settle it with `drawbench` on an Old 3DS and a New 3DS.
 
 ## Pitfalls
@@ -197,11 +197,11 @@ To compare two strategies on the same scene, record for each: draw calls per fra
 - **Clearing with the wrong colour format**: the clear colour is packed as RGBA (`0xRRGGBBAA`) for an RGBA8 target.
 - **Binding the same texture before every draw** (common in naïve sprite loops): extra state writes and texture-cache clears every draw.
 - **Alpha blending without sorting**: translucent geometry must be drawn back to front after the opaque geometry.
-- **Assuming an emulator's tolerance**: a configuration that renders in an emulator can still hang a real GPU ([debugging](debugging.md#gpu-hangs)).
+- **Assuming an emulator's tolerance**: a configuration that renders in an emulator can still hang a real GPU ([debugging](../debugging.md#gpu-hangs)).
 
 ## Open questions
 
-- Draw-call CPU cost in citro3d per state change on Old 3DS, then New 3DS — [`drawbench`](../benchmarks/README.md#drawbench) measures exactly this; no results yet.
+- Draw-call CPU cost in citro3d per state change on Old 3DS, then New 3DS — [`drawbench`](../../benchmarks/README.md#drawbench) measures exactly this; no results yet.
 - Fill-rate figures for RGBA8 vs RGB565 targets and for each texture format, with and without the texture cache warm.
 - Whether placing static textures in VRAM gives a measurable speed-up over linear FCRAM for typical scenes.
 

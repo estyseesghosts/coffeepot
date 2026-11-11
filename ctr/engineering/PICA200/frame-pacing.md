@@ -1,8 +1,8 @@
 # Frame pacing on the 3DS
 
-Frame pacing is about *when* frames appear, not only how many: a game that shows a new picture at a steady 30 per second feels smoother than one that alternates between 60 and 40. On the 3DS both screens refresh at about 60 Hz, the GPU works asynchronously from the CPU, and **[citro3d](../glossary.md#libctru)** decides when to wait for each. This page explains the timing model, how to structure the main loop so CPU and GPU overlap, how to lock to 60 or 30 fps, how to keep game speed independent of rendering speed, and how to detect missed frames.
+Frame pacing is about *when* frames appear, not only how many: a game that shows a new picture at a steady 30 per second feels smoother than one that alternates between 60 and 40. On the 3DS both screens refresh at about 60 Hz, the GPU works asynchronously from the CPU, and **[citro3d](../../glossary.md#libctru)** decides when to wait for each. This page explains the timing model, how to structure the main loop so CPU and GPU overlap, how to lock to 60 or 30 fps, how to keep game speed independent of rendering speed, and how to detect missed frames.
 
-Measuring where frame time goes is on [performance](performance.md); buffer ownership rules are on [memory and cache](memory-and-cache.md#buffer-lifetime).
+Measuring where frame time goes is on [performance](../performance.md); buffer ownership rules are on [memory and cache](../memory-and-cache.md#buffer-lifetime).
 
 ## Before you start
 
@@ -14,8 +14,8 @@ Four things happen at their own pace:
 
 1. **The CPU** runs your loop: input, game logic, recording GPU commands.
 2. **The GPU** runs the recorded command list after `C3D_FrameEnd`, then the display transfers that copy each render target to its screen's framebuffer.
-3. **The displays** scan out a framebuffer about 60 times per second and signal a **[V-blank](../../glossary.md#vblank)** interrupt between frames, one per screen (`GSPGPU_EVENT_VBlank0` top, `VBlank1` bottom).
-4. **Audio** is consumed by the DSP in 160-sample frames of about 4.9 ms, independent of all of the above ([audio](audio.md)).
+3. **The displays** scan out a framebuffer about 60 times per second and signal a **[V-blank](../../../glossary.md#vblank)** interrupt between frames, one per screen (`GSPGPU_EVENT_VBlank0` top, `VBlank1` bottom).
+4. **Audio** is consumed by the DSP in 160-sample frames of about 4.9 ms, independent of all of the above ([audio](../audio.md)).
 
 citro3d ties them together [documented: citro3d `renderqueue.c`]:
 
@@ -27,7 +27,7 @@ So with `C3D_FRAME_SYNCDRAW`, at most one frame is in flight and the CPU never g
 
 ## How many images the GPU draws
 
-The GPU draws one image per render target per frame, not a fixed three. With the 3D slider off, a typical frame is a top image plus a bottom image (two); with 3D on, a left-eye and a right-eye top image plus the bottom (three) ([GPU](../hardware/gpu.md)). A screen whose contents did not change needs no image at all: citro3d swaps a screen's framebuffer only if a target for it was drawn that frame (see Technical details), so a mostly static bottom screen can be skipped by not drawing its target [documented: citro3d `renderqueue.c`; the saving is unmeasured]. Check `gfxIs3D()` or the slider and skip the right-eye target when it is off. The 2DS family has no stereoscopic 3D, so this path is always the two-image case there.
+The GPU draws one image per render target per frame, not a fixed three. With the 3D slider off, a typical frame is a top image plus a bottom image (two); with 3D on, a left-eye and a right-eye top image plus the bottom (three) ([GPU](../../hardware/gpu.md)). A screen whose contents did not change needs no image at all: citro3d swaps a screen's framebuffer only if a target for it was drawn that frame (see Technical details), so a mostly static bottom screen can be skipped by not drawing its target [documented: citro3d `renderqueue.c`; the saving is unmeasured]. Check `gfxIs3D()` or the slider and skip the right-eye target when it is off. The 2DS family has no stereoscopic 3D, so this path is always the two-image case there.
 
 ## Overlapping CPU and GPU
 
@@ -52,7 +52,7 @@ Putting game logic between `C3D_FrameBegin` and `C3D_FrameEnd` serialises the tw
 
 A more aggressive pipeline can prepare a later command buffer while an earlier frame executes. Keep each command buffer and every referenced texture or vertex buffer immutable until GPU completion; separately keep a framebuffer unavailable for reuse while it is pending presentation or scanout. Track these as distinct ownership transitions and measure CPU wait, GPU completion, presentation and input latency. More buffers can improve overlap but can also increase latency and memory use; the net result is [hypothesis] until measured on the target.
 
-SM64DS Enhanced's [case study](case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws) describes such a pipeline and a hardware flicker problem absent in its emulator. Its implementation depends on citro3d internals, so it is an example of the ownership problem, not a stable API recipe. [reported: project renderer, revision and test model unspecified]
+SM64DS Enhanced's [case study](../case-studies/case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws) describes such a pipeline and a hardware flicker problem absent in its emulator. Its implementation depends on citro3d internals, so it is an example of the ownership problem, not a stable API recipe. [reported: project renderer, revision and test model unspecified]
 
 ## Locking the frame rate
 
@@ -90,13 +90,13 @@ while (aptMainLoop()) {
 }
 ```
 
-- `svcGetSystemTick` runs at 268,111,856 Hz on all models, including New 3DS fast mode ([performance](performance.md#cpu-time-the-system-tick)).
+- `svcGetSystemTick` runs at 268,111,856 Hz on all models, including New 3DS fast mode ([performance](../performance.md#cpu-time-the-system-tick)).
 - Cap the catch-up (here 8 steps) so a long stall — loading, the HOME Menu, a debugger break — does not cause a burst of fast-forwarded steps.
 - For games ported from a console with its own refresh rate (the DS refreshes at about 59.83 Hz, not 60), decide explicitly whether to run the logic at the original rate or at 60; small differences accumulate in music and timers.
 - Report two numbers separately: logic ticks per second and distinct frames shown per second.
-- If a separate render thread produces pictures that the display consumes (a pattern from a large port, [porting](porting.md#lessons-reported-by-one-large-port)), also log how old the picture on screen is in logic ticks, and keep the hand-over queue short (one pending plus one in flight was the starting point in that port's notes); show the newest finished picture and drop unstarted older ones under load, but never drop logic ticks or audio `[hypothesis]` (from the unpublished notes of that port; not tested for this wiki).
+- If a separate render thread produces pictures that the display consumes (a pattern from a large port, [porting](../porting.md#lessons-reported-by-one-large-port)), also log how old the picture on screen is in logic ticks, and keep the hand-over queue short (one pending plus one in flight was the starting point in that port's notes); show the newest finished picture and drop unstarted older ones under load, but never drop logic ticks or audio `[hypothesis]` (from the unpublished notes of that port; not tested for this wiki).
 
-Interpolation can show an intermediate pose without running another game tick. When the source does not expose stable object identities, matching across frames becomes part of the cost and can fail: test object creation and deletion, camera cuts, teleports and animation discontinuities, and fall back to an uninterpolated frame when a match is unreliable. Count simulation ticks, displayed frames and matching time separately. SM64DS Enhanced describes this approach; its default disables interpolation on Old 3DS. **New 3DS:** the supplied research reports it enabled by default. [reported: project interpolation implementation, revision and test conditions unspecified; [case study](case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws)]
+Interpolation can show an intermediate pose without running another game tick. When the source does not expose stable object identities, matching across frames becomes part of the cost and can fail: test object creation and deletion, camera cuts, teleports and animation discontinuities, and fall back to an uninterpolated frame when a match is unreliable. Count simulation ticks, displayed frames and matching time separately. SM64DS Enhanced describes this approach; its default disables interpolation on Old 3DS. **New 3DS:** the supplied research reports it enabled by default. [reported: project interpolation implementation, revision and test conditions unspecified; [case study](../case-studies/case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws)]
 
 ## Detecting missed frames
 
@@ -109,17 +109,17 @@ Interpolation can show an intermediate pose without running another game tick. W
 A load inside the frame loop is a missed-frame generator: file reads, decompression, texture uploads and allocation can each take many frames. Guidance, `[hypothesis]` unless labelled:
 
 - **Convert offline, load raw.** Do format conversion, decompression-friendly packing and texture swizzling in the build ([asset pipeline](asset-pipeline.md)); at run time read large chunks into their final layout.
-- **Move loads off the frame thread** and pass results through a bounded queue; the frame thread only checks "ready". A load worker on the Old 3DS's shared core 1 competes with system services ([threading](threading.md#when-borrowing-core-1-can-make-the-game-slower)).
+- **Move loads off the frame thread** and pass results through a bounded queue; the frame thread only checks "ready". A load worker on the Old 3DS's shared core 1 competes with system services ([threading](../threading.md#when-borrowing-core-1-can-make-the-game-slower)).
 - **Budget per frame.** If a load must run on the frame thread, split it into slices that fit a time budget (for example 2 ms per frame, measured with ticks) and resume next frame.
-- **Never log synchronously from the frame thread.** `[reported]` the G-Diffuser postmortem records main-thread log flushes of 26-270 ms on an Old 3DS build and "no hitches" after moving to an asynchronous log ([source](https://hypnotize.works/gdx-3ds/postmortem/native.html); its game only). Details in the [profiling cookbook](performance.md#synchronous-sd-logging-causes-hitches).
-- **Keep audio and input alive during loads** ([audio](audio.md#choosing-buffer-sizes)); a loading screen still calls `aptMainLoop()`.
-- **Measure the load, not the average.** Log the longest frame during a load with the stage that caused it, using the [frame-time helper](performance.md#frame-time-distribution-and-missed-frames).
+- **Never log synchronously from the frame thread.** `[reported]` the G-Diffuser postmortem records main-thread log flushes of 26-270 ms on an Old 3DS build and "no hitches" after moving to an asynchronous log ([source](https://hypnotize.works/gdx-3ds/postmortem/native.html); its game only). Details in the [profiling cookbook](../performance.md#synchronous-sd-logging-causes-hitches).
+- **Keep audio and input alive during loads** ([audio](../audio.md#choosing-buffer-sizes)); a loading screen still calls `aptMainLoop()`.
+- **Measure the load, not the average.** Log the longest frame during a load with the stage that caused it, using the [frame-time helper](../performance.md#frame-time-distribution-and-missed-frames).
 
 ## Latency
 
 Input read at the top of the loop is shown, at best, after the current frame's GPU work, the transfer and the next V-blank — roughly one to two display periods with `C3D_FRAME_SYNCDRAW` [hypothesis from the pipeline above; not measured]. Read input as late as practical before recording the frame if latency matters (rhythm games, fast action), and avoid adding extra queued frames.
 
-See the [rendering trade-off case studies](case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
+See the [rendering trade-off case studies](../case-studies/case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
 
 ## Technical details
 

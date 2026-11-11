@@ -79,22 +79,22 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Debugging](engineering/debugging.md) — 3dslink logging, error screens and crash dumps, GDB through Rosalina, GPU hangs, emulators.
 - [Performance](engineering/performance.md) — measuring CPU and GPU time, finding the bottleneck, frame pacing, using the second core, ARM11 code habits.
 - [Memory and cache](engineering/memory-and-cache.md) — how much memory a program gets, heap vs linear vs VRAM, cache flushing rules, buffer lifetime.
-- [GPU rendering](engineering/gpu-rendering.md) — citro3d frames, draw-call costs, batching, textures, combiner recipes, citro2d, stereo and wide mode.
-- [Asset pipeline](engineering/asset-pipeline.md) — tex3ds, shaders, fonts, RomFS, audio and compression.
+- [GPU rendering](engineering/PICA200/gpu-rendering.md) — citro3d frames, draw-call costs, batching, textures, combiner recipes, citro2d, stereo and wide mode.
+- [Asset pipeline](engineering/PICA200/asset-pipeline.md) — tex3ds, shaders, fonts, RomFS, audio and compression.
 - [Testing on hardware](engineering/testing-on-hardware.md) — test tiers, a fast test loop and the experiment protocol.
 - [CPU optimisation](engineering/cpu-optimization.md) — how the ARM11 executes code, expensive constructs, reading generated code, hardware performance counters.
 - [Threading](engineering/threading.md) — which cores you can use, core-1 time sharing, priorities, synchronisation, a worker pattern.
-- [Frame pacing](engineering/frame-pacing.md) — the CPU/GPU/display timing model, locking to 60 or 30, fixed-step simulation, missed frames.
+- [Frame pacing](engineering/PICA200/frame-pacing.md) — the CPU/GPU/display timing model, locking to 60 or 30, fixed-step simulation, missed frames.
 - [Audio](engineering/audio.md) — ndsp setup and the DSP firmware file, formats, buffer sizing, streaming, diagnosing crackles.
-- [2D rendering](engineering/rendering-2d.md) — end-to-end guide to 2D on the PICA200: setup and frame loop, screens and depth, textures and memory, citro2d beyond sprites, performance decisions and troubleshooting.
-- [2D tile renderer](engineering/2d-tile-renderer.md) — a compile-checked scrolling tilemap with sprites and cached text, four tile-submission strategies, and a scripted mode that writes per-phase timings to the SD card for the crossover experiments (all unrun).
+- [2D rendering](engineering/PICA200/rendering-2d.md) — end-to-end guide to 2D on the PICA200: setup and frame loop, screens and depth, textures and memory, citro2d beyond sprites, performance decisions and troubleshooting.
+- [2D tile renderer](engineering/PICA200/2d-tile-renderer.md) — a compile-checked scrolling tilemap with sprites and cached text, four tile-submission strategies, and a scripted mode that writes per-phase timings to the SD card for the crossover experiments (all unrun).
 - [Porting](engineering/porting.md) — planning a port, desktop-to-PICA200 concept mapping, SDL and portlibs, what published ports chose.
 - [Application lifecycle](engineering/application-lifecycle.md) — how a program handles HOME, sleep, resume, the software keyboard and exit, with a complete logging example.
 - [Files and saves](engineering/filesystem-and-saves.md) — SD card, RomFS, save data and extdata, commit rules, write errors, and a two-copy checksummed save manager.
 - [IPC and services](engineering/ipc-and-services.md) — how to write a correct service client: message layout, transport versus service results, buffers, handles, sessions and failure tests, with `cfg:u` GetSystemModel as the worked example.
 - [Networking](engineering/networking.md) — starting `soc:U`, non-blocking sockets, bounded-memory HTTP downloads with httpc, and HTTPS with certificate validation left on.
-- [PICA200 command pipeline](engineering/pica200-command-pipeline.md) — what draw calls write, how command lists are encoded and reach the GPU, a hang/overflow/cache checklist, and a command-list decoder.
-- [PICA200 shader programming](engineering/pica200-shader-programming.md) — picasso shaders from one triangle to lighting, instruction encoding, float24 behaviour and a debugging tree.
+- [PICA200 command pipeline](engineering/PICA200/pica200-command-pipeline.md) — what draw calls write, how command lists are encoded and reach the GPU, a hang/overflow/cache checklist, and a command-list decoder.
+- [PICA200 shader programming](engineering/PICA200/pica200-shader-programming.md) — picasso shaders from one triangle to lighting, instruction encoding, float24 behaviour and a debugging tree.
 - [Input and sensors](engineering/input-and-sensors.md) — buttons, Circle Pad, touch, motion sensors, C-Stick and ZL/ZR, key repeat and model differences.
 - [Cameras and Y2R](engineering/camera-and-y2r.md) — capture sequence, buffers, YUV-to-RGB conversion.
 - [Microphone](engineering/microphone.md) — shared-memory ring buffer sampling.
@@ -104,13 +104,13 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Local wireless](engineering/local-wireless.md) — UDS host, join, send and receive.
 - [libctru service groups](engineering/service-groups.md) — init/exit pattern, every remaining service group, utilities, and a probe for which services your build can open.
 - [citro3d fixed-function API](engineering/citro3d-fixed-function-api.md) — which citro3d call sets lighting, fog, procedural textures, gas and render state.
-- [Renderer architecture](engineering/renderer-architecture.md) — decision guide for retained vs immediate rendering, batching, state caching, flush ranges and effect reformulation, with planned (not yet run) GPU benchmarks.
-- [Stereo engineering](engineering/stereo-engineering.md) — cost of the second eye, camera separation and convergence, the 3D slider, depth plane, HUD depth and comfort testing on an Old 3DS.
-- [3D scene optimisation](engineering/3d-scene-optimisation.md) — visibility culling, draw ordering and the early-depth evidence, LOD, baked lighting and 2D quads in 3D scenes.
-- [Case study: HGSS port](engineering/case-study-hgss-port.md) — hardware profiling, renderer-state failures, cache validation, audio and shutdown pitfalls.
-- [Case studies: rendering trade-offs](engineering/case-studies-rendering-tradeoffs.md) — DS and 2D port pipelines, frame ownership and Smash content budgets.
-- [Case studies: commercial 3DS games](engineering/case-studies-commercial.md) — developer-stated techniques from five shipped games, labelled as reported, with what hardware tests would verify them.
-- [Case studies: large 3DS ports](engineering/case-studies-ports.md) — reported techniques and results from three N64 ports (F-Zero X, Super Mario 64, Ocarina of Time), with model and conditions.
+- [Renderer architecture](engineering/PICA200/renderer-architecture.md) — decision guide for retained vs immediate rendering, batching, state caching, flush ranges and effect reformulation, with planned (not yet run) GPU benchmarks.
+- [Stereo engineering](engineering/PICA200/stereo-engineering.md) — cost of the second eye, camera separation and convergence, the 3D slider, depth plane, HUD depth and comfort testing on an Old 3DS.
+- [3D scene optimisation](engineering/PICA200/3d-scene-optimisation.md) — visibility culling, draw ordering and the early-depth evidence, LOD, baked lighting and 2D quads in 3D scenes.
+- [Case study: HGSS port](engineering/case-studies/case-study-hgss-port.md) — hardware profiling, renderer-state failures, cache validation, audio and shutdown pitfalls.
+- [Case studies: rendering trade-offs](engineering/case-studies/case-studies-rendering-tradeoffs.md) — DS and 2D port pipelines, frame ownership and Smash content budgets.
+- [Case studies: commercial 3DS games](engineering/case-studies/case-studies-commercial.md) — developer-stated techniques from five shipped games, labelled as reported, with what hardware tests would verify them.
+- [Case studies: large 3DS ports](engineering/case-studies/case-studies-ports.md) — reported techniques and results from three N64 ports (F-Zero X, Super Mario 64, Ocarina of Time), with model and conditions.
 - [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
 - [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush, instruction-cache and draw-call costs (`membench`, `flushbench`, `icachebench`, `drawbench`) and the result-recording format (not yet run on hardware).
 

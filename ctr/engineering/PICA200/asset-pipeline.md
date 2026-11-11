@@ -31,7 +31,7 @@ Under a `.3dsx` the RomFS is read from the file on the SD card, so read speed is
 
 ## Textures with tex3ds
 
-`tex3ds` converts images to **tiled** GPU textures ([glossary](../../glossary.md#tiling)): 8×8-pixel blocks instead of rows. The Makefile runs `tex3ds -i file.t3s -H file.h -d deps -o file.t3x`; the `.t3s` file holds options on its first line and image files after it. Two real examples from `3ds-examples`:
+`tex3ds` converts images to **tiled** GPU textures ([glossary](../../../glossary.md#tiling)): 8×8-pixel blocks instead of rows. The Makefile runs `tex3ds -i file.t3s -H file.h -d deps -o file.t3x`; the `.t3s` file holds options on its first line and image files after it. Two real examples from `3ds-examples`:
 
 ```text
 --atlas -f rgba8888 -z auto
@@ -86,13 +86,13 @@ Put sprites drawn together into the same atlas so citro2d or your batcher can dr
 
 ### Repacking an unusual source layout
 
-Some ports must load assets in their original layout at runtime. The Sonic CD 11 3DS research describes rearranging a 16 × 16384 indexed tileset into a 512 × 512 direct-colour atlas: for integer source coordinates `(sx, sy)`, use `dx = sx + 16 * (sy / 512)` and `dy = sy % 512`. A 512 × 512 RGBA5551 atlas uses 512 KiB for pixels alone. [reported: project renderer, revision and test model unspecified; see the [case study](case-studies-rendering-tradeoffs.md#sonic-cd-convert-a-software-renderer-to-gpu-layers)]
+Some ports must load assets in their original layout at runtime. The Sonic CD 11 3DS research describes rearranging a 16 × 16384 indexed tileset into a 512 × 512 direct-colour atlas: for integer source coordinates `(sx, sy)`, use `dx = sx + 16 * (sy / 512)` and `dy = sy % 512`. A 512 × 512 RGBA5551 atlas uses 512 KiB for pixels alone. [reported: project renderer, revision and test model unspecified; see the [case study](../case-studies/case-studies-rendering-tradeoffs.md#sonic-cd-convert-a-software-renderer-to-gpu-layers)]
 
 Expand indices through the active palette, then tile the resulting texture for the GPU. Validate the first and last pixel of each 512-row section and compare tile addresses and orientation against the original. Keep the original palette or a way to reconstruct it: when it changes, invalidate all converted pixels that depend on it. Include source, destination and any temporary buffers in the peak load budget.
 
 ## Shaders with picasso
 
-Shader source files ending in `.v.pica` in a source directory are assembled one per output file; to put several shaders (for example a vertex and a geometry shader) into one `.shbin`, list them in a `.shlist` file. The generated header declares `<name>_shbin` and `<name>_shbin_size`, which you pass to `DVLB_ParseFile` ([picasso and citro3d](../homebrew/picasso-and-citro3d.md)).
+Shader source files ending in `.v.pica` in a source directory are assembled one per output file; to put several shaders (for example a vertex and a geometry shader) into one `.shbin`, list them in a `.shlist` file. The generated header declares `<name>_shbin` and `<name>_shbin_size`, which you pass to `DVLB_ParseFile` ([picasso and citro3d](../../homebrew/picasso-and-citro3d.md)).
 
 ## Fonts
 
@@ -106,7 +106,7 @@ There is no build-time audio converter in the 3DS toolchain. Three common choice
 - **Ogg Vorbis** or **Opus** decoded on the console with the `libvorbisidec` (integer-only Vorbis) or `opusfile` port libraries from devkitPro's package manager, streamed into `ndsp` wave buffers: small files, CPU cost while playing. See `audio/ogg-vorbis-decoding`, `audio/opus-decoding` and `audio/streaming` [documented: `3ds-examples`].
 - **Tracker modules** with `libmodplug` (`audio/modplug-decoding`).
 
-The DSP's native output rate is about 32,728 Hz ([audio](../hardware/audio.md)); `ndsp` resamples each channel from its own rate (`ndspChnSetRate`). Decoding on a core-1 thread on an Old 3DS is a common pattern; read [performance](threading.md) for its caveats.
+The DSP's native output rate is about 32,728 Hz ([audio](../../hardware/audio.md)); `ndsp` resamples each channel from its own rate (`ndspChnSetRate`). Decoding on a core-1 thread on an Old 3DS is a common pattern; read [performance](../threading.md) for its caveats.
 
 ## Data compression
 
@@ -118,13 +118,13 @@ Whether compression speeds up loading depends on SD-card read speed versus decom
 
 A game can be fine in steady play and still stutter when it loads: opening a file, reading it from the SD card, decompressing and converting it all take time, and on an Old 3DS they take it from the same single core that runs your game. These are the rules this wiki carries, mostly from the author's unpublished notes (`old-3ds-guide-revised.md`, section 10, written for a port) and therefore `[hypothesis]` until measured on your own game:
 
-- **Keep file work out of the frame.** No `fopen`, blocking SD read, texture decode or allocation in the part of the loop that must meet a deadline, and none inside audio refill or GPU callbacks. Load from a worker thread ([threading](threading.md)) and hand finished data over with an event.
+- **Keep file work out of the frame.** No `fopen`, blocking SD read, texture decode or allocation in the part of the loop that must meet a deadline, and none inside audio refill or GPU callbacks. Load from a worker thread ([threading](../threading.md)) and hand finished data over with an event.
 - **Few large sequential reads beat many small ones.** Pack related assets into one file with an index of offsets and lengths, and read whole blocks. Whether compressing the pack helps depends on SD read speed versus CPU decompression and has to be measured on hardware (see Data compression above).
 - **Time the stages separately**: wait on the file, decompress, decode, swizzle, cache flush, upload. A single "load time" number hides which one to fix. Log from memory and write the log out later, not synchronously per asset.
 - **Test cold and warm.** The first run after boot reads from the card; a repeat may be served from caches. Report both, and report the transition frame, not only the average.
 - **Prefetch what a transition predicts** (the next map's textures, the next menu's art) but never let prefetching evict something the current frame needs, and never hold a global lock across an SD read.
 - **Fail visibly.** A missing or corrupt asset should produce a clear log line and a fallback, not a crash several frames later.
-- **Bound the memory.** Know what the loaded set costs in linear memory and VRAM before you add a feature ([memory and cache](memory-and-cache.md#size-arithmetic)); a texture cache that is nearly full can turn a handful of loads into seconds of work.
+- **Bound the memory.** Know what the loaded set costs in linear memory and VRAM before you add a feature ([memory and cache](../memory-and-cache.md#size-arithmetic)); a texture cache that is nearly full can turn a handful of loads into seconds of work.
 
 No measured SD throughput, decompression speed or prefetch gain exists on this wiki; the experiments are listed under Open questions.
 
@@ -134,15 +134,15 @@ Run-time optimisation is limited by what the art asks the hardware to do, so man
 
 **Convert offline, always.** Do swizzling (tiling), format conversion, atlas packing, mipmap generation, shader assembly and compression in the build (`tex3ds`, `picasso`, `mkbcfnt`, above). On the console they cost CPU time on the same core as the game and need memory for the source and result [documented: this page, above]. Models follow the same rule: convert vertex data offline to the exact attribute formats and orders the shader and draw call expect (packed 8-bit or 16-bit attributes where the art tolerates them), so loading is a copy into linear memory. The vertex-format options are in [GPU rendering](gpu-rendering.md); no 3DS model-conversion tool is covered by this wiki, so a model converter is code you write (the file format is yours) [hypothesis on the saving; measure load time].
 
-**Set budgets before production.** Choose, per scene, the VRAM and linear memory you will spend on textures, meshes and render targets, and the triangle and draw counts you can submit per frame, and give them to artists as numbers. How to compute the memory side, and the per-format sizes, is in [memory and cache](memory-and-cache.md#size-arithmetic); this page does not repeat the table. Budget triangles and draws from a measurement on your own scene at your target frame rate [hypothesis: no wiki measurement exists]. Remember render targets and depth buffers share the 6 MiB of VRAM with textures ([GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode)).
+**Set budgets before production.** Choose, per scene, the VRAM and linear memory you will spend on textures, meshes and render targets, and the triangle and draw counts you can submit per frame, and give them to artists as numbers. How to compute the memory side, and the per-format sizes, is in [memory and cache](../memory-and-cache.md#size-arithmetic); this page does not repeat the table. Budget triangles and draws from a measurement on your own scene at your target frame rate [hypothesis: no wiki measurement exists]. Remember render targets and depth buffers share the 6 MiB of VRAM with textures ([GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode)).
 
 **Bake effects instead of computing them.** Lighting, ambient occlusion and shadows for static geometry go into vertex colours or a lightmap texture; reflections and highlights can be painted; painted flat backdrops can replace distant geometry. The options and costs are in [3D scene optimisation](3d-scene-optimisation.md#baked-lighting-shadows-and-vertex-colours). Baked results cost build time and storage, and cannot react to run-time changes.
 
-**Stage loading and evict by lifetime.** Group assets by how long they live: permanent (UI font, common atlas), per-level, per-room, per-frame. Allocate each group from its own region or pool, load a group during a transition on a worker thread, and free the whole group at once instead of tracking assets one by one. This keeps fragmentation down, and makes the memory use of each scene a known number [hypothesis on fragmentation benefit; see [memory and cache](memory-and-cache.md#buffer-lifetime) for lifetimes of GPU-visible buffers]. The loading rules (large sequential reads, no file work in the frame, timing the stages) are in Streaming and load hitches above. The review that prompted this section (coffeepot4.md section 9) asserts that offline conversion, staged loading and lifetime-based eviction should be part of the architecture from the start; that is advice, not a measured result.
+**Stage loading and evict by lifetime.** Group assets by how long they live: permanent (UI font, common atlas), per-level, per-room, per-frame. Allocate each group from its own region or pool, load a group during a transition on a worker thread, and free the whole group at once instead of tracking assets one by one. This keeps fragmentation down, and makes the memory use of each scene a known number [hypothesis on fragmentation benefit; see [memory and cache](../memory-and-cache.md#buffer-lifetime) for lifetimes of GPU-visible buffers]. The loading rules (large sequential reads, no file work in the frame, timing the stages) are in Streaming and load hitches above. The review that prompted this section (coffeepot4.md section 9) asserts that offline conversion, staged loading and lifetime-based eviction should be part of the architecture from the start; that is advice, not a measured result.
 
 ### Pixel art against 3D textures: choosing the format
 
-The size and format table is under Choosing a format above and in [memory and cache](memory-and-cache.md#size-arithmetic). The quality trade is the part to decide in art production:
+The size and format table is under Choosing a format above and in [memory and cache](../memory-and-cache.md#size-arithmetic). The quality trade is the part to decide in art production:
 
 | Asset | Format to try first | Why | Check |
 | ----- | ------------------- | --- | ----- |

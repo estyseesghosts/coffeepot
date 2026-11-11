@@ -4,7 +4,7 @@
 Checks, for every Markdown page outside private_please_gitignore/:
   * relative links point at files that exist;
   * #anchors in relative links exist in the target page (GitHub heading
-    slugs, or explicit {#anchor} ids as used by the glossaries);
+    slugs and explicit HTML <a name="..."> anchors);
   * glossary links point at an existing glossary entry;
   * wiki pages in console directories (except glossaries) end
     with a "## Sources" section, as AGENTS.md requires.
@@ -27,9 +27,6 @@ def strip_code(text):
 
 
 def slug(heading):
-    m = re.search(r"\{#([^}]+)\}\s*$", heading)
-    if m:
-        return m.group(1)
     h = heading.strip().lower()
     h = re.sub(r"[^\w\- ]", "", h)
     return h.replace(" ", "-")
@@ -47,7 +44,7 @@ def anchors_of(path, cache={}):
     if path not in cache:
         with open(path, encoding="utf-8") as f:
             text = re.sub(r"^```.*?^```", "", f.read(), flags=re.S | re.M)
-        found = set()
+        found = set(re.findall(r"<a\s+name=[\"']([^\"']+)[\"']\s*></a>", text, re.I))
         counts = {}
         for m in re.finditer(r"^#+\s+(.*)$", text, re.M):
             s = slug(m.group(1))
@@ -66,6 +63,9 @@ def main():
         with open(page, encoding="utf-8") as f:
             raw = f.read()
         text = strip_code(raw)
+
+        for m in re.finditer(r"^#{1,6}\s+.*\{#[^}]+\}\s*$", text, re.M):
+            problems.append(f"{rel}: unsupported heading anchor syntax: {m.group(0)}")
 
         for m in re.finditer(r"\]\(([^)\s]+)\)", text):
             url = m.group(1)

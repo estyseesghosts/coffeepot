@@ -1,6 +1,6 @@
 # CTR displays
 
-The 3DS has two screens. The bottom one is an ordinary 320×240 touchscreen. The top one is special: it can show a separate image to each eye without glasses, which is what gives the console its name. Games have to cooperate by drawing every frame twice, from slightly different viewpoints.
+The 3DS has two screens. The bottom one is an ordinary 320×240 touchscreen. The top one is special: it can show a separate image to each eye without glasses, which is what gives the console its name. For stereoscopic output, games normally provide left- and right-eye images from slightly different viewpoints. With stereo disabled, the upper screen normally displays one image; rendering work can be shared between eye views, so stereo does not necessarily double the total frame cost.
 
 On top of that, DS and Game Boy Advance games reach the same screens through a separate "legacy" path, because their graphics chips work completely differently from the 3DS [GPU](gpu.md).
 
@@ -16,7 +16,7 @@ The top panel is physically 800×240 pixels, but each pixel is half-width. A **p
 
 - **3D mode:** all 800 columns are used as two 400×240 images, one per eye.
 - **2D mode:** pairs of columns are treated as single pixels, showing one 400×240 image.
-- The panel can in principle show a true 800×240 image; no commercial game used it.
+- The panel supports a single 800×240 image in wide mode. Copetti reports no commercial games using that mode; homebrew can use it [reported: Copetti, 3DS Architecture; date and test models unspecified].
 
 The barrier needs extra brightness (shorter battery life), and the effect only works if the player holds the console square to their face. A slider ("3D depth slider") scales how different the two views are. **New 3DS:** a front camera and infrared LED track the player's head to keep the image aligned (this takes one CPU core; see [CPU](cpu.md) and the next section). The 2DS and New 2DS XL have no 3D screen at all.
 

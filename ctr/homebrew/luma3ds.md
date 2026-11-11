@@ -1,6 +1,6 @@
 # Luma3DS
 
-**[Luma3DS](../glossary.md#luma3ds)** is the standard 3DS custom firmware. It "patches and reimplements significant parts of the system software" on every 3DS-family model and aims to keep the console useful past the end of Nintendo's support. It needs [boot9strap](boot9strap.md) to run: boot9strap gives it control at power-on, and Luma3DS then loads, patches and starts the real operating system.
+**[Luma3DS](../glossary.md#luma3ds)** is the standard 3DS custom firmware. It "patches and reimplements significant parts of the system software" on every 3DS-family model and aims to keep the console useful past the end of Nintendo's support. [boot9strap](boot9strap.md) is its officially supported loader: boot9strap gives it control at power-on, and Luma3DS then loads, patches and starts the real operating system. Other FIRM bootloaders exist, but LumaTeam does not guarantee their compatibility.
 
 Who it is for: players who want homebrew, game modding and debugging features, and developers who want a GDB debugger and a system they can extend. This page describes how it is built and what it changes, from its public source repository (GPLv3).
 

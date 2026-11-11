@@ -18,7 +18,7 @@ Each row is one example directory. "Model" is Old 3DS or New 3DS availability as
 
 | Example | Demonstrates | Model | Wiki guide |
 | ------- | ------------ | ----- | ---------- |
-| `templates/application` | Starter project for a libctru application (the Makefile used throughout the wiki) | not stated | [development workflow](development-workflow.md#4-build-your-first-3dsx), [asset pipeline](../engineering/asset-pipeline.md) |
+| `templates/application` | Starter project for a libctru application (the Makefile used throughout the wiki) | not stated | [development workflow](development-workflow.md#4-build-your-first-3dsx), [asset pipeline](../engineering/PICA200/asset-pipeline.md) |
 | `templates/library` | Starter project for a 3DS static library | not stated | [development workflow](development-workflow.md#6-grow-the-project) (library packaging itself: none yet) |
 | `get_system_language` | `cfguInit`, `CFGU_GetSystemLanguage`: reads the language code from the config savegame | not stated | [IPC and services](../engineering/ipc-and-services.md), [services](../software/services.md) |
 | `time/rtc` | `time(NULL)` / `gmtime` for the clock, with a hand-written day-of-week calculation; redraws once per frame | not stated | [libctru](libctru.md) (clock); none yet for date handling |
@@ -32,46 +32,46 @@ Each row is one example directory. "Model" is Old 3DS or New 3DS availability as
 
 | Example | Demonstrates | Wiki guide |
 | ------- | ------------ | ---------- |
-| `graphics/printing/hello-world`, `both-screen-text`, `colored-text`, `multiple-windows-text`, `wide-console` | libctru's text console (`consoleInit`) on one or both screens, ANSI colour escapes, several console windows, and the 800-pixel-wide console | [debugging](../engineering/debugging.md) for text output as a debug tool; [gpu rendering](../engineering/gpu-rendering.md) for wide mode; the console API itself: none yet |
+| `graphics/printing/hello-world`, `both-screen-text`, `colored-text`, `multiple-windows-text`, `wide-console` | libctru's text console (`consoleInit`) on one or both screens, ANSI colour escapes, several console windows, and the 800-pixel-wide console | [debugging](../engineering/debugging.md) for text output as a debug tool; [gpu rendering](../engineering/PICA200/gpu-rendering.md) for wide mode; the console API itself: none yet |
 | `graphics/printing/system-font` | Using the system's shared font | none yet |
-| `graphics/printing/custom-font` | Loading a BCFNT font (the Makefile converts a Liberation Serif font) | [asset pipeline](../engineering/asset-pipeline.md) (`mkbcfnt`) |
-| `graphics/bitmap/24bit-color` | Drawing a 24-bit image to the bottom-screen framebuffer; the Makefile needs ImageMagick (`convert` or `magick`) | [rendering 2D](../engineering/rendering-2d.md) (framebuffer layout in [display](../hardware/display.md)) |
+| `graphics/printing/custom-font` | Loading a BCFNT font (the Makefile converts a Liberation Serif font) | [asset pipeline](../engineering/PICA200/asset-pipeline.md) (`mkbcfnt`) |
+| `graphics/bitmap/24bit-color` | Drawing a 24-bit image to the bottom-screen framebuffer; the Makefile needs ImageMagick (`convert` or `magick`) | [rendering 2D](../engineering/PICA200/rendering-2d.md) (framebuffer layout in [display](../hardware/display.md)) |
 | `sdmc` | Reading `test.bin` (a raw 240x320 RGB image) from the SD card with plain `fopen`, then copying it to the bottom framebuffer while a cosine-table effect runs on the top one | [filesystem and saves](../engineering/filesystem-and-saves.md) |
-| `romfs` | `romfsInit`, then reading files from `romfs:/` including a path with non-ASCII (Japanese) names | [filesystem and saves](../engineering/filesystem-and-saves.md), [asset pipeline](../engineering/asset-pipeline.md) |
+| `romfs` | `romfsInit`, then reading files from `romfs:/` including a path with non-ASCII (Japanese) names | [filesystem and saves](../engineering/filesystem-and-saves.md), [asset pipeline](../engineering/PICA200/asset-pipeline.md) |
 
 ### Graphics: citro2d and citro3d
 
-All `graphics/gpu` examples use citro3d (`C3D_*`) except those marked citro2d (`C2D_*`). Shader sources are `.pica` files assembled by picasso ([picasso and citro3d](picasso-and-citro3d.md)). The frame structure they share is explained in [gpu rendering](../engineering/gpu-rendering.md).
+All `graphics/gpu` examples use citro3d (`C3D_*`) except those marked citro2d (`C2D_*`). Shader sources are `.pica` files assembled by picasso ([picasso and citro3d](picasso-and-citro3d.md)). The frame structure they share is explained in [gpu rendering](../engineering/PICA200/gpu-rendering.md).
 
 | Example | Demonstrates | Wiki guide |
 | ------- | ------------ | ---------- |
-| `2d_shapes` (citro2d) | Untextured circles, ellipses, rectangles and triangles on screen targets | [rendering 2D](../engineering/rendering-2d.md) |
-| `gpusprites` (citro2d) | Sprite sheets built by `tex3ds` from many PNGs, `C2D_Sprite` move/rotate | [rendering 2D](../engineering/rendering-2d.md), [asset pipeline](../engineering/asset-pipeline.md) |
-| `stereoscopic_2d` (citro2d, C++) | One render target per eye on the top screen with per-eye offsets for a 3D depth effect | [gpu rendering](../engineering/gpu-rendering.md) (stereo mode), [display](../hardware/display.md) |
-| `simple_tri` | Minimal citro3d: vertex shader, attribute info, a VBO, a fixed attribute for white colour, `C3D_DrawArrays` | [gpu rendering](../engineering/gpu-rendering.md), [PICA200 shader programming](../engineering/pica200-shader-programming.md) |
-| `both_screens` | Drawing to the top and bottom screens (`C3D_Both` clear, per-target frame drawing) | [gpu rendering](../engineering/gpu-rendering.md) |
-| `multiple_buf` | Position and colour kept in two separate vertex buffers, each added to `C3D_BufInfo` (`BufInfo_Add`) | [gpu rendering](../engineering/gpu-rendering.md) |
-| `immediate` | Immediate-mode drawing (`C3D_ImmDrawBegin`); the source notes attribute format and element count are ignored in immediate mode | [gpu rendering](../engineering/gpu-rendering.md) (batching); immediate mode specifically: none yet |
-| `textured_cube` | A textured, rotating cube; texture from `kitten.t3s` via tex3ds | [gpu rendering](../engineering/gpu-rendering.md), [asset pipeline](../engineering/asset-pipeline.md) |
-| `lenny` | Stereoscopic 3D (`gfxSet3D(true)`): the scene is rendered twice with an eye offset taken from the 3D slider (`osGet3DSliderState()`, divided by 3), first colour-combiner stage blends the primary colour | [gpu rendering](../engineering/gpu-rendering.md) |
-| `wide_mode_3d` | `gfxSetWide(true)`: the 800-pixel-wide top-screen mode with citro3d rendering | [gpu rendering](../engineering/gpu-rendering.md), [display](../hardware/display.md) |
-| `composite_scene` | citro3d scene plus citro2d text and sprites on the same targets (`C2D_Flush`, text buffers); stereo and the 3D slider | [gpu rendering](../engineering/gpu-rendering.md) |
-| `fragment_light` | Per-pixel lighting through `normalquat` and `view` outputs and the citro3d light environment | [PICA200 shader programming](../engineering/pica200-shader-programming.md), [GPU shading features](../hardware/gpu-shading-features.md#fragment-lighting) |
+| `2d_shapes` (citro2d) | Untextured circles, ellipses, rectangles and triangles on screen targets | [rendering 2D](../engineering/PICA200/rendering-2d.md) |
+| `gpusprites` (citro2d) | Sprite sheets built by `tex3ds` from many PNGs, `C2D_Sprite` move/rotate | [rendering 2D](../engineering/PICA200/rendering-2d.md), [asset pipeline](../engineering/PICA200/asset-pipeline.md) |
+| `stereoscopic_2d` (citro2d, C++) | One render target per eye on the top screen with per-eye offsets for a 3D depth effect | [gpu rendering](../engineering/PICA200/gpu-rendering.md) (stereo mode), [display](../hardware/display.md) |
+| `simple_tri` | Minimal citro3d: vertex shader, attribute info, a VBO, a fixed attribute for white colour, `C3D_DrawArrays` | [gpu rendering](../engineering/PICA200/gpu-rendering.md), [PICA200 shader programming](../engineering/PICA200/pica200-shader-programming.md) |
+| `both_screens` | Drawing to the top and bottom screens (`C3D_Both` clear, per-target frame drawing) | [gpu rendering](../engineering/PICA200/gpu-rendering.md) |
+| `multiple_buf` | Position and colour kept in two separate vertex buffers, each added to `C3D_BufInfo` (`BufInfo_Add`) | [gpu rendering](../engineering/PICA200/gpu-rendering.md) |
+| `immediate` | Immediate-mode drawing (`C3D_ImmDrawBegin`); the source notes attribute format and element count are ignored in immediate mode | [gpu rendering](../engineering/PICA200/gpu-rendering.md) (batching); immediate mode specifically: none yet |
+| `textured_cube` | A textured, rotating cube; texture from `kitten.t3s` via tex3ds | [gpu rendering](../engineering/PICA200/gpu-rendering.md), [asset pipeline](../engineering/PICA200/asset-pipeline.md) |
+| `lenny` | Stereoscopic 3D (`gfxSet3D(true)`): the scene is rendered twice with an eye offset taken from the 3D slider (`osGet3DSliderState()`, divided by 3), first colour-combiner stage blends the primary colour | [gpu rendering](../engineering/PICA200/gpu-rendering.md) |
+| `wide_mode_3d` | `gfxSetWide(true)`: the 800-pixel-wide top-screen mode with citro3d rendering | [gpu rendering](../engineering/PICA200/gpu-rendering.md), [display](../hardware/display.md) |
+| `composite_scene` | citro3d scene plus citro2d text and sprites on the same targets (`C2D_Flush`, text buffers); stereo and the 3D slider | [gpu rendering](../engineering/PICA200/gpu-rendering.md) |
+| `fragment_light` | Per-pixel lighting through `normalquat` and `view` outputs and the citro3d light environment | [PICA200 shader programming](../engineering/PICA200/pica200-shader-programming.md), [GPU shading features](../hardware/gpu-shading-features.md#fragment-lighting) |
 | `toon_shading` | Toon-style lighting of a teapot model (indexed draw with `C3D_DrawElements`) | [GPU shading features](../hardware/gpu-shading-features.md) |
 | `normal_mapping` | Bump mapping: diffuse and normal textures, both converted by tex3ds | [GPU shading features](../hardware/gpu-shading-features.md) (lighting inputs); the technique itself: none yet |
 | `cubemap` | Skybox using a cube-map texture (`skybox.t3s`) | none yet (texture formats in [GPU shading features](../hardware/gpu-shading-features.md)) |
-| `mipmap_fog` | Mipmapped texture plus the GPU fog unit (`C3D_FogColor`) | [GPU shading features](../hardware/gpu-shading-features.md), [asset pipeline](../engineering/asset-pipeline.md) (mipmaps) |
+| `mipmap_fog` | Mipmapped texture plus the GPU fog unit (`C3D_FogColor`) | [GPU shading features](../hardware/gpu-shading-features.md), [asset pipeline](../engineering/PICA200/asset-pipeline.md) (mipmaps) |
 | `proctex` | Procedural textures (`C3D_ProcTexCombiner` and friends), drawn in immediate mode | [GPU shading features](../hardware/gpu-shading-features.md) |
-| `geoshader` | A geometry shader with stride 6 (a triangle at a time) | [PICA200 shader programming](../engineering/pica200-shader-programming.md) |
-| `loop_subdivision` | Loop subdivision of a model in a geometry shader, indexed drawing (`C3D_DrawElements`) | [PICA200 shader programming](../engineering/pica200-shader-programming.md) (geometry shaders) |
-| `particles` | A geometry-shader particle system with alpha blending, depth test and a noise smooth-step in the shader | [PICA200 shader programming](../engineering/pica200-shader-programming.md), [gpu rendering](../engineering/gpu-rendering.md) |
+| `geoshader` | A geometry shader with stride 6 (a triangle at a time) | [PICA200 shader programming](../engineering/PICA200/pica200-shader-programming.md) |
+| `loop_subdivision` | Loop subdivision of a model in a geometry shader, indexed drawing (`C3D_DrawElements`) | [PICA200 shader programming](../engineering/PICA200/pica200-shader-programming.md) (geometry shaders) |
+| `particles` | A geometry-shader particle system with alpha blending, depth test and a noise smooth-step in the shader | [PICA200 shader programming](../engineering/PICA200/pica200-shader-programming.md), [gpu rendering](../engineering/PICA200/gpu-rendering.md) |
 | `physics/box2d` (C++) | Box2D physics driven by touch and buttons (a library port, not a GPU example) | [porting](../engineering/porting.md#example-c-sdl-software-rendered-2d-game) |
 
 ### Input
 
 | Example | Demonstrates | Wiki guide |
 | ------- | ------------ | ---------- |
-| `input/read-controls` | `hidScanInput`, `hidKeysDown/Held/Up`, `hidCircleRead` (the Circle Pad) | [libctru](libctru.md) (HID subsystem); [frame pacing](../engineering/frame-pacing.md) for when to poll |
+| `input/read-controls` | `hidScanInput`, `hidKeysDown/Held/Up`, `hidCircleRead` (the Circle Pad) | [libctru](libctru.md) (HID subsystem); [frame pacing](../engineering/PICA200/frame-pacing.md) for when to poll |
 | `input/touch-screen` | `hidTouchRead` | none yet |
 | `input/software-keyboard` | `swkbdInit`/`swkbdInputText`, validation, filter callback, dictionary and learning data, password mode, numpad keys; uses `aptSetChainloaderToSelf` | [application lifecycle](../engineering/application-lifecycle.md#software-keyboard-and-other-library-applets) |
 | `qtm/eye_position` | **New 3DS** head tracking: `qtmInit`, tracking data (eye coordinates, confidence, pitch/yaw/roll deviation), `qtmEstimateEyeToCameraDistance`, `qtmComputeHeadTiltAngle` | [libctru](libctru.md#qtm-new-3ds-head-tracking), [services](../software/services.md) |
@@ -83,7 +83,7 @@ All `graphics/gpu` examples use citro3d (`C3D_*`) except those marked citro2d (`
 | ------- | ------------ | ---------- |
 | `audio/streaming` | `ndsp` wave buffers streamed from memory | [audio](../engineering/audio.md) |
 | `audio/filters` | `ndspChnIirBiquadSet*` filters (low, high, band-pass, notch, peaking equaliser), `ndspChnSetMix`, `ndspSetOutputMode` | [audio](../engineering/audio.md) |
-| `audio/ogg-vorbis-decoding` | Threaded Ogg Vorbis streaming from RomFS with `libvorbisidec`; README says it is fast enough "even on O3DS" (Old 3DS) | [audio](../engineering/audio.md), [asset pipeline](../engineering/asset-pipeline.md#audio) |
+| `audio/ogg-vorbis-decoding` | Threaded Ogg Vorbis streaming from RomFS with `libvorbisidec`; README says it is fast enough "even on O3DS" (Old 3DS) | [audio](../engineering/audio.md), [asset pipeline](../engineering/PICA200/asset-pipeline.md#audio) |
 | `audio/opus-decoding` | Same design with `opusfile`; README also says fast "even on O3DS" | [audio](../engineering/audio.md) |
 | `audio/modplug-decoding` | Tracker module playback with `libmodplug` | [audio](../engineering/audio.md) |
 | `audio/mic` | `micInit` with a `0x30000`-byte buffer, `MICU_StartSampling` (PCM16 signed, 16360 Hz sample-rate constant), reading `micGetLastSampleOffset`; plays the recording back through **CSND**, not ndsp. README: about 32 seconds fit in the default buffer | none yet for the microphone ([I/O and peripherals](../hardware/io-and-peripherals.md), [services](../software/services.md)) |

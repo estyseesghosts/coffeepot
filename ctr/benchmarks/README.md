@@ -18,6 +18,7 @@ Small, self-contained 3DS programs that measure costs the wiki's engineering pag
 | [`flushbench`](#flushbench) | yes (r68) | not run | not run | not run |
 | [`drawbench`](#drawbench) | yes (r68) | not run | not run | not run |
 | [`icachebench`](#icachebench) | yes (r68; also compiled directly with `-Wall -Wextra`) | not run | not run | not run |
+| [`tile-renderer`](../engineering/PICA200/2d-tile-renderer.md) | default builds (r68); see guide for prior configuration checks | not run | not run | not run |
 
 Emulator runs only show that a program works; never record emulator timings as results.
 
@@ -123,7 +124,7 @@ Compare variants using `record_ms + frameend_ms` for total CPU cost per frame; `
 
 The shader (`source/vshader.v.pica`) transforms position by a projection matrix plus an offset uniform.
 
-**What it settles:** the draw-call cost table on [GPU rendering](../engineering/gpu-rendering.md#what-a-draw-call-costs), currently labelled with no measured numbers, and the sprite-batching trade-offs on [2D rendering](../engineering/rendering-2d.md#sprites).
+**What it settles:** the draw-call cost table on [GPU rendering](../engineering/PICA200/gpu-rendering.md#what-a-draw-call-costs), currently labelled with no measured numbers, and the sprite-batching trade-offs on [2D rendering](../engineering/PICA200/rendering-2d.md#sprites).
 
 **Results:** not run on hardware.
 
@@ -161,7 +162,7 @@ Not written, not run; listed so that the question is recorded, not because any r
 | ------ | -------- | ----- |
 | GPU workload | Draw overhead, vertex rate, fill rate, texture bandwidth, render-target changes and synchronisation, separately | Would use the GSP performance log ([performance](../engineering/performance.md#per-operation-gpu-times-the-gsp-performance-log)) to separate P3D, PPF and PSC time |
 | Scheduling | Frame time with a worker on core 1 at several `APT_SetAppCpuTimeLimit` percentages, versus no worker | Protocol in [threading](../engineering/threading.md#proving-a-worker-improves-frame-time) |
-| Real scene | A fixed 2D tilemap scene (for example the [2D tile renderer](../engineering/2d-tile-renderer.md) variants) with frame-time percentiles and missed frames | Needs the frame-time helper from the [profiling cookbook](../engineering/performance.md#frame-time-distribution-and-missed-frames) |
+| Real scene | A fixed 2D tilemap scene (for example the [2D tile renderer](../engineering/PICA200/2d-tile-renderer.md) variants) with frame-time percentiles and missed frames | Needs the frame-time helper from the [profiling cookbook](../engineering/performance.md#frame-time-distribution-and-missed-frames) |
 | Indirect dispatch | Per-element function-pointer dispatch versus grouping by operation type | Companion to `icachebench`; would use the same counters |
 
 ## Recording results
@@ -185,4 +186,4 @@ Run each benchmark at least three times after a fresh boot and report the spread
 
 ## tilerenderer (in the engineering pages)
 
-The scripted mode of the [2D tile renderer](../engineering/2d-tile-renderer.md#experiments) writes `sdmc:/coffeepot-tilerenderer.csv` in the same `meta`/`result`/`note`/`error` layout as above. Differences: the file is opened for append; `result,tilerenderer,<phase>,<variant>,<visible_tiles>,<frames>,<min_us>,<med_us>,<max_us>` has one line per phase (period, update, build, record, framebegin, frameend, c3d_proc, c3d_gpu); a `summary,tilerenderer,<variant>,<key>,<value>` line kind carries means, p99, missed frames, rebuilds, dropped objects, command-buffer peak and end-of-run memory. Status: builds; not run on hardware or an emulator. Experiments E1 to E6 are specified on the tile renderer page.
+The scripted mode of the [2D tile renderer](../engineering/PICA200/2d-tile-renderer.md#experiments) writes `sdmc:/coffeepot-tilerenderer.csv` in the same `meta`/`result`/`note`/`error` layout as above. Differences: the file is opened for append; `result,tilerenderer,<phase>,<variant>,<visible_tiles>,<frames>,<min_us>,<med_us>,<max_us>` has one line per phase (period, update, build, record, framebegin, frameend, c3d_proc, c3d_gpu); a `summary,tilerenderer,<variant>,<key>,<value>` line kind carries means, p99, missed frames, rebuilds, dropped objects, command-buffer peak and end-of-run memory. Status: builds; not run on hardware or an emulator. Experiments E1 to E6 are specified on the tile renderer page.

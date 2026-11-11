@@ -4,10 +4,10 @@ Several studios that shipped 3DS games have said, in interviews and articles, ho
 
 ## Before you start
 
-- Applies to the Old 3DS first (see [model terms](../glossary.md#old-new-3ds)). The sources rarely say which model a statement was made on; where it matters the entry says `> Unknown:`. **New 3DS:** the model was released from 2014, so a game released earlier, such as Resident Evil: Revelations in January 2012, was written for the Old 3DS CPU and memory.
+- Applies to the Old 3DS first (see [model terms](../../glossary.md#old-new-3ds)). The sources rarely say which model a statement was made on; where it matters the entry says `> Unknown:`. **New 3DS:** the model was released from 2014, so a game released earlier, such as Resident Evil: Revelations in January 2012, was written for the Old 3DS CPU and memory.
 - Sources were fetched on 11 November 2026. Quotes are short phrases with attribution; everything else is paraphrase.
-- Interviews reveal decisions and constraints, not complete renderers. Do not read an interview sentence as proof of an undocumented internal algorithm. For source-available engines and measured work see [porting](porting.md) and [performance](performance.md).
-- Evidence labels follow [AGENTS.md](../../AGENTS.md#evidence-labels). "Stated" means the developer said it. "Inferred" is this wiki's reading and is a `[hypothesis]`.
+- Interviews reveal decisions and constraints, not complete renderers. Do not read an interview sentence as proof of an undocumented internal algorithm. For source-available engines and measured work see [porting](../porting.md) and [performance](../performance.md).
+- Evidence labels follow [AGENTS.md](../../../AGENTS.md#evidence-labels). "Stated" means the developer said it. "Inferred" is this wiki's reading and is a `[hypothesis]`.
 
 ## Summary
 
@@ -29,11 +29,11 @@ Several studios that shipped 3DS games have said, in interviews and articles, ho
 - Vblank's post, quoted by Nintendo Everything on 12 February 2015: the update "boasts a brand new renderer", the rendering code "has been completely redone", the old version "would occasionally dip below 60 fps", and the frame rate is now "rock solid, even on the original 3DS systems". It says the update helps both the original and the New 3DS, and runs natively on New 3DS to use the faster CPU. `[reported: Nintendo Everything, 12 Feb 2015]`
 - Nintendo Life, 11 February 2015: "a stable 60 frames per second"; New 3DS gets smoother effects from its faster CPU. `[reported: Nintendo Life, 11 Feb 2015]`
 
-**Inferred.** The stated fix is in the renderer's CPU and RAM cost, not in game logic, which fits the advice in [performance](performance.md) to find the dominant cost first. How much of the gain came from the renderer versus other changes in the patch is not stated. `[hypothesis]`
+**Inferred.** The stated fix is in the renderer's CPU and RAM cost, not in game logic, which fits the advice in [performance](../performance.md) to find the dominant cost first. How much of the gain came from the renderer versus other changes in the patch is not stated. `[hypothesis]`
 
 > Conflict: coffeepot4.md merges two statements into one. The shadow-renderer remark is from the 2013 interview, before release; no fetched article about the 2015 update mentions a shadow renderer. The "60 FPS on all models" wording is a Nintendo Life tag-page summary; Vblank's own post says "rock solid" on the original 3DS and says nothing about a fixed figure for every model. A Nintendo Everything summary line saying the game "will not remain consistent at 60" contradicts its own quoted Vblank post and looks like an error.
 
-**Verify on hardware.** Swap the renderer behind a fixed game-state replay and measure CPU time per frame and the worst frame, not average FPS, on an Old 3DS ([performance](performance.md)).
+**Verify on hardware.** Swap the renderer behind a fixed game-state replay and measure CPU time per frame and the worst frame, not average FPS, on an Old 3DS ([performance](../performance.md)).
 
 ## Shovel Knight (Yacht Club Games)
 
@@ -43,9 +43,9 @@ Several studios that shipped 3DS games have said, in interviews and articles, ho
 
 > Conflict: coffeepot4.md names the developer "Sandy Wozniak". The Digital Trends page names Nick Wozniak. This page follows the source.
 
-> Unknown: no VRAM figure, model or profile is given. The console's VRAM size is on [memory](../hardware/memory.md); how much any background used is not stated.
+> Unknown: no VRAM figure, model or profile is given. The console's VRAM size is on [memory](../../hardware/memory.md); how much any background used is not stated.
 
-**Inferred.** The decision was made in art production: a flat painted layer replaces geometry and its textures. `[hypothesis]` See [asset pipeline](asset-pipeline.md) and [GPU rendering](gpu-rendering.md).
+**Inferred.** The decision was made in art production: a flat painted layer replaces geometry and its textures. `[hypothesis]` See [asset pipeline](../PICA200/asset-pipeline.md) and [GPU rendering](../PICA200/gpu-rendering.md).
 
 **Verify on hardware.** Draw the same background as geometry and as one textured quad; compare VRAM use and per-frame CPU and GPU time on an Old 3DS.
 
@@ -68,7 +68,7 @@ Several studios that shipped 3DS games have said, in interviews and articles, ho
 
 > Unknown: both reports predate the January 2012 release and describe development-time plans on development hardware. They name no console model and may differ from the shipped build.
 
-**Inferred.** Lower antialiasing and 30 fps in 3D look like a per-mode trade: two views cost more, so image quality is reduced. `[hypothesis]` For stereo cost see [GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode).
+**Inferred.** Lower antialiasing and 30 fps in 3D look like a per-mode trade: two views cost more, so image quality is reduced. `[hypothesis]` For stereo cost see [GPU rendering](../PICA200/gpu-rendering.md#stereoscopic-3d-and-wide-mode).
 
 **Verify on hardware.** Measure frame time for a fixed homebrew scene with stereo on and off on an Old 3DS.
 
@@ -80,11 +80,11 @@ Several studios that shipped 3DS games have said, in interviews and articles, ho
 
 > Conflict: coffeepot4.md says Velez "described balancing" these systems within a 60 FPS frame budget. The fetched text lists them as challenges of the genre; it does not describe a frame budget or a balancing method, and does not say which routines were written in assembly.
 
-**Reconciling existing wiki material.** The wiki already cites this game for something else: 3dbrew reads debug text in the *Ironfall: Invasion* binary as suggesting shader limits of 512 instructions and 128 operand descriptors. That is a single-game inference from a binary, not a developer statement, and is covered with its conflict in [PICA200 shader programming](pica200-shader-programming.md) and [GPU hardware](../hardware/gpu.md); it is not repeated here. Velez says nothing about shaders, so the two sources do not conflict. The game also appears as the `ironhax` target in [exploits](../homebrew/exploits.md). The retail-budget sentence in [performance](performance.md#the-budget) ("Commercial games treated these budgets as design constraints") is unsourced; this page is the sourced version, and it shows only that these studios cared about a frame target, not how they split it.
+**Reconciling existing wiki material.** The wiki already cites this game for something else: 3dbrew reads debug text in the *Ironfall: Invasion* binary as suggesting shader limits of 512 instructions and 128 operand descriptors. That is a single-game inference from a binary, not a developer statement, and is covered with its conflict in [PICA200 shader programming](../PICA200/pica200-shader-programming.md) and [GPU hardware](../../hardware/gpu.md); it is not repeated here. Velez says nothing about shaders, so the two sources do not conflict. The game also appears as the `ironhax` target in [exploits](../../homebrew/exploits.md). The retail-budget sentence in [performance](../performance.md#the-budget) ("Commercial games treated these budgets as design constraints") is unsourced; this page is the sourced version, and it shows only that these studios cared about a frame target, not how they split it.
 
-**Inferred.** A shooter with many actors has frame cost in gameplay and networking, not only rendering. Assembly use implies some hot loops on the [ARM11](../hardware/arm11-mpcore.md) were hand-written; which is unknown. `[hypothesis]`
+**Inferred.** A shooter with many actors has frame cost in gameplay and networking, not only rendering. Assembly use implies some hot loops on the [ARM11](../../hardware/arm11-mpcore.md) were hand-written; which is unknown. `[hypothesis]`
 
-**Verify on hardware.** Profile update, rendering and network time separately ([performance](performance.md)); compare a hand-written loop with compiler output using [CPU optimization](cpu-optimization.md).
+**Verify on hardware.** Profile update, rendering and network time separately ([performance](../performance.md)); compare a hand-written loop with compiler output using [CPU optimization](../cpu-optimization.md).
 
 ## Jett Rocket II: The Wrath of Taikai (Shin'en Multimedia)
 
@@ -102,7 +102,7 @@ Several studios that shipped 3DS games have said, in interviews and articles, ho
 
 **Inferred.** A "few percent" overrun suggests the second view was not free, but how much work is shared between eyes is not stated. `[hypothesis]`
 
-**Verify on hardware.** Measure per-eye CPU and GPU time for a fixed scene and how much of the cost is common to both views ([GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode)).
+**Verify on hardware.** Measure per-eye CPU and GPU time for a fixed scene and how much of the cost is common to both views ([GPU rendering](../PICA200/gpu-rendering.md#stereoscopic-3d-and-wide-mode)).
 
 ## Related indie accounts
 
@@ -125,7 +125,7 @@ The same Digital Trends article has more notes, all `[reported]`, none with numb
 
 | Question | What would settle it |
 | -------- | -------------------- |
-| Which stated approaches hold for homebrew on an Old 3DS? | Run the [benchmarks](../benchmarks/README.md) on an Old 3DS |
+| Which stated approaches hold for homebrew on an Old 3DS? | Run the [benchmarks](../../benchmarks/README.md) on an Old 3DS |
 | Cost of a flat background versus geometry | A paired test with fixed content on an Old 3DS |
 | Cost of stereo in a retained-geometry scene | Per-eye CPU and GPU timing on an Old 3DS |
 | Did Capcom's enemy design reduce texture or physics cost? | The original interview text |
@@ -142,4 +142,4 @@ The same Digital Trends article has more notes, all `[reported]`, none with numb
 - [Developer Interview: Shin'en Multimedia on Jett Rocket II](https://www.nintendolife.com/news/2013/08/developer_interview_shinen_multimedia_talks_about_jett_rocket_ii_new_modes_and_sticking_with_nintendo) — 60 fps, stereo overrun (21 Aug 2013).
 - [SPC Interviews: Manfred Linzner](https://www.superphillipcentral.com/2013/04/spc-interviews-manfred-linzner-shinen.html) — engine improved for 60 fps (23 Apr 2013).
 - [Jett Rocket II review (Nintendo Life)](https://www.nintendolife.com/reviews/3ds-eshop/jett_rocket_ii_the_wrath_of_taikai) — 60 fps with 3D on (22 Nov 2013).
-- Wiki pages: [porting](porting.md), [performance](performance.md), [GPU rendering](gpu-rendering.md), [PICA200 shader programming](pica200-shader-programming.md).
+- Wiki pages: [porting](../porting.md), [performance](../performance.md), [GPU rendering](../PICA200/gpu-rendering.md), [PICA200 shader programming](../PICA200/pica200-shader-programming.md).

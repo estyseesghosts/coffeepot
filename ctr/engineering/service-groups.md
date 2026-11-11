@@ -34,7 +34,7 @@ So: pair every successful `xxxInit` with one `xxxExit`; a failed init must not b
 | ----- | ---------- | ------------ | ---- |
 | FS, archives, save data, RomFS | `fs:USER` | `fsInit` / `fsExit` (started by default) | [files and saves](filesystem-and-saves.md) |
 | APT, applets, HOME | APT services | `aptInit` / `aptExit` (started by default) | [application lifecycle](application-lifecycle.md) |
-| GSP (GPU) | `gsp::Gpu` | `gspInit` / `gspExit` (started by `gfxInit`) | [GPU rendering](gpu-rendering.md), [frame pacing](frame-pacing.md) |
+| GSP (GPU) | `gsp::Gpu` | `gspInit` / `gspExit` (started by `gfxInit`) | [GPU rendering](PICA200/gpu-rendering.md), [frame pacing](PICA200/frame-pacing.md) |
 | DSP, ndsp, CSND | `dsp::DSP`, `csnd:SND` | `dspInit`, `ndspInit`, `csndInit` | [audio](audio.md) |
 | Sockets | `soc:U` | `socInit(buf, size)` / `socExit` | [networking](networking.md) |
 | HTTP, TLS | `http:C`, `ssl:C` | `httpcInit(size)`, `sslcInit` | [networking](networking.md) |
@@ -77,7 +77,7 @@ These ship in libctru too and need no `srvGetServiceHandle`, but you will meet t
 | Header | What it gives | Notes |
 | ------ | ------------- | ----- |
 | `util/utf.h` | `decode_utf8/16`, `encode_utf8/16`, `utf8_to_utf16`, `utf8_to_utf32`, `utf16_to_utf8`, `utf16_to_utf32`, `utf32_to_utf8`, `utf32_to_utf16` | System strings (Mii and user names, UDS user names, notification text) are UTF-16; most C code is UTF-8. The bulk converters return the number of units the input *would* produce (more than `len` means truncated), `-1` on invalid input, and do **not** NUL-terminate [documented: `utf.h`] |
-| `util/decompress.h` | LZSS/LZ11/Huffman/RLE decompression | See [asset pipeline](asset-pipeline.md#data-compression) |
+| `util/decompress.h` | LZSS/LZ11/Huffman/RLE decompression | See [asset pipeline](PICA200/asset-pipeline.md#data-compression) |
 | `util/rbtree.h` | An intrusive red-black tree (`rbtree_init/insert/find/remove/clear`, `rbtree_item` to get the containing struct) | Plain data structure; no allocation |
 | `console.h` | The text console: `consoleInit(screen, NULL)`, `consoleSelect`, `consoleSetWindow`, `consoleClear`, `consoleDebugInit(device)` (route `stderr` to a debug device) | For on-screen text and quick logging; see [debugging](debugging.md) |
 | `env.h` | Facts about how the program was started: `envIsHomebrew()`, `envGetHandle(name)` (service handles passed by the launcher), `envGetHeapSize()`, `envGetLinearHeapSize()`, `envGetSystemArgList()`, `envGetSystemRunFlags()`, `envGetAptAppId()` | `envGetHandle` is why some `srvGetServiceHandle` calls succeed without asking `srv:` |

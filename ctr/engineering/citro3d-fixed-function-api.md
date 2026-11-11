@@ -2,13 +2,13 @@
 
 The [PICA200](../glossary.md#pica200) has no pixel shader, so everything that happens per pixel is set up through fixed-function units: lighting, fog, procedural textures, gas, blending and depth/stencil tests. `citro3d` exposes each unit as a small group of functions. This page says, for each group, which call does what, which GPU registers it ends up writing, what its defaults are, and which traps the source contains. Read it when a lighting or fog setup draws nothing or the wrong colours, or when you need to know what a call costs in command-list writes.
 
-Short answer to "which call sets what": the unit-by-unit tables below. For the register fields themselves see [GPU internal registers](../hardware/gpu-internal-registers.md); for how the units work and what is known about them see [GPU shading features](../hardware/gpu-shading-features.md); for frames, textures and combiners see [GPU rendering](gpu-rendering.md).
+Short answer to "which call sets what": the unit-by-unit tables below. For the register fields themselves see [GPU internal registers](../hardware/gpu-internal-registers.md); for how the units work and what is known about them see [GPU shading features](../hardware/gpu-shading-features.md); for frames, textures and combiners see [GPU rendering](PICA200/gpu-rendering.md).
 
 ## Before you start
 
 - Checked by reading citro3d at `9f21cf7` (v1.7.1) and libctru at `62b7c42` ([source versions](source-versions.md)); everything marked `[documented]` is stated in those files. Nothing here was run on a console or emulator. All behaviour is the same on the Old 3DS and the New 3DS as far as the code is concerned: citro3d contains no model check in these paths.
 - Verification status of the one code fragment: it builds with devkitARM/libctru/citro3d (`-Wall -Wextra`); not run on an Old 3DS or a New 3DS.
-- citro3d is stateful. Every call below only changes a copy in the citro3d context and marks it dirty; the register writes are emitted at the next draw call (`C3Di_UpdateContext`) or frame end, so a mistake shows up as wrong output or a hang later, not at the call ([pipeline](pica200-command-pipeline.md#what-a-draw-call-writes)).
+- citro3d is stateful. Every call below only changes a copy in the citro3d context and marks it dirty; the register writes are emitted at the next draw call (`C3Di_UpdateContext`) or frame end, so a mistake shows up as wrong output or a hang later, not at the call ([pipeline](PICA200/pica200-command-pipeline.md#what-a-draw-call-writes)).
 
 ## Lighting
 
@@ -18,7 +18,7 @@ Short answer to "which call sets what": the unit-by-unit tables below. For the r
 2. Set a material with `C3D_LightEnvMaterial(&env, &mtl)` (`C3D_Material`: `ambient`, `diffuse`, `specular0`, `specular1`, `emission`, three floats each) and optionally `C3D_LightEnvAmbient(&env, r, g, b)` (scene ambient, default 1.0).
 3. Attach look-up tables with `C3D_LightEnvLut(&env, lutId, input, negative, lut)`.
 4. Create up to eight lights with `C3D_LightInit(&light, &env)` (returns the slot 0-7, or -1 when all eight are taken), then set colour, position and optionally spot and attenuation.
-5. In the vertex shader, output the quaternion and view vector; in the colour combiner, use the lighting result as a source ([shader programming](pica200-shader-programming.md#5-driving-fixed-function-lighting)).
+5. In the vertex shader, output the quaternion and view vector; in the colour combiner, use the lighting result as a source ([shader programming](PICA200/pica200-shader-programming.md#5-driving-fixed-function-lighting)).
 
 ```c
 #include <3ds.h>
@@ -150,9 +150,9 @@ All of `effect.c` edits one `C3D_Effect` struct that is written out whenever it 
 
 ## Render targets and immediate mode
 
-- `C3D_CalcColorBufSize(w, h, fmt)` and `C3D_CalcDepthBufSize` multiply the pixel count by 2 plus `{2,1,0,0,0}[fmt]` (RGBA8 4 B, RGB8 3 B, others 2 B) and 2 plus `{0,0,1,2}[fmt]` (D16 2 B, D24 3 B, D24S8 4 B) `[documented: framebuffer.c]`; these feed the [VRAM budget](gpu-rendering.md#render-target-memory-budget).
+- `C3D_CalcColorBufSize(w, h, fmt)` and `C3D_CalcDepthBufSize` multiply the pixel count by 2 plus `{2,1,0,0,0}[fmt]` (RGBA8 4 B, RGB8 3 B, others 2 B) and 2 plus `{0,0,1,2}[fmt]` (D16 2 B, D24 3 B, D24S8 4 B) `[documented: framebuffer.c]`; these feed the [VRAM budget](PICA200/gpu-rendering.md#render-target-memory-budget).
 - `C3Di_FrameBufBind` invalidates the framebuffer cache, then writes depth/colour addresses (physical >> 3), `RENDERBUF_DIM` and `FRAMEBUFFER_DIM` (`0x01000000 | ((h-1) & 0xFFF) << 12 | (w & 0xFFF)`), buffer formats, `FRAMEBUFFER_BLOCK32` and the read/write enables (zero when a buffer is NULL). `C3D_FrameBufClear` uses the two memory-fill units (`GX_MemoryFill`) and `C3D_FrameBufTransfer` a `GX_DisplayTransfer` ([external registers](../hardware/gpu-external-registers.md)).
-- Immediate mode: `C3D_ImmDrawBegin(prim)` writes `PRIMITIVE_CONFIG`, `RESTART_PRIMITIVE`, a dummy `INDEXBUFFER_CONFIG`, `GEOSTAGE_CONFIG2` bit 0 = 1, `START_DRAW_FUNC0` = drawing and `FIXEDATTRIB_INDEX` = `0xF`; each `C3D_ImmSendAttrib(x, y, z, w)` writes the four float24 values as three words; `C3D_ImmDrawEnd` restores configuration mode, clears bit 0 and clears the post-vertex cache. The attribute count is whatever the bound `C3D_AttrInfo` declares (3dbrew: set `VSH_NUM_ATTR`; all vertex-loader registers are ignored in this mode). Use it for a handful of vertices ([GPU rendering](gpu-rendering.md#what-a-draw-call-costs)).
+- Immediate mode: `C3D_ImmDrawBegin(prim)` writes `PRIMITIVE_CONFIG`, `RESTART_PRIMITIVE`, a dummy `INDEXBUFFER_CONFIG`, `GEOSTAGE_CONFIG2` bit 0 = 1, `START_DRAW_FUNC0` = drawing and `FIXEDATTRIB_INDEX` = `0xF`; each `C3D_ImmSendAttrib(x, y, z, w)` writes the four float24 values as three words; `C3D_ImmDrawEnd` restores configuration mode, clears bit 0 and clears the post-vertex cache. The attribute count is whatever the bound `C3D_AttrInfo` declares (3dbrew: set `VSH_NUM_ATTR`; all vertex-loader registers are ignored in this mode). Use it for a handful of vertices ([GPU rendering](PICA200/gpu-rendering.md#what-a-draw-call-costs)).
 - Combiner buffer: `C3D_TexEnvBufUpdate(mode, mask)` picks which of stages 1-4 read the previous buffer (bits 8-11 RGB, 12-15 alpha of `TEXENV_UPDATE_BUFFER`) and `C3D_TexEnvBufColor` sets `TEXENV_BUFFER_COLOR`. Stages 4 and 5 are at register `0x0F0`/`0x0F8`, not at `0x0C0 + 8*n`: `C3Di_TexEnvBind` adds 2 to the stage index for them.
 
 ## Pitfalls

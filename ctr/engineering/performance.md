@@ -2,7 +2,7 @@
 
 Making a 3DS program fast is mostly about finding out *which* part is slow before changing anything. The console has a slow CPU (268 MHz on an Old 3DS; **New 3DS:** up to 804 MHz), a capable but unusual GPU, and a small amount of fast memory; a frame can be late because the CPU ran out of time, because the GPU did, because one waited for the other, or because something stalled on a file or a system service. This page shows how to measure each of those with the libraries homebrew already uses, how to pace frames, how to use the second CPU core, and which CPU-side habits pay off on this processor.
 
-Related pages: [memory and cache](memory-and-cache.md) (where buffers live and what flushing costs), [GPU rendering](gpu-rendering.md) (draw-call and state costs), [testing on hardware](testing-on-hardware.md) (how to run a benchmark you can trust).
+Related pages: [memory and cache](memory-and-cache.md) (where buffers live and what flushing costs), [GPU rendering](PICA200/gpu-rendering.md) (draw-call and state costs), [testing on hardware](testing-on-hardware.md) (how to run a benchmark you can trust).
 
 ## Before you start
 
@@ -97,15 +97,15 @@ With those three sources you can fill in this table for any frame; it is the sta
 
 ### Check the measuring code
 
-Write down whether each counter counts attempts, completed work, skipped work or presented frames; inspect every increment site before dividing two counters. Define intervals as disjoint or explicitly nested and do not add a child timer to its parent. A wall-clock interval includes preemption and waits. Publish a complete duration to other threads with appropriate synchronization rather than exposing a transient unsigned subtraction. HGSS found all three pitfalls while diagnosing an Old 3DS port; see the [case study](case-study-hgss-port.md#establish-the-bottleneck-and-validate-the-counters) [reported: project worklog, November 2026].
+Write down whether each counter counts attempts, completed work, skipped work or presented frames; inspect every increment site before dividing two counters. Define intervals as disjoint or explicitly nested and do not add a child timer to its parent. A wall-clock interval includes preemption and waits. Publish a complete duration to other threads with appropriate synchronization rather than exposing a transient unsigned subtraction. HGSS found all three pitfalls while diagnosing an Old 3DS port; see the [case study](case-studies/case-study-hgss-port.md#establish-the-bottleneck-and-validate-the-counters) [reported: project worklog, November 2026].
 
 ## Finding the bottleneck
 
 | Observation | Likely bottleneck | Next step |
 | ----------- | ----------------- | --------- |
-| Logic + Record ≈ frame interval, Wait ≈ 0 | **CPU** | Profile the CPU work by subsystem; see [CPU-side habits](#cpu-side-habits) and [draw-call costs](gpu-rendering.md#what-a-draw-call-costs) |
-| Wait for GPU large, GPU draw ≈ frame interval | **GPU** | Fewer pixels (smaller targets, less overdraw, no stereo when the slider is off), fewer fragments with expensive features, smaller textures — [GPU rendering](gpu-rendering.md) |
-| Both CPU and GPU well under budget, but frames still missed | **Synchronisation** — the two take turns instead of overlapping, or you wait for V-blank at the wrong moment | Restructure the frame loop ([frame pacing](frame-pacing.md#overlapping-cpu-and-gpu)) |
+| Logic + Record ≈ frame interval, Wait ≈ 0 | **CPU** | Profile the CPU work by subsystem; see [CPU-side habits](#cpu-side-habits) and [draw-call costs](PICA200/gpu-rendering.md#what-a-draw-call-costs) |
+| Wait for GPU large, GPU draw ≈ frame interval | **GPU** | Fewer pixels (smaller targets, less overdraw, no stereo when the slider is off), fewer fragments with expensive features, smaller textures — [GPU rendering](PICA200/gpu-rendering.md) |
+| Both CPU and GPU well under budget, but frames still missed | **Synchronisation** — the two take turns instead of overlapping, or you wait for V-blank at the wrong moment | Restructure the frame loop ([frame pacing](PICA200/frame-pacing.md#overlapping-cpu-and-gpu)) |
 | Occasional single long frames | **Hitches**: file reads, texture uploads, allocation, a full cache flush, a system service call | Log the worst frames with their stage breakdown; move loading off the frame thread |
 | Audio crackles while frames look fine | Audio refill thread starved or blocked | [Audio](#audio-deadlines) |
 
@@ -113,7 +113,7 @@ Do not optimise a stage that is not on the critical path: halving GPU time does 
 
 ## Frame pacing
 
-Structure the loop so game logic runs *before* `C3D_FrameBegin` (overlapping the GPU's work on the previous frame), lock to 60 or a deliberate 30 with `C3D_FRAME_SYNCDRAW` and `C3D_FrameRate`, and run the simulation on a fixed time step independent of rendering. Details, loop code and missed-frame detection: [frame pacing](frame-pacing.md).
+Structure the loop so game logic runs *before* `C3D_FrameBegin` (overlapping the GPU's work on the previous frame), lock to 60 or a deliberate 30 with `C3D_FRAME_SYNCDRAW` and `C3D_FrameRate`, and run the simulation on a fixed time step independent of rendering. Details, loop code and missed-frame detection: [frame pacing](PICA200/frame-pacing.md).
 
 ## Using the second core
 
@@ -147,7 +147,7 @@ A checklist for getting numbers from an Old 3DS that someone else can trust. Eve
 
 ### Work time versus waiting for V-blank
 
-A frame that "takes 16.7 ms" because it waited 12 ms for V-blank has 12 ms of headroom. Log both: **work** = logic + record + `C3D_FrameEnd` ticks; **wait** = ticks inside `C3D_FrameBegin` (or `gspWaitForVBlank`). Report work time and the frame interval separately; the ratio tells you the headroom. Never conclude anything from a vsynced frame rate alone: 60 fps is the ceiling, so an optimisation shows only in work time until the frame goes over budget ([frame pacing](frame-pacing.md#detecting-missed-frames)).
+A frame that "takes 16.7 ms" because it waited 12 ms for V-blank has 12 ms of headroom. Log both: **work** = logic + record + `C3D_FrameEnd` ticks; **wait** = ticks inside `C3D_FrameBegin` (or `gspWaitForVBlank`). Report work time and the frame interval separately; the ratio tells you the headroom. Never conclude anything from a vsynced frame rate alone: 60 fps is the ceiling, so an optimisation shows only in work time until the frame goes over budget ([frame pacing](PICA200/frame-pacing.md#detecting-missed-frames)).
 
 ### Frame-time distribution and missed frames
 
@@ -202,7 +202,7 @@ static void frame_report(const char *program, const char *variant, u64 nominal_t
 /* nominal_ticks for 60 fps: (u64)(SYSCLOCK_ARM11 / 60) = 4,468,530. */
 ```
 
-Output line: `note,pct,<program>,<variant>,<frames>,<p50_us>,<p95_us>,<p99_us>,<worst_us>,<missed_slots>`. Verification: builds with devkitARM r68 and libctru 2.7.1 (`-Wall -Wextra -O2`, inside a stub `main`); not run on hardware. The nominal period is an assumption: the LCD refresh rate is often quoted as about 59.83 Hz and has not been confirmed here ([frame pacing: open questions](frame-pacing.md#open-questions)), so check how many "missed" slots an idle loop reports before trusting the count.
+Output line: `note,pct,<program>,<variant>,<frames>,<p50_us>,<p95_us>,<p99_us>,<worst_us>,<missed_slots>`. Verification: builds with devkitARM r68 and libctru 2.7.1 (`-Wall -Wextra -O2`, inside a stub `main`); not run on hardware. The nominal period is an assumption: the LCD refresh rate is often quoted as about 59.83 Hz and has not been confirmed here ([frame pacing: open questions](PICA200/frame-pacing.md#open-questions)), so check how many "missed" slots an idle loop reports before trusting the count.
 
 ### Synchronous SD logging causes hitches
 
@@ -211,7 +211,7 @@ Writing a log to the SD card from the frame thread blocks it for as long as the 
 ### Counters, command capture and regression tests
 
 - **Counters:** CPU events per core via `svcControlPerformanceCounter` ([CPU optimisation](cpu-optimization.md#hardware-performance-counters)); GPU durations via the GSP performance log (above). Count events per unit of work, not totals.
-- **Command capture:** to see what a frame sent to the GPU, dump the command list and compare counts between variants. The command-list format, a capture hook and a decoder are on [PICA200 command pipeline](pica200-command-pipeline.md); this page does not duplicate them. G-Diffuser reports reducing GX entries per frame from 990 to 771 and completion interrupts from 550 to 331 by submitting both eyes together (1P 3D race, Old 3DS, 10-26 entries) `[reported]`; the same page calls some of its other results "suggestive" (two blocks per arm), which is why this wiki records the counts, not a speed-up, from it.
+- **Command capture:** to see what a frame sent to the GPU, dump the command list and compare counts between variants. The command-list format, a capture hook and a decoder are on [PICA200 command pipeline](PICA200/pica200-command-pipeline.md); this page does not duplicate them. G-Diffuser reports reducing GX entries per frame from 990 to 771 and completion interrupts from 550 to 331 by submitting both eyes together (1P 3D race, Old 3DS, 10-26 entries) `[reported]`; the same page calls some of its other results "suggestive" (two blocks per arm), which is why this wiki records the counts, not a speed-up, from it.
 - **Regression tests:** keep one fixed scene (input script, camera, seed) and run it on every performance-relevant change. A regression test is a stored `note,pct` line plus a stored checksum of the final framebuffer (or a screenshot); fail the change if p99 worsens by more than the run-to-run spread of the stored baseline, or if the checksum differs without an accepted reason.
 - **Reporting:** attach the raw `coffeepot-<program>.csv`, not a screenshot of averages; label the claim `[measured]` only with console model, firmware and build ([record format](testing-on-hardware.md#benchmark-record-format)).
 

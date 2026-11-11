@@ -8,7 +8,7 @@ The flaw underneath it is called **[sighax](../glossary.md#sighax)**; **ntrboot*
 
 - Any Nintendo 3DS-family console (3DS, 3DS XL, 2DS, New 3DS, New 3DS XL, New 2DS XL) on any firmware version — the boot ROM is identical on all of them.
 - Some way to write boot9strap's signed firmware into the console's NAND, which needs code running with ARM9 or NAND access: any of the ARM9-level entries in the [exploit catalogue](exploits.md) (for example MSET9, or the Safe Mode route on Old 3DS), or a hardware route such as ntrboot with a compatible DS flashcart (a magnet is used to simulate the closed shell; the Start + Select + X key combination is held (on Old 3DS/2DS the power button then works even with the shell closed or faked by a magnet, per 3dbrew: Bootloader)).
-- **Back up your NAND and your OTP data first.**
+- Back up your SD-card contents before starting and preserve any existing NAND backups. On a stock console, follow the [3DS Hacks Guide](https://3ds.hacks.guide/) for your model and firmware; after boot9strap is installed, create the SysNAND and essential-file backups during [final setup](https://3ds.hacks.guide/finalizing-setup). A separate raw OTP dump is not a prerequisite to first-time installation.
 
 ## How it works
 

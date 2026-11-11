@@ -216,7 +216,7 @@ Design notes:
 - Before tearing down anything a worker uses (GPU buffers, audio, files), stop it, wait for it, and only then release the resources.
 - Only one thread should run `aptMainLoop()` and react to HOME, sleep and exit requests.
 
-A producer/consumer queue also constrains exit order. Stop new production, drain pending work while the required consumer is alive, signal workers and join them before freeing their state. A timeout is not evidence that a thread has stopped: do not free its handle or shared resources while it may still run. HGSS documented a hang from joining its geometry worker before a drain that depended on it [reported: project S16, November 2026; [case study](case-study-hgss-port.md#interrupts-callbacks-and-shutdown)].
+A producer/consumer queue also constrains exit order. Stop new production, drain pending work while the required consumer is alive, signal workers and join them before freeing their state. A timeout is not evidence that a thread has stopped: do not free its handle or shared resources while it may still run. HGSS documented a hang from joining its geometry worker before a drain that depended on it [reported: project S16, November 2026; [case study](case-studies/case-study-hgss-port.md#interrupts-callbacks-and-shutdown)].
 
 For a port that emulates a burst of scanline interrupts, measure handler execution and scheduling separately. The HGSS port reported many costly thread switches during its H-blank walk and deferred them while preserving dispatch. This is application-specific: validate event ordering and all intermediate-state requirements before attempting it [reported: Old 3DS session 20, November 2026; same case study].
 
