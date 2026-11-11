@@ -19,8 +19,9 @@
 //   +texenv    per-quad draw, alternating between two combiner setups
 //   +texswap   per-quad draw, alternating between two different textures
 //
-// Up/Down double/halve N. Output: a table on the bottom screen and CSV-style
-// lines on stdout / sdmc:/coffeepot-drawbench.csv.
+// The program sweeps N through 125, 250, 500, 1000, 2000 and 4096 quads by itself and then
+// finishes. Output: a table on the bottom screen and CSV-style lines on stdout and in
+// sdmc:/coffeepot/s<NNN>/drawbench.csv. START aborts the sweep.
 #include <3ds.h>
 #include <citro3d.h>
 #include <stdio.h>
@@ -114,6 +115,7 @@ int main(void)
     bench_line("meta,cmdbuf_bytes,%lu", (unsigned long)CMDBUF_SIZE);
     bench_line("meta,frames_per_variant,%d", FRAMES_PER_VARIANT);
     bench_line("meta,skip_frames,%d", SKIP_FRAMES);
+    bench_line("meta,quad_counts,125 250 500 1000 2000 %d", MAX_QUADS);
     bench_line("columns,result,drawbench,variant,quads,frames,record_ms,frameend_ms,begin_ms,gpu_ms,cmdbuf_pct");
 
     bool tex_ok[2] = { false, false };
@@ -167,7 +169,9 @@ int main(void)
     C3D_Mtx proj;
     Mtx_OrthoTilt(&proj, 0.0f, 400.0f, 240.0f, 0.0f, 0.0f, 1.0f, true);
 
-    int nquads = 1000, variant = 0, frame = 0;
+    static const int counts[] = { 125, 250, 500, 1000, 2000, MAX_QUADS };
+    const int ncounts = (int)(sizeof counts / sizeof counts[0]);
+    int ci = 0, nquads = counts[0], variant = 0, frame = 0;
     bool emit = true;
     double rec_sum = 0, end_sum = 0, beg_sum = 0, gpu_sum = 0;
     float cmd_max = 0;
@@ -180,13 +184,6 @@ int main(void)
         u32 down = hidKeysDown();
         if (down & KEY_START) break;
         if (!ready) { gspWaitForVBlank(); continue; }
-        if (down & (KEY_UP | KEY_DOWN)) {
-            nquads = (down & KEY_UP) ? nquads * 2 : nquads / 2;
-            if (nquads > MAX_QUADS) nquads = MAX_QUADS;
-            if (nquads < 125) nquads = 125;
-            variant = 0; frame = 0; emit = true;
-            rec_sum = end_sum = beg_sum = gpu_sum = 0; cmd_max = 0;
-        }
 
         u64 t0 = svcGetSystemTick();
         if (!C3D_FrameBegin(C3D_FRAME_SYNCDRAW)) { bench_error("C3D_FrameBegin", -1); continue; }
@@ -237,7 +234,10 @@ int main(void)
                 for (int v = 1; v < V_COUNT; v++)
                     printf("%.1f ", (rec_avg[v] + end_avg[v] - rec_avg[V_BATCHED] - end_avg[V_BATCHED])
                                         * 1000.0 / nquads);
-                printf("\nUp/Down: quads x2 or /2. START: exit.\n");
+                printf("\nsweep %d/%d. START: abort.\n", ci + 1, ncounts);
+                if (++ci == ncounts) break;   // sweep complete
+                nquads = counts[ci];
+                emit = true;
             }
         }
     }
@@ -248,8 +248,7 @@ int main(void)
     if (prog_ok) shaderProgramFree(&prog);
     if (dvlb) DVLB_Free(dvlb);
     if (citro_ok) C3D_Fini();
-    bench_line("note,done errors=%d", bench_error_count);
-    if (bench_fp) { fclose(bench_fp); bench_fp = NULL; }
+    bench_wait_exit();
     gfxExit();
     return 0;
 }

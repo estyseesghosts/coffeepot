@@ -1,0 +1,35 @@
+meta,program,membench
+meta,build_date,Nov 10 2026 22:33:29
+meta,compiler,16.1.0
+meta,libctru_version,not-readable
+meta,citro3d_version,not-readable
+meta,model,Old 3DS
+meta,new3ds,0
+meta,firm_version,2.58.0
+meta,kernel_version,2.58.0
+meta,speedup_requested,untouched
+meta,speedup_l2_state,not-readable
+meta,cpu_ticks_per_usec,268.1119
+meta,linear_free_bytes,31941632
+meta,runs,31
+meta,linear_heap_bytes,33554432
+result,membench,gsp_flush_whole,cold-first,33554432,1,137.38,137.38,137.38
+result,membench,gsp_flush_whole,warm-clean,33554432,31,77.06,79.85,105.34
+result,membench,gsp_flush_whole,dirtied-chunk,33554432,31,126.02,135.58,150.12
+meta,dirtied_chunk_bytes,30892032
+result,membench,memset_heap,default,16384,31,24.15,24.60,61.91
+result,membench,memset_linear,default,16384,31,23.92,24.46,37.69
+result,membench,memcpy_heap_to_linear,default,16384,31,132.30,140.16,164.05
+result,membench,svc_flush_written,default,16384,31,54.19,63.68,151.63
+result,membench,gsp_flush_written,default,16384,31,109.31,117.70,212.96
+result,membench,memset_heap,default,262144,31,659.20,668.03,726.63
+result,membench,memset_linear,default,262144,31,659.24,668.50,730.60
+result,membench,memcpy_heap_to_linear,default,262144,31,2575.66,2667.73,2770.54
+result,membench,svc_flush_written,default,262144,31,60.10,62.68,122.78
+result,membench,gsp_flush_written,default,262144,31,114.33,121.12,205.19
+result,membench,memset_heap,default,1048576,31,2680.63,2691.91,2762.82
+result,membench,memset_linear,default,1048576,31,2678.98,2692.75,2765.17
+result,membench,memcpy_heap_to_linear,default,1048576,31,10622.22,10728.30,10807.03
+result,membench,svc_flush_written,default,1048576,31,56.56,73.40,196.55
+result,membench,gsp_flush_written,default,1048576,31,116.75,130.09,252.70
+note,done errors=0; press START to exit

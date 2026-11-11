@@ -1,0 +1,33 @@
+# Tile-renderer suite: 20 variants, one binary each, run in this order (t01 ... t20).
+# Format:  <id>|<extra -D flags>      (BENCH_AUTO, SUITE_*, BENCH_COMMIT are added by the build script)
+# Everything not listed stays at its default: TILE=16 (416 visible tiles), NPC_COUNT=40, CAM_SPEED=2.0f,
+# BENCH_PATH=0 (square loop), MAP_EDIT_PERIOD=0, TEX_MODE=0, SHAPE_MODE=0, BOTTOM_PERIOD=1,
+# 120 warm-up and 600 measured frames. ids are C identifiers (they are passed as -DSUITE_ID=<id>).
+#
+# Why these 20: the four strategies at the default scene give the baseline and repeat the first
+# hardware run (01-04). Tile count (05-09) is the variable that decides E1's manual-versus-direct
+# crossover and shows whether chunks scale (126, 416 and 1,581 visible tiles). The cache (10-12) is
+# the only strategy with a tail, so it gets the camera-speed, standing-still and map-edit probes of
+# E2. Chunk size and edit rate (13-15) are E4. 16-17 are E3 (texture changes), 18 is E5 (static
+# bottom screen), 19-20 are E6 (shape batching). Not run: TILE=12 and 24, NPC_COUNT=0, other
+# speeds and edit rates; add them by appending lines and rebuilding (the total is computed).
+01_direct_t16|-DTILE_STRATEGY=0
+02_manual_t16|-DTILE_STRATEGY=1
+03_chunks16_t16|-DTILE_STRATEGY=2
+04_cache_t16|-DTILE_STRATEGY=3
+05_direct_t32|-DTILE_STRATEGY=0 -DTILE=32
+06_manual_t32|-DTILE_STRATEGY=1 -DTILE=32
+07_direct_t8|-DTILE_STRATEGY=0 -DTILE=8
+08_manual_t8|-DTILE_STRATEGY=1 -DTILE=8
+09_chunks16_t8|-DTILE_STRATEGY=2 -DTILE=8
+10_cache_still|-DTILE_STRATEGY=3 -DBENCH_PATH=1
+11_cache_speed4|-DTILE_STRATEGY=3 -DCAM_SPEED=4.0f
+12_cache_edit30|-DTILE_STRATEGY=3 -DMAP_EDIT_PERIOD=30
+13_chunks8_t16|-DTILE_STRATEGY=2 -DCHUNK_TILES=8
+14_chunks32_t16|-DTILE_STRATEGY=2 -DCHUNK_TILES=32
+15_chunks16_edit1|-DTILE_STRATEGY=2 -DMAP_EDIT_PERIOD=1
+16_direct_tex1|-DTILE_STRATEGY=0 -DTEX_MODE=1
+17_direct_tex2|-DTILE_STRATEGY=0 -DTEX_MODE=2
+18_direct_bottom4|-DTILE_STRATEGY=0 -DBOTTOM_PERIOD=4
+19_direct_shape1|-DTILE_STRATEGY=0 -DSHAPE_MODE=1
+20_direct_shape2|-DTILE_STRATEGY=0 -DSHAPE_MODE=2

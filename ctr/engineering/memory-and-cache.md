@@ -126,7 +126,29 @@ The kernel calls avoid a round-trip to a system module. That matters when your p
 
 `C3D_FrameEnd(flags)` passes `flags` to `GX_ProcessCommandList`. If `GX_CMDLIST_FLUSH` (bit 1) is **not** set, citro3d first calls `GSPGPU_FlushDataCache` over the **entire linear heap** [documented: citro3d `renderqueue.c`]. With `GX_CMDLIST_FLUSH` set, it skips that, and the GSP module flushes only the command list buffer before running it [documented: libctru `gx.c`, command word 7].
 
-The default is safe: every vertex, index and texture byte the CPU wrote anywhere in linear memory is visible to the GPU. Its cost grows with work the CPU does over a range of up to 32 MiB every frame, most of it untouched [hypothesis on the magnitude — not measured; time it with the snippet on [performance](performance.md#measuring-time)].
+The default is safe: every vertex, index and texture byte the CPU wrote anywhere in linear memory is visible to the GPU. Its cost is small and does not grow with how much of the 32 MiB you use: about 90 µs per frame on an Old 3DS `[measured]`, see [Measured costs](#measured-costs-old-3ds) below. Time it in your own program with the snippet on [performance](performance.md#measuring-time).
+
+### Measured costs (Old 3DS)
+
+`[measured]` Old 3DS (2011 unit), system 11.17.0-50U, Luma3DS 13.0.2, devkitARM r68 and libctru 2.7.1 builds of [`membench`](../benchmarks/README.md#membench) and [`flushbench`](../benchmarks/README.md#flushbench), two sessions that agree within a few percent (medians; full tables and caveats in the [benchmark README](../benchmarks/README.md#hardware-runs)). **New 3DS:** not measured.
+
+| Operation | Cost | Notes |
+| --------- | ---- | ----- |
+| `memset` into the ordinary heap or the linear heap | 635 MiB/s for 16 KiB, about 370 MiB/s for 256 KiB and 1 MiB | Identical for both heaps (within 0.5%): linear memory is cached normally |
+| `memcpy` from the heap into linear memory | about 93 MiB/s at 256 KiB and 1 MiB (112 MiB/s at 16 KiB) | Four times slower than writing the same bytes with `memset`; generate data in place when you can |
+| `svcFlushProcessDataCache` of a clean range | 22 µs for 1 KiB, 28 µs for 4 KiB, 35 µs for 16 KiB, then 34-36 µs for any size up to 16 MiB | Fixed cost plus a short walk, then flat |
+| `svcStoreProcessDataCache` (clean only) | 4-5 µs less than the flush, same shape | Lines stay valid in the cache |
+| `GSPGPU_FlushDataCache` of a clean range | 58 µs for 1 KiB, 85-93 µs for 16 KiB to 16 MiB | About 37-57 µs more than the kernel call, the cost of the IPC round trip |
+| Flush of a fully dirty, resident 16 KiB range | 65 µs (kernel flush), 53 µs (clean only), 121 µs (GSP) | About 30 µs above the clean figure: about 60 ns per dirty 32-byte line |
+| Flush right after writing 16 KiB to 16 MiB | 60-80 µs (kernel), 115-135 µs (GSP) | Only the part still in the 16 KiB L1 cache is dirty at call time |
+| Whole 32 MiB linear heap through the GSP | 80-89 µs clean, 135-140 µs with 30 MB just rewritten | |
+| `C3D_FrameEnd(0)` against `C3D_FrameEnd(GX_CMDLIST_FLUSH)` on an empty scene | 147 µs against 57 µs | The difference, about 90 µs, is the whole-heap flush |
+
+Three consequences:
+
+- **The cost of a flush is bounded, not proportional.** Above about 16 KiB the kernel call costs the same whatever the range. The mechanism was not read from the kernel; a switch to a whole-cache operation above some size would produce this shape, and the switch point lies between 16 KiB and 64 KiB `[hypothesis]`. Do not model flush cost as "so many nanoseconds per byte" for large ranges.
+- **The default `C3D_FrameEnd(0)` costs about 0.5% of a 16.7 ms frame.** A tracked-flush scheme can save at most about 90 µs per frame (the `C3D_FrameEnd` figures above) and has to pay one kernel flush, 22-35 µs or more, for every range it flushes. From these medians, tracking breaks even at about three ranges per frame and loses beyond that (arithmetic, not a scene measurement). Reach for [flush-range tracking](#flush-range-tracking) only if a profile of your own scene shows `C3D_FrameEnd` is expensive for another reason, or if you have one or two large dynamic buffers.
+- **Prefer the kernel call to the GSP call for flushes you issue yourself.** It is 37-57 µs cheaper per call on an idle system and does not depend on the `gsp` module getting core-1 time ([above](#the-functions)).
 
 To switch to targeted flushing:
 
@@ -255,11 +277,11 @@ With citro3d's standard frame loop, "GPU finished" for everything drawn in frame
 
 ## Open questions
 
-- Whether tracked flush ranges beat the full-heap flush, by how much, and at what number of ranges the bookkeeping outweighs the saving; Old 3DS first, then New 3DS. No result exists.
+- Whether tracked flush ranges beat the full-heap flush in a real scene. The microbenchmarks bound the saving at about 90 µs per frame and put the break-even near three ranges ([measured costs](#measured-costs-old-3ds)); a scene benchmark with a tracker has not been run. **New 3DS:** not measured.
 - Whether VRAM-resident textures sample measurably faster than linear-memory textures, and the break-even number of samples per upload.
-- Measured cost of the full linear-heap flush in `C3D_FrameEnd` at 16 and 32 MiB, Old 3DS first, then New 3DS — [`flushbench`](../benchmarks/README.md#flushbench) measures it; no results yet.
-- Whether the kernel switches to a whole-cache clean above some range size (which would bound the cost of large flushes) is not documented in the sources used.
-- CPU write and read bandwidth to the application heap versus linear heap on Old 3DS first, then New 3DS.
+- The cost of the full linear-heap flush in `C3D_FrameEnd` is measured on an Old 3DS (about 90 µs, [above](#measured-costs-old-3ds)); **New 3DS:** not measured. The 32 MiB heap is the Old 3DS size; the extra 2 MB L2 of a New 3DS may change the figures.
+- Whether the kernel switches to a whole-cache clean above some range size is not documented in the sources used. The measured cost is flat above 16 KiB, which is consistent with it; a flush sweep at 16-64 KiB and the kernel source would settle where.
+- CPU write bandwidth to the application heap versus linear heap is measured (identical, [above](#measured-costs-old-3ds)); read bandwidth is not, and neither is anything on a New 3DS.
 
 ## Sources
 

@@ -53,11 +53,11 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 
 ## Verification status of code on the wiki
 
-"Builds" means compiled with the toolchain above with `-Wall` and no warnings. No code on the wiki has been run on hardware yet.
+"Builds" means compiled with the toolchain above with `-Wall` and no warnings. Apart from the benchmark programs (rows below), no code on the wiki has been run on hardware. The test console for the Old 3DS column is a 2011 Old 3DS on system 11.17.0-50U (sysNAND) with Luma3DS v13.0.2; note that the Luma3DS source the wiki cites is v13.5, so run-time behaviour is evidence for 13.0.2 only.
 
 | Code | Where | Builds | Emulator | Old 3DS | New 3DS |
 | ---- | ----- | ------ | -------- | ------- | ------- |
-| `membench`, `flushbench`, `drawbench` | [benchmarks](../benchmarks/README.md) | yes | not run | not run | not run |
+| `membench`, `flushbench`, `drawbench` | [benchmarks](../benchmarks/README.md) | yes | not run | run: 2 sessions, default variant, no errors ([results](../benchmarks/README.md#hardware-runs)) | not run |
 | 3dslink logging setup | [debugging](debugging.md#logging-over-the-network-3dslink) | yes | not run | not run | not run |
 | Hardware performance counter helper | [CPU optimisation](cpu-optimization.md#hardware-performance-counters) | yes | not run | not run | not run |
 | Job queue / worker thread (bounded shutdown rewrite) | [threading](threading.md#a-worker-thread-pattern) | yes (stub `main`, `-Wall -Wextra`) | not run | not run | not run |
@@ -72,7 +72,8 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | `tools/pica_cmdlist_decode.py` | [pipeline](PICA200/pica200-command-pipeline.md#host-side-command-list-decoder) | self-test passes on synthetic lists only | n/a | n/a | n/a |
 | Input, camera/Y2R, microphone, NFC/IR, system-info, QTM/MVD, UDS, `ac` and service-probe examples | [input and sensors](input-and-sensors.md), [cameras](camera-and-y2r.md), [microphone](microphone.md), [NFC and IR](nfc-and-infrared.md), [system info](system-info-and-power.md), [QTM and MVD](new-3ds-qtm-and-mvd.md), [local wireless](local-wireless.md), [service groups](service-groups.md) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`) | not run | not run | not run |
 | citro3d lighting fragment | [citro3d fixed-function API](citro3d-fixed-function-api.md) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
-| `icachebench` (code-footprint probe) | [benchmarks](../benchmarks/README.md) | yes (`-Wall -Wextra` clean; devkitARM r68, libctru 2.7.1) | not run | not run | not run |
+| `coffeebench` micro suite (four modules in one binary), tile-renderer suite (20 chained binaries), session directories, per-frame files, provenance fields | [benchmarks](../benchmarks/README.md#building-and-running) | yes (`-Wall` clean; devkitARM r68) | not run | not run (the chained launch and the new CSV layout are unconfirmed) | not run |
+| `icachebench` (code-footprint probe) | [benchmarks](../benchmarks/README.md) | yes (`-Wall -Wextra` clean; devkitARM r68, libctru 2.7.1) | not run | run: 2 sessions, counters worked, no errors | not run |
 | ARMv6 packed SIMD (`UADD8`/`QADD16`) example | [CPU optimisation](cpu-optimization.md#techniques-and-how-to-check-them) | yes (`-Wall -Wextra`) | not run | not run | not run |
 | Frame-time percentile helper | [performance](performance.md) | yes (builds with `bench.h`) | not run | not run | not run |
 | Flush-range tracker fragment (`dirtyAdd`, `frameEndTracked`) | [memory and cache](memory-and-cache.md#flush-range-tracking) | yes (`-Wall -Wextra`, inside a stub `main`, linked with `3dsx.specs`, devkitARM r68) | not run | not run | not run |
@@ -81,7 +82,7 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | ndsp streaming setup | [audio](audio.md#setting-up-a-channel) | yes | not run | not run | not run |
 | Sprite demo (procedural sheet, animation, touch) | [2D rendering](PICA200/rendering-2d.md#5-a-complete-example-animated-sprite-with-touch) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`, devkitARM r68, citro2d 1.7.0-1) | not run | not run | not run |
 | citro2d render-target, stereo-eye and text fragments | [2D rendering](PICA200/rendering-2d.md) | yes (inside a stub `main`, linked) | not run | not run | not run |
-| 2D tile renderer (four tile strategies, texture/shape/bottom-screen/edit modes, scripted CSV mode; 30 configurations) | [2D tile renderer](PICA200/2d-tile-renderer.md#verification-status) | yes (`-Wall -Wextra`, linked to ELF; strategies 1 and 2 with picasso-assembled shader) | not run | not run | not run |
+| 2D tile renderer (four tile strategies, texture/shape/bottom-screen/edit modes, scripted CSV mode; 30 configurations) | [2D tile renderer](PICA200/2d-tile-renderer.md#verification-status) | yes (`-Wall -Wextra`, linked to ELF; strategies 1 and 2 with picasso-assembled shader) | not run | strategies 0-3 with `BENCH_AUTO=1` at default settings: run, 2 sessions, no errors; pictures not compared; other configurations not run | not run |
 | Texture swizzle function | [2D rendering](PICA200/rendering-2d.md#generating-a-texture-in-code) | yes; algorithm matches `tex3ds -r` output for a 16x16 RGBA8 image (host check) | not run | not run | not run |
 | Frame and render-target fragments | [GPU rendering](PICA200/gpu-rendering.md#anatomy-of-a-frame) | taken from `3ds-examples/graphics/gpu/simple_tri`, which builds | — | — | — |
 

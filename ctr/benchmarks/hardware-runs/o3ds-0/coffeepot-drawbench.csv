@@ -1,0 +1,24 @@
+meta,program,drawbench
+meta,build_date,Nov 10 2026 22:33:32
+meta,compiler,16.1.0
+meta,libctru_version,not-readable
+meta,citro3d_version,not-readable
+meta,model,Old 3DS
+meta,new3ds,0
+meta,firm_version,2.58.0
+meta,kernel_version,2.58.0
+meta,speedup_requested,untouched
+meta,speedup_l2_state,not-readable
+meta,cpu_ticks_per_usec,268.1119
+meta,linear_free_bytes,31941632
+meta,cmdbuf_bytes,1048576
+meta,frames_per_variant,120
+meta,skip_frames,4
+columns,result,drawbench,variant,quads,frames,record_ms,frameend_ms,begin_ms,gpu_ms,cmdbuf_pct
+result,drawbench,batched,1000,116,0.047,0.164,16.495,1.039,0.0
+result,drawbench,per-quad,1000,116,9.710,0.202,6.797,1.297,8.4
+result,drawbench,+uniform,1000,116,10.916,0.204,5.587,1.551,11.5
+result,drawbench,+texbind,1000,116,11.798,0.204,4.706,1.529,13.8
+result,drawbench,+texenv,1000,116,10.623,0.214,5.870,1.488,10.7
+result,drawbench,+texswap,1000,116,11.768,0.207,4.732,1.525,13.8
+note,done errors=0

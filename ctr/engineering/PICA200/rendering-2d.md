@@ -23,7 +23,7 @@ Background pages: [GPU rendering](gpu-rendering.md) (draw-call costs, combiners,
 
 - Checked against citro2d 1.7.0 (installed headers and library), citro3d 1.7.1 and libctru 2.7.1 (cloned sources), devkitARM r68 (GCC 16.1.0), tex3ds 2.3.0 (see [source versions](../source-versions.md)). Old 3DS is the default target; New 3DS differences are in **New 3DS:** notes.
 - citro2d's source (`source/base.c`) is **not cloned** in this repository. Where this page says what citro2d does internally, the evidence is one of: the installed 1.7.0 headers `[documented]`; a disassembly of `base.o` inside the installed `libcitro2d.a` (`arm-none-eabi-objdump`) `[reverse-engineered]` — these are the wiki author's readings of compiled code and name the function; or upstream `master` `base.c` as cited by earlier pages `[documented, not re-verified locally]`.
-- All code on this page and on [2D tile renderer](2d-tile-renderer.md) **builds; not run on Old 3DS, New 3DS or an emulator** (details in [Verification status](#verification-status)). Expect to debug the first run: orientation and colour conventions below were derived from tool output and library sources, not seen on a screen.
+- All code on this page builds. The [2D tile renderer](2d-tile-renderer.md) was run on an Old 3DS (strategies 0-3, default settings, two sessions, no errors; [first results](2d-tile-renderer.md#first-hardware-runs-old-3ds)); the rest of the code on this page is **not run on Old 3DS, New 3DS or an emulator** (details in [Verification status](#verification-status)). Expect to debug the first run: orientation and colour conventions below were derived from tool output and library sources, not seen on a screen.
 - Jargon: a **draw call** is one request to the GPU to draw a list of triangles; a **batch** is a run of quads that citro2d submits in one draw call; an **atlas** (sprite sheet) is one texture holding many images; a **render target** is a buffer the GPU draws into.
 
 ## 1. Setup and the frame loop
@@ -564,7 +564,7 @@ Old 3DS budget: 16.7 ms per frame at 60 fps, about 4.47 million core-0 cycles ([
 
 | Decision | Recommendation | Mechanism | Label |
 | -------- | -------------- | --------- | ----- |
-| Many images from one atlas | Within an order-compatible group, draw consecutively; they become one draw call per run | citro2d submits one `C3D_DrawElements` per run; each citro3d draw call writes dirty state into the command buffer ([draw-call costs](gpu-rendering.md#what-a-draw-call-costs)) | `[documented]` mechanism; saving size `[hypothesis]` — drawbench `batched` vs `per-quad` variants measure the per-draw cost |
+| Many images from one atlas | Within an order-compatible group, draw consecutively; they become one draw call per run | citro2d submits one `C3D_DrawElements` per run; each citro3d draw call writes dirty state into the command buffer ([draw-call costs](gpu-rendering.md#what-a-draw-call-costs)) | `[documented]` mechanism; per-draw cost `[measured]` on an Old 3DS: 9.7 µs per separate draw against 0.21 ms for 1000 batched quads ([drawbench](../../benchmarks/README.md#drawbench)) |
 | A different texture mid-run | Group only where ordering, clipping, depth and blend results remain correct, or merge atlases | Each texture change ends the run and `C3D_TexBind` rewrites the unit and clears the texture cache | `[documented: gpu-rendering.md]`; cost `[hypothesis]` — drawbench `+texswap` vs `+texbind` |
 | Text between sprites | Group text only within an order-compatible region | Glyphs come from font sheets, a texture switch each time | `[documented: text.h glyph sheets; upstream base.c batching]`; cost `[hypothesis]` |
 | Rectangles, lines, circles between textured quads | Group shapes only within an order-compatible region | `C2D_DrawRectangle` clears the texture-mode state bits, so the next textured draw re-applies it | `[reverse-engineered: disassembly]`; cost `[hypothesis]` |
@@ -578,7 +578,7 @@ Old 3DS budget: 16.7 ms per frame at 60 fps, about 4.47 million core-0 cycles ([
 | Full-screen translucent overlays | Keep them few; use small quads | Each covers every pixel, blending reads the framebuffer | general GPU behaviour `[hypothesis]` for the PICA200; no fill-rate measurement |
 | Wide mode | Only if the sharper image matters | Doubles the top screen's pixels and render-target size | `[documented: libctru gfx.h]` for the mode; cost `[hypothesis]` |
 | Stereo | Skip the right-eye pass when the slider is 0 | Right target is only drawn if you draw it | `[documented: composite_scene example, renderqueue.c]` |
-| Whole-heap flush at `C3D_FrameEnd(0)` | Consider `GX_CMDLIST_FLUSH` plus targeted flushes only after measuring | The default flushes all linear memory | `[documented: memory-and-cache.md]`; cost `[hypothesis]` — flushbench |
+| Whole-heap flush at `C3D_FrameEnd(0)` | Keep the default unless a profile of your scene points at it; `GX_CMDLIST_FLUSH` plus targeted flushes can save at most about 90 µs per frame | The default flushes all linear memory | `[documented: memory-and-cache.md]`; cost `[measured]` on an Old 3DS: 147 µs against 57 µs ([memory and cache](../memory-and-cache.md#measured-costs-old-3ds)) |
 
 The open `[hypothesis]` items in this table are turned into experiments in the next section (E1 to E6 implemented in the [tile renderer](2d-tile-renderer.md#experiments); P1 to P3 specified). Still without an experiment: the fill-rate cost of full-screen translucent layers (drawbench draws 4×4-pixel quads, so it does not measure fill; a variant with K stacked full-screen translucent quads reading `c3d_gpu` would), and the cost of `C2D_TargetClear` splits (one target against two, same total quads).
 
@@ -801,7 +801,7 @@ Validate with status-only and VCOUNT-only changes, scroll/palette/OAM/VRAM write
 | Setup/teardown and frame-loop fragments | this page | yes (the same calls are used in both programs) | not run | not run | not run |
 | Manual render-target and stereo-eye fragments | this page | yes (compiled inside a stub `main`, `-Wall -Wextra`, linked) | not run | not run | not run |
 
-The tile renderer (30 configurations: four strategies, texture, shape, bottom-screen, edit and scripted-run modes) builds and has not been run; its rows are on [its page](2d-tile-renderer.md#verification-status). The validation checklist above is a plan; all of its rows are `not run`.
+The tile renderer (30 configurations: four strategies, texture, shape, bottom-screen, edit and scripted-run modes) builds, and strategies 0-3 with `BENCH_AUTO=1` have run on an Old 3DS without errors; its rows are on [its page](2d-tile-renderer.md#verification-status). Pictures were not compared. The validation checklist above is a plan; all of its rows are `not run`.
 
 ## Pitfalls
 
@@ -821,7 +821,7 @@ The tile renderer (30 configurations: four strategies, texture, shape, bottom-sc
 - Fill-rate cost of full-screen translucent layers on Old 3DS, and the P1 to P3 experiments (partial texture updates, palette effects, cached text).
 - Orientation of a render-to-texture layer when drawn with a standard subtexture, and the scissor rectangle's mapping to rotated screens: both need one run on hardware.
 - Which sign of the per-eye offset moves a 2D layer in front of the screen plane.
-- Whether the four tile strategies draw identical pixels, and how a 2D engine behaves across HOME and sleep: the [validation checklist](#validation-checklist-for-a-2d-engine), every row `not run`.
+- Whether the four tile strategies draw identical pixels, and how a 2D engine behaves across HOME and sleep: the [validation checklist](#validation-checklist-for-a-2d-engine), every row `not run`. The first Old 3DS runs completed with no `error,` lines, so the manual-draw hand-over and the cache did not crash; whether they draw the right picture was not recorded.
 - Whether citro2d's batch really ends on each of the triggers listed above: confirm by cloning citro2d (`source/base.c`) at the 1.7.0 tag and reading `C2Di_Update`.
 
 ## Sources

@@ -151,7 +151,7 @@ See the [rendering trade-off case studies](../case-studies/case-studies-renderin
 ## Open questions
 
 - Measured input-to-photon latency with `C3D_FRAME_SYNCDRAW` versus a non-blocking loop.
-- Exact refresh rate of the 3DS LCDs (often quoted as about 59.83 Hz) — not confirmed in the sources used here.
+- Exact refresh rate of the 3DS LCDs: the median loop period of four different tile-renderer strategies on an Old 3DS under `C3D_FRAME_SYNCDRAW` was 16,712-16,717 µs, which is 59.83 Hz `[measured]` ([benchmark README](../../benchmarks/README.md#lessons-for-running-and-reading-these-benchmarks)). That is the period of a display-locked loop whose frames fit, not a direct read of the panel; **New 3DS:** not measured.
 
 ## Sources
 

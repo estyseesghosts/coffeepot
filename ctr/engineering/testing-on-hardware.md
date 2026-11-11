@@ -5,7 +5,7 @@ A program that works in an emulator, or on a New 3DS alone, can still crash, stu
 ## Before you start
 
 - A console with [Luma3DS](../homebrew/luma3ds.md) and the Homebrew Menu, on the same network as your PC.
-- The [benchmark suite](../benchmarks/README.md) builds without warnings with devkitARM r68 and libctru 2.7.1. It has **not** been run on hardware (Old 3DS: not run; New 3DS: not run); no results are recorded yet.
+- The [benchmark suite](../benchmarks/README.md) builds without warnings with devkitARM r68 and libctru 2.7.1 and has been run on one Old 3DS (system 11.17.0-50U, Luma3DS 13.0.2; two sessions, default variants; New 3DS: not run). The results are in the [benchmark README](../benchmarks/README.md#hardware-runs).
 
 ## Test tiers
 
@@ -109,14 +109,16 @@ Rules: one record per console and variant; keep the raw `coffeepot-<program>.csv
 
 ## Microbenchmarks worth running
 
-The wiki has no measured numbers yet for the costs below; they are the questions that come up most often when optimising ([performance: open questions](performance.md#open-questions)):
+What the first Old 3DS runs have answered, with the page that holds each answer ([New 3DS: none of these is measured](../benchmarks/README.md#hardware-runs)):
 
-- CPU write bandwidth to the application heap versus the linear heap, at sizes inside and outside the 16 KB L1 data cache.
-- The cost of flushing a range with the kernel call versus the GSP service, as a function of size.
-- The cost of `C3D_FrameEnd(0)`'s whole-linear-heap flush.
-- Whether the ARM11 performance counters work from a `.3dsx` under Luma3DS, and how the cycle counter relates to the system tick ([CPU optimisation: open questions](cpu-optimization.md#open-questions)); `icachebench` tries the counters and reports `perf_unavailable` if the kernel refuses, so a first run answers the first half.
-- How code footprint beyond 16 KB affects cycles per instruction (`icachebench`).
-- How these change with an `APT_SetAppCpuTimeLimit` share active on an Old 3DS, and **New 3DS:** with and without `osSetSpeedupEnable(true)`.
+- CPU write bandwidth to the heap versus the linear heap: identical, 635 MiB/s inside the 16 KB L1 data cache and about 370 MiB/s outside it ([memory and cache](memory-and-cache.md#measured-costs-old-3ds)).
+- Kernel flush versus GSP flush: 35 µs against 85-93 µs for a clean range from 16 KiB up, and flat up to 16 MiB; the GSP call costs a fixed 37-57 µs more ([memory and cache](memory-and-cache.md#measured-costs-old-3ds)).
+- `C3D_FrameEnd(0)`'s whole-linear-heap flush: about 90 µs per frame, 0.5% of the frame ([memory and cache](memory-and-cache.md#measured-costs-old-3ds)).
+- Whether the ARM11 performance counters work from a `.3dsx` under Luma3DS: yes under 13.0.2, and the cycle counter runs 1:1 with the system tick ([CPU optimisation](cpu-optimization.md#availability-under-luma3ds)).
+- How code footprint beyond 16 KB affects cycles per instruction: 1.0 up to 16 KiB, 2.9 at 20 KiB, 5.6 from 32 KiB ([CPU optimisation](cpu-optimization.md#icachebench-on-an-old-3ds)).
+- Draw-call cost in citro3d: 9.7 µs per separate draw, 1-2 µs more per state change ([GPU rendering](PICA200/gpu-rendering.md#what-a-draw-call-costs)).
+
+Still unmeasured: the effect of an `APT_SetAppCpuTimeLimit` share on flush cost, anything with `osSetSpeedupEnable(true)` or on a New 3DS, read bandwidth, and the draw-call cost at other quad counts.
 
 ### The benchmark suite
 
@@ -130,9 +132,20 @@ Build with `make` in each folder (or `tools/build_benchmarks.sh` for all), run w
 
 How to read `membench`'s output:
 
-- `memset heap` vs `memset linear`: whether the linear heap is slower for the CPU to write than the ordinary heap on your model.
+- `memset heap` vs `memset linear`: whether the linear heap is slower for the CPU to write than the ordinary heap on your model (on an Old 3DS it is not).
 - `svcFlush` vs `GSPGPU_Flush`: the kernel call versus the service request, for the same dirty range.
-- `whole linear`: the flush `C3D_FrameEnd(0)` performs every frame. Compare it with the frame budget (16,667 µs at 60 fps) to decide whether targeted flushing ([memory and cache](memory-and-cache.md#the-c3d_frameend-flush)) is worth the bookkeeping.
+- `whole linear`: the flush `C3D_FrameEnd(0)` performs every frame. Compare it with the frame budget (16,667 µs at 60 fps) to decide whether targeted flushing ([memory and cache](memory-and-cache.md#the-c3d_frameend-flush)) is worth the bookkeeping (on an Old 3DS it costs 80-140 µs, so usually not).
+
+### Lessons from the first hardware runs
+
+These came out of running the suite on an Old 3DS and apply to any microbenchmark you add ([details](../benchmarks/README.md#lessons-for-running-and-reading-these-benchmarks)):
+
+- **Run each program at least twice and compare the medians.** On this console the sessions agreed within about 1%, which is what makes a difference of a few percent believable; a single run cannot show that.
+- **Report medians, and read the max column as noise.** One flush in 15 can take 2-5 times the median.
+- **Never let two sessions share a file.** The first tile-renderer build appended to one CSV, and a file left on the SD card silently turned the next session's file into two sessions. The suites now write `sdmc:/coffeepot/s<NNN>/` per session; do the same in your own benchmarks.
+- **Record the system version, the CFW version and whether the boot was fresh in the log itself**, not only in your notes. The `meta` block holds the firmware and kernel number (`2.58.0` for system 11.17.0-50U) but not the Luma3DS version, and the SD-card timestamps were wrong because the console clock was unset.
+- **Do not read `begin_ms` or `period` as cost.** Both are display waits; the loop period was 16.71 ms (59.83 Hz) for every tile strategy ([frame pacing](PICA200/frame-pacing.md#open-questions)).
+- **Check the counters work before relying on them.** `icachebench` falls back to timing only if the kernel refuses; look for `note,perf` against `note,perf_unavailable`.
 
 When you have results, add them to the relevant page with the console model, system and Luma3DS versions, and the build details.
 

@@ -1,0 +1,36 @@
+meta,program,icachebench
+meta,build_date,Nov 11 2026 00:02:53
+meta,compiler,16.1.0
+meta,libctru_version,not-readable
+meta,citro3d_version,not-readable
+meta,model,Old 3DS
+meta,new3ds,0
+meta,firm_version,2.58.0
+meta,kernel_version,2.58.0
+meta,speedup_requested,untouched
+meta,speedup_l2_state,not-readable
+meta,cpu_ticks_per_usec,268.1119
+meta,linear_free_bytes,31941632
+meta,runs,15
+meta,passes_per_run,64
+result,icachebench,footprint,straight_4k,4096,15,250.59,250.59,251.87
+note,perf,straight_4k,4096,65536,68600,29,917
+result,icachebench,footprint,straight_8k,8192,15,496.03,496.05,497.72
+note,perf,straight_8k,8192,131072,134465,41,1270
+result,icachebench,footprint,straight_12k,12288,15,741.53,741.63,886.75
+note,perf,straight_12k,12288,196608,200400,52,1639
+result,icachebench,footprint,straight_16k,16384,15,1062.24,1065.32,1170.31
+note,perf,straight_16k,16384,262144,287374,592,23165
+result,icachebench,footprint,straight_20k,20480,15,3475.66,3514.35,3652.19
+note,perf,straight_20k,20480,327680,943828,16836,614111
+result,icachebench,footprint,straight_24k,24576,15,5937.16,5983.41,6102.25
+note,perf,straight_24k,24576,393216,1605804,33084,1210601
+result,icachebench,footprint,straight_32k,32768,15,10884.80,10934.65,10990.98
+note,perf,straight_32k,32768,524288,2933339,66007,2403139
+result,icachebench,footprint,straight_48k,49152,15,16336.67,16401.26,16459.11
+note,perf,straight_48k,49152,786432,4399027,98778,3600615
+result,icachebench,footprint,straight_64k,65536,15,21749.34,21864.50,21926.89
+note,perf,straight_64k,65536,1048576,5863763,131551,4802684
+result,icachebench,footprint,loop_256b,256,15,3917.03,3917.12,3970.13
+note,perf,loop_256b,256,1048576,1051356,0,0
+note,done errors=0; press START to exit

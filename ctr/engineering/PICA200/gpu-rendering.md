@@ -63,7 +63,20 @@ A citro3d draw is not free even if the GPU is idle. Calling `C3D_DrawArrays`, `C
 | Combiner (`C3D_TexEnv*`), depth/blend/alpha (`C3D_DepthTest`, `C3D_AlphaBlend`, `C3D_AlphaTest`, …) | Only the changed stages/state | Cheap per change; still group by material |
 | The draw itself | Primitive config, vertex count, offset, kick | Fewer, larger draws |
 
-The practical rule: **one draw per material, not per object**. Put many objects that share a texture, shader and combiner setup into the same vertex buffer and draw them with one call. The CPU cost of a thousand tiny draws is easily larger than the GPU cost of drawing the triangles [hypothesis — the crossover point has not been measured; use the [performance](../performance.md#a-frame-level-breakdown) breakdown to see where your frame goes].
+`[measured]` on an Old 3DS (2011 unit, system 11.17.0-50U, Luma3DS 13.0.2, citro3d 1.7.1; [`drawbench`](../../benchmarks/README.md#drawbench), 1000 4x4-pixel quads per frame, two sessions within 0.01 ms; **New 3DS:** not measured). CPU time per frame for recording plus `C3D_FrameEnd`, and the difference from one `C3D_DrawArrays` call per quad:
+
+| Variant (1000 quads) | CPU time per frame | Extra per quad | Command buffer per quad |
+| -------------------- | ------------------ | -------------- | ----------------------- |
+| One draw call for all quads | 0.21 ms | | |
+| One draw call per quad | 9.91 ms | 9.7 µs | about 88 bytes |
+| Plus a uniform update before each draw | 11.12 ms | +1.2 µs | +32 bytes |
+| Plus `C3D_TexBind` of the same texture | 12.00 ms | +2.1 µs | +56 bytes |
+| Plus alternating between two combiner setups | 10.84 ms | +0.9 µs | +24 bytes |
+| Plus alternating between two textures | 11.98 ms | +2.1 µs | +56 bytes |
+
+So a separate draw costs about 9.7 µs of CPU, about 2,600 cycles, and 1000 of them use 60% of a 16.7 ms frame before the game does anything else. Each state change on top is 1-2 µs, a tenth of the draw itself. A redundant texture bind costs as much as a real texture swap. The GPU side stays small: 1.0 ms for the batched frame (most of it the display transfer) and 1.3-1.55 ms for the per-quad variants. That settles the order of the advice in the table above: **batching is the large win** (about 47 times for these quads), skipping redundant binds and uniform updates is worth only a few microseconds each. One size and one scene were measured, with 4x4 quads, so the figure for larger quads or other shaders is not established.
+
+The practical rule: **one draw per material, not per object**. Put many objects that share a texture, shader and combiner setup into the same vertex buffer and draw them with one call. The CPU cost of a thousand tiny draws (10 ms on an Old 3DS, above) is far larger than the GPU cost of drawing the triangles. Use the [performance](../performance.md#a-frame-level-breakdown) breakdown to see where your frame goes.
 
 ### Vertex data
 
@@ -210,7 +223,7 @@ To compare two strategies on the same scene, record for each: draw calls per fra
 
 ## Open questions
 
-- Draw-call CPU cost in citro3d per state change on Old 3DS, then New 3DS — [`drawbench`](../../benchmarks/README.md#drawbench) measures exactly this; no results yet.
+- Draw-call CPU cost in citro3d per state change: measured on an Old 3DS at 1000 quads ([above](#what-a-draw-call-costs)); **New 3DS:** not measured, and the dependence on quad count (125 to 4096 in the program) has not been run.
 - Fill-rate figures for RGBA8 vs RGB565 targets and for each texture format, with and without the texture cache warm.
 - Whether placing static textures in VRAM gives a measurable speed-up over linear FCRAM for typical scenes.
 

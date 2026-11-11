@@ -7,3 +7,6 @@ site/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Staged SD-card image from tools/stage_benchmarks.sh
+dist/

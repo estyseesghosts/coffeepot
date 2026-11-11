@@ -2,9 +2,9 @@
 
 A scrolling tilemap is the standard test of a 2D engine: a world far larger than the screen, a camera that follows the player, animated tiles, characters that walk in front of and behind each other, text, and a way to see what the frame costs. This page walks through one complete program that does all of that with [citro2d](rendering-2d.md), using only art generated in code, so it builds with no asset files. The program also has compile-time switches that change *how the tiles reach the GPU* (four strategies) and a scripted mode that records per-phase timings to a file on the SD card, so the crossover questions on [2D rendering](rendering-2d.md#design-alternatives-and-how-to-choose) can be answered on a console.
 
-> **Status: instrumentation is incomplete.** `dropped_objects` covers selected tile calls only, command-buffer usage is sampled before citro2d’s final frame-end flush, and automatic runs still draw debug text. A zero drop count or a pre-flush occupancy reading cannot establish a valid complete frame. Fix and validate those limitations before relying on results. Nothing has been run on hardware or an emulator.
+> **Status: instrumentation is incomplete.** `dropped_objects` covers selected tile calls only, command-buffer usage is sampled before citro2d’s final frame-end flush, and automatic runs still draw debug text. A zero drop count or a pre-flush occupancy reading cannot establish a valid complete frame. Fix and validate those limitations before relying on results. Strategies 0-3 with default settings have run on an Old 3DS ([first hardware runs](#first-hardware-runs-old-3ds)); no other configuration and no emulator.
 
-> **Status: this is an experiment rig, not a performance reference.** Nothing on this page has been run on an Old 3DS, a New 3DS or an emulator. Every number below is arithmetic from sizes or a `[hypothesis]`; no frame time, speed-up or crossover has been measured, and none may be quoted from here. What *has* been done: the program compiles without warnings in 30 configurations ([build matrix](#verification-status)). Expect to debug the first run (orientation of the cached layer, the manual-draw state hand-over; see [Pitfalls](#pitfalls)). The result of a run is a CSV file whose format is fixed in [Output records](#output-records) so that results from different people can be compared.
+> **Status: this is an experiment rig, not a performance reference.** Only one set of runs exists: strategies 0-3 at default settings on an Old 3DS ([first hardware runs](#first-hardware-runs-old-3ds)). Nothing here has run on a New 3DS or an emulator, and experiments E1-E6 have not been run as specified. Numbers outside that section are arithmetic or a `[hypothesis]`; no crossover has been measured, and none may be quoted from here. What *has* been done: the program compiles without warnings in 30 configurations ([build matrix](#verification-status)). Expect to debug the first run (orientation of the cached layer, the manual-draw state hand-over; see [Pitfalls](#pitfalls)). The result of a run is a CSV file whose format is fixed in [Output records](#output-records) so that results from different people can be compared.
 
 Read [2D rendering](rendering-2d.md) first for the setup, coordinate and texture rules this program relies on. This page assumes you know what an atlas, a draw call and a batch are (defined there).
 
@@ -114,11 +114,34 @@ Every frame is split into phases with `svcGetSystemTick()` (268,111,856 ticks pe
 
 **Compare strategies with `build + record + frameend`** (the summary line `mean_cpu_build_record_frameend_us`), never `c3d_proc` alone, because `C3D_FrameEnd(0)` flushes the whole linear heap and `C3D_GetProcessingTime` stops before that ([citro3d's two timers](../performance.md#citro3ds-two-timers), [drawbench](../../benchmarks/README.md#drawbench)). The debug text remains enabled by default in `BENCH_AUTO` builds, even though periodic updates are suppressed during collection. Drawing it is part of the recorded workload; the displayed values need not be current.
 
+## First hardware runs (Old 3DS)
+
+`[measured]` Old 3DS (2011 unit), system 11.17.0-50U, Luma3DS 13.0.2, devkitARM r68 and citro2d 1.7.0 / citro3d 1.7.1 builds with `-DBENCH_AUTO=1 -DTILE_STRATEGY={0,1,2,3}`; everything else at its default: `TILE=16` (416 visible tiles), `NPC_COUNT=40`, `CAM_SPEED=2`, `BENCH_PATH=0`, 120 warm-up and 600 recorded frames. Two sessions per strategy, shown as session 0 / session 1; medians in microseconds. No `error,` line, no missed frame over 25 ms and `dropped_objects` 0 in any run (the instrumentation caveats above still apply: zero proves little). **New 3DS:** not measured. The raw files are in [`hardware-runs/`](../../benchmarks/hardware-runs/) (the second session of `o3ds-1` is appended to a copy of the first; see the [benchmark README](../../benchmarks/README.md#hardware-runs)).
+
+| Strategy | `mean_cpu_build_record_frameend_us` | `build` | `record` | `frameend` | `c3d_gpu` |
+| -------- | ----------------------------------- | ------- | -------- | ---------- | --------- |
+| 0 direct | 1,497 / 1,497 | 0 | 1,285 / 1,288 | 209 / 207 | 2,146 / 2,162 |
+| 1 manual | 1,020 / 1,019 | 179 / 179 | 622 / 620 | 210 / 211 | 2,172 / 2,180 |
+| 2 chunks (16 tiles) | 902 / 897 | 22 / 22 | 646 / 643 | 205 / 206 | 2,305 / 2,315 |
+| 3 cache | 866 / 870 | 0 | 570 / 572 | 203 / 205 | 1,980 / 1,992 |
+
+Tail behaviour (session 0 / 1): strategy 3 spends 1,946 / 1,935 µs on its worst `build` frame, 1,872 / 1,876 µs at the 99th percentile, and its `c3d_gpu` peaks at 4,369 / 4,509 µs (99th percentile 4,155 / 4,310 µs) against about 2,450-2,500 µs for strategy 0; strategy 2's worst `build` is 163 / 160 µs. The median loop period is 16,713-16,717 µs for all four. Strategy 3's period ranges from 14.7 to 18.7 ms across its 9 redraws; the others stay within 16.55-16.89 ms. `cmdbuf_peak_pct` is 1.4 / 2.1 / 2.3 / 1.6 (before the final flush, so a lower bound). Memory: strategy 3 took exactly 1,572,864 bytes of VRAM (free VRAM 5,254,656 to 3,681,792), strategy 1 took 76,928 bytes of linear memory and strategy 2 took 1,551,488 (1,474,560 plus the same 76,928), matching the arithmetic above; strategy 2 builds the whole world in 8.1 ms at start-up (`chunk_build_all_ms`).
+
+What the runs show, and what they cannot:
+
+- **Order by CPU cost at this scene:** direct 1.50 ms, manual 1.02 ms (32% less), chunks 0.90 ms (40% less), cache 0.87 ms (42% less). All are a tenth of the 16.7 ms frame, and none missed one, so at 416 tiles every strategy fits the budget; the choice is about headroom for the rest of a game, not about fitting.
+- **Why direct is dearer:** its `record` is 663 µs above manual's, and manual spends 179 µs building vertices, so the manual path saves about 480 µs per frame, about 1.15 µs per visible tile (arithmetic from the medians). One scene size gives one point: the [E1](#e1-manual-vertex-buffer-versus-c2d_drawimageat) crossover, if there is one, lies below 416 tiles or does not exist, and only the 126 to 1,581 sweep can say.
+- **`frameend` does not separate the strategies.** It is 203-211 µs in all four, of which about 90 µs is the whole-heap flush ([memory and cache](../memory-and-cache.md#measured-costs-old-3ds)); compare `build + record + frameend`, as the page already says.
+- **GPU time is about 2 ms in all four** and `c3d_gpu` includes the display transfers. Strategy 2 is about 130 µs above strategy 1 with 3.7 times the vertices submitted (9,216 against 2,496); that is consistent with over-submission costing something but is far too small a difference to rank them on `[hypothesis]`.
+- **The cache is cheapest on average and worst in the tail.** By the [E2](#e2-cached-background-versus-direct-tiles) rule it does not yet pay: its mean is 630 µs lower than strategy 0's, but its 99th-percentile `build` (1.9 ms against 0) and `c3d_gpu` (4.2-4.3 ms against 2.5 ms) are worse, for 1.5 MiB of VRAM. Nine redraws in 600 frames put 1.5% of frames in that tail, enough to set the 99th percentile. Whether the tail is visible was not examined.
+- **The sessions agree to within 0.5%** on every mean, so two sessions per variant is enough to see differences of a few percent on this console; E1-E6 still ask for three.
+- **Not shown:** pixel equality between strategies (the runs were not photographed or dumped), anything with a different `TILE`, `CAM_SPEED`, `NPC_COUNT`, edit rate or texture mode, and any New 3DS behaviour.
+
 ## Experiments
 
-Nothing here has been run. Each experiment names its variables, metrics, build lines and the rule that turns numbers into a decision. Only the listed macros vary; everything else stays at its default. The table that places these experiments among all the design choices is [Design alternatives and how to choose](rendering-2d.md#design-alternatives-and-how-to-choose).
+Only the default-setting four-strategy run has been done ([above](#first-hardware-runs-old-3ds)); none of E1-E6 has been run as specified. Each experiment names its variables, metrics, build lines and the rule that turns numbers into a decision. Only the listed macros vary; everything else stays at its default. The table that places these experiments among all the design choices is [Design alternatives and how to choose](rendering-2d.md#design-alternatives-and-how-to-choose).
 
-**Protocol for all of them.** Old 3DS first (the primary target), then a New 3DS as a separate data set. Fresh boot, close other homebrew, detach the debugger, no game plugins ([benchmark README](../../benchmarks/README.md#before-you-start)). Build with `BENCH_AUTO=1`, run from the Homebrew Menu, wait for "bench done", press START, copy `sdmc:/coffeepot-tilerenderer.csv` (opened for append: delete it between sessions, or keep it; each run starts with its own `meta` block). At least three runs per variant. A reported `error,` line or a nonzero `dropped_objects` invalidates a run. However, the counter covers only selected tile calls, not all sprite, shape, text and cache draws; zero does not prove success. `cmdbuf_peak_pct` is sampled before the final citro2d flush and can understate usage. Fix and validate full submission accounting and final command-buffer occupancy before treating the results as valid. Per run use the median of each phase; report the spread across runs. Emulator output is never a result.
+**Protocol for all of them.** Old 3DS first (the primary target), then a New 3DS as a separate data set. Fresh boot, close other homebrew, detach the debugger, no game plugins ([benchmark README](../../benchmarks/README.md#before-you-start)). Build with `BENCH_AUTO=1` (or use the 20-variant [tile suite](../../benchmarks/README.md#tile-renderer-suite), which already covers most of the variables below), run from the Homebrew Menu, wait for "bench done", press START, copy the session directory `sdmc:/coffeepot/s<NNN>/` (one `tile-<id>.csv` and one per-frame file per variant; every session gets a new directory). At least three runs per variant. A reported `error,` line or a nonzero `dropped_objects` invalidates a run. However, the counter covers only selected tile calls, not all sprite, shape, text and cache draws; zero does not prove success. `cmdbuf_peak_pct` is sampled before the final citro2d flush and can understate usage. Fix and validate full submission accounting and final command-buffer occupancy before treating the results as valid. Per run use the median of each phase; report the spread across runs. Emulator output is never a result.
 
 Why not decide on `period`: the loop is locked to the display, so any variant whose CPU and GPU work fit in 16.7 ms shows the same `period`. The crossover questions are about cost, so they are decided on `mean_cpu_build_record_frameend_us` and `c3d_gpu`; `period` and the missed-frame count only say whether a variant fits the budget at all.
 
@@ -196,7 +219,7 @@ The claim was checked against the local sources: `include/c2d/base.h` of the ins
 
 ## Output records
 
-`BENCH_AUTO=1` writes the same kinds of lines as [`bench.h`](../../benchmarks/README.md#output-format-and-metadata) to `sdmc:/coffeepot-tilerenderer.csv` (append mode). The program is self-contained and does not include `bench.h`; it copies the field layout. One extra line kind, `summary`, carries scalars.
+`BENCH_AUTO=1` writes the same kinds of lines as [`bench.h`](../../benchmarks/README.md#output-format-and-metadata) to `sdmc:/coffeepot/s<NNN>/tile-<id>.csv` (one file per session and variant; `<id>` is `tilerenderer` for a standalone build, the suite id for a suite build), and the per-frame samples to `tile-<id>-frames.csv`. The first hardware runs used an older build that appended to `sdmc:/coffeepot-tilerenderer.csv`. The program is self-contained and does not include `bench.h`; it copies the field layout. One extra line kind, `summary`, carries scalars.
 
 ```text
 meta,<key>,<value>
@@ -222,7 +245,7 @@ A row in the wiki's results tables is one variant on one console: the median of 
 - Batch structure of one frame, assuming citro2d's rules from [2D rendering](rendering-2d.md#the-object-limit-and-how-batching-works): tiles and sprites share the atlas (one run); the rectangle breaks it; each text object ends with font-sheet texture changes; the bottom screen starts a new scene. `[hypothesis]` for the exact draw-call count: nothing here counted them ([command capture](pica200-command-pipeline.md) would).
 - `Z_ALL = 0.5f` lies inside citro2d's usable z range −1..1 ([depth](rendering-2d.md#2-screens-coordinates-and-depth)).
 - Input: ±156 is treated as full Circle Pad deflection and values within ±15 of centre are ignored; both numbers are assumptions made for this example, not read from libctru (Unknown: the real range). The D-pad overrides the pad.
-- The 25 ms missed-frame threshold is 1.5 nominal periods of 16.7 ms; the exact LCD refresh rate is not confirmed in the sources used ([frame pacing](frame-pacing.md#open-questions)).
+- The 25 ms missed-frame threshold is 1.5 nominal periods of 16.7 ms; the loop period measured on an Old 3DS is 16.71 ms, 59.83 Hz ([frame pacing](frame-pacing.md#open-questions)).
 
 ## Pitfalls
 
@@ -238,18 +261,19 @@ A row in the wiki's results tables is one variant on one console: the median of 
 
 ## Open questions
 
-Every item is an experiment above; nothing has run.
+Every item is an experiment above; only the default-setting four-strategy run has been done.
 
 - E1 to E6: the numbers, on an Old 3DS and a New 3DS.
 - Whether the cached layer is upright and pixel-exact with a standard subtexture, and whether strategies 0 to 3 produce identical pixels (the [validation checklist](rendering-2d.md#validation-checklist-for-a-2d-engine) describes the comparison; this program has no framebuffer dump).
-- Whether the cache redraw spike shows as a visible hitch at 60 frames per second.
+- Whether the cache redraw spike shows as a visible hitch at 60 frames per second. On an Old 3DS the spike is 1.9 ms of CPU and up to 4.4-4.5 ms of GPU time with no loop period over 18.7 ms and no missed frame at the 25 ms threshold, but whether a late frame of that size can be seen was not looked at ([first hardware runs](#first-hardware-runs-old-3ds)).
+- Why strategy 3 rebuilt its cache only 9 times in 600 frames when [E2](#e2-cached-background-versus-direct-tiles) estimates about 48 ÷ speed = 24 frames between redraws (about 25 rebuilds). The estimate was arithmetic; the camera path or the cache window re-centring was not examined.
 - Whether citro2d's internal state survives the strategy 1 and 2 hand-over unchanged.
 - Whether the number of draw calls per frame matches the expected structure.
 - Whether any of this differs between Old 3DS and New 3DS. Unknown: GPU-side costs on the New 3DS.
 
 ## Verification status
 
-All rows: Emulator not run, Old 3DS not run, New 3DS not run.
+Emulator: not run. New 3DS: not run. Old 3DS: strategies 0, 1, 2 and 3 with `BENCH_AUTO=1` at default settings ran twice with no `error,` lines ([results](#first-hardware-runs-old-3ds)); every other row is not run. Whether the pictures are correct was not checked.
 
 | Configuration (`-D` flags) | Builds |
 | -------------------------- | ------ |
@@ -265,7 +289,7 @@ All rows: Emulator not run, Old 3DS not run, New 3DS not run.
 | `BENCH_AUTO=1 TILE_STRATEGY=2 MAP_EDIT_PERIOD=30 SHAPE_MODE=1 BOTTOM_PERIOD=2 BENCH_PATH=1 NPC_COUNT=0`; `BENCH_AUTO=1 TILE_STRATEGY=3 NPC_COUNT=0 MAP_EDIT_PERIOD=30 CAM_SPEED=4.0f`; `BENCH_AUTO=1 CMDBUF_SIZE=0x100000` | yes (all three) |
 | Guards: `TEX_MODE=1 TILE_STRATEGY=1`; `TILE_STRATEGY=3 TILE=8`; `TILE_STRATEGY=2 CHUNK_TILES=10` | stop with `#error` as intended |
 
-The extracted project was also built with its Makefile in the default configuration and strategies 1–3 with `BENCH_AUTO=1`; these builds packaged `.3dsx` files. No run was performed. The earlier configuration table means: "Builds": `arm-none-eabi-gcc` (devkitARM r68, GCC 16.1.0) invoked directly with `DEVKITPRO=C:\devkitPro`, `-D__3DS__ -Wall -Wextra -O2 -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -mword-relocations -ffunction-sections -fno-math-errno -std=gnu11`, include path `libctru/include`, linked to an ELF with `-specs=3dsx.specs -lcitro2d -lcitro3d -lctru -lm`; no warnings in any of the 30 configurations built (28 in a scripted matrix, plus `BENCH_AUTO=1 CMDBUF_SIZE=0x100000` and strategy 1 with `TILE=12` as spot builds). The shader was assembled with the installed picasso, converted with `bin2s` and assembled into an object that was linked in (the template `Makefile` does the same). Those earlier direct-compiler checks did not package a `.3dsx` or run the program.
+The extracted project was also built with its Makefile in the default configuration and strategies 1–3 with `BENCH_AUTO=1`; these builds packaged `.3dsx` files. Apart from the Old 3DS runs above, no run was performed. The earlier configuration table means: "Builds": `arm-none-eabi-gcc` (devkitARM r68, GCC 16.1.0) invoked directly with `DEVKITPRO=C:\devkitPro`, `-D__3DS__ -Wall -Wextra -O2 -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -mword-relocations -ffunction-sections -fno-math-errno -std=gnu11`, include path `libctru/include`, linked to an ELF with `-specs=3dsx.specs -lcitro2d -lcitro3d -lctru -lm`; no warnings in any of the 30 configurations built (28 in a scripted matrix, plus `BENCH_AUTO=1 CMDBUF_SIZE=0x100000` and strategy 1 with `TILE=12` as spot builds). The shader was assembled with the installed picasso, converted with `bin2s` and assembled into an object that was linked in (the template `Makefile` does the same). Those earlier direct-compiler checks did not package a `.3dsx` or run the program.
 
 ## Sources
 

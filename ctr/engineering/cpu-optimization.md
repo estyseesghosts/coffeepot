@@ -6,7 +6,7 @@ Hardware reference: [CPU](../hardware/cpu.md). Measuring whole frames: [performa
 
 ## Before you start
 
-- Checked against ARM's *ARM11 MPCore Processor Technical Reference Manual* (DDI 0360E), libctru 2.7.1 and devkitARM r68 (GCC 16.1). The performance-counter helper below compiles without warnings with those versions; it has **not** been run on hardware for this page (Old 3DS: not run; New 3DS: not run).
+- Checked against ARM's *ARM11 MPCore Processor Technical Reference Manual* (DDI 0360E), libctru 2.7.1 and devkitARM r68 (GCC 16.1). The performance-counter helper below compiles without warnings with those versions; it has **not** been run as written. The counter calls in [`icachebench`](../benchmarks/README.md#icachebench) have run on an Old 3DS ([below](#availability-under-luma3ds)); New 3DS: not run.
 - Measure before and after every change ([testing on hardware](testing-on-hardware.md#running-a-performance-experiment)). The rules of thumb here say where to look, not what you will find.
 
 ## How the core executes code
@@ -53,7 +53,7 @@ Unaligned access: the MPCore supports unaligned word and halfword loads and stor
 
 Data caches get most of the attention, but the core also has to *fetch* every instruction it runs. Each Old 3DS core has a 16 KB instruction **[cache](../../glossary.md#cache)** (**I-cache**) and nothing behind it except FCRAM, because the Old 3DS has no L2 cache. Code that executes more than 16 KB of distinct instructions per frame keeps evicting itself, and the core waits for memory instead of running.
 
-**What is established.** DDI 0360E describes the I-cache as 4-way set-associative with 32-byte lines, virtually indexed and physically tagged, with a size of 16, 32 or 64 KB chosen when the chip is built [documented: DDI 0360E; [ARM11 MPCore internals](../hardware/arm11-mpcore.md#caches)]. That the 3DS uses 16 KB comes from Copetti's analysis, not from a register read-out on a console [reverse-engineered: Copetti, via [CPU](../hardware/cpu.md)]; the G-Diffuser probe below states 16 KB for the Old 3DS as well [reported]. With no L2 on the Old 3DS, every I-cache miss goes to FCRAM.
+**What is established.** DDI 0360E describes the I-cache as 4-way set-associative with 32-byte lines, virtually indexed and physically tagged, with a size of 16, 32 or 64 KB chosen when the chip is built [documented: DDI 0360E; [ARM11 MPCore internals](../hardware/arm11-mpcore.md#caches)]. That the 3DS uses 16 KB comes from Copetti's analysis, not from a register read-out on a console [reverse-engineered: Copetti, via [CPU](../hardware/cpu.md)]; an Old 3DS run of `icachebench` shows the cost step just above 16 KiB, which agrees with 16 KB without reading the size `[measured]`, [below](#icachebench-on-an-old-3ds); the G-Diffuser probe below states 16 KB for the Old 3DS as well [reported]. With no L2 on the Old 3DS, every I-cache miss goes to FCRAM.
 
 > Unknown: this wiki has not read the cache-type register (`MRC p15,0,Rd,c0,c0,1`) on a console, and [`icachebench`](../benchmarks/README.md#icachebench) does not either; it shows the *effect* of footprint, not the configuration. **New 3DS:** the 2 MB L2 (when enabled) may soften an I-cache miss, but that has not been measured here.
 
@@ -71,11 +71,31 @@ Also stated on that page: the real render path measured CPI 4.34 with 43.6% of c
 
 > Conflict: the review that prompted this section describes the result as CPI rising "as the active code footprint increased" but leaves out that the 16 KB point is the good case (1.06) and the jump comes between 16 and 24 KB. The source's prose around the 24 KB figure is garbled; the table value 4.10 is used here.
 
-Do not extend the numbers: one program's probe, one unit, an unstated instruction mix. [`icachebench`](../benchmarks/README.md#icachebench) is this wiki's version of the experiment; it has not been run, so nothing here is `[measured]`.
+Do not extend the G-Diffuser numbers: one program's probe, one unit, an unstated instruction mix. This wiki's own version of the experiment has now run, with the same shape.
+
+### icachebench on an Old 3DS
+
+`[measured]` Old 3DS (2011 unit), system 11.17.0-50U, Luma3DS 13.0.2, devkitARM r68, two sessions that agree within 0.05 CPI ([`icachebench`](../benchmarks/README.md#icachebench), full table and conditions in the [benchmark README](../benchmarks/README.md#hardware-runs)). Straight-line `add` instructions, 64 passes per run, performance counters on; medians. **New 3DS:** not measured.
+
+| Distinct code per pass | Cycles per instruction | I-cache misses per 32-byte line fetched | Cycles stalled on fetch |
+| ---------------------- | ---------------------- | --------------------------------------- | ----------------------- |
+| 4, 8, 12 KiB | 1.02-1.04 | 0.00 | under 1% |
+| 16 KiB | 1.10-1.15 | 0.02-0.03 | 8-12% |
+| 20 KiB | 2.89 | 0.41 | 65% |
+| 24 KiB | 4.11 | 0.67 | 75% |
+| 32, 48, 64 KiB | 5.58-5.60 | 1.00 | 82% |
+| 260-byte loop, about the same instruction count as 64 KiB (first build, 16,642 per call) | 0.99 | 0.00 | 0% |
+
+- **The cliff sits just above 16 KiB.** Within a factor of 1.1 of one cycle per instruction up to 16 KiB; 2.9 at 20 KiB; 5.6 from 32 KiB. The same kind of instruction runs about 5.6 times slower when the code is 32 KiB or more than when it is a 260-byte loop (the loop's own CPI is 0.99; its instruction count differed from the 64 KiB function's by 1.6% in this first build, corrected since).
+- **A miss costs about 36.5 cycles** (stall cycles divided by miss count, 36.4-36.7 from 20 KiB up, in both sessions), about 136 ns. This is the "about 37 cycles" the G-Diffuser page states.
+- **It reproduces the G-Diffuser numbers.** CPI 1.06 / 4.10 / 5.62 at 16 / 24 / 32 KB `[reported]` against 1.10-1.15 / 4.11 / 5.60 here `[measured]`. Two independent probes agree on this console model, so the figures can be used as a planning number for straight-line code: **budget fewer than 16 KiB of distinct code per hot loop**, and expect the penalty to reach its ceiling of about 5.6 cycles per instruction once the footprint is twice that.
+- **Misses rise gradually, not at once** (0.41 and 0.67 per line at 20 and 24 KiB, 1.00 from 32 KiB). A least-recently-used cache hit by a cyclic walk over more than its capacity would miss on every line immediately, so the policy is probably not LRU `[hypothesis]`; DDI 0360E lists random and round-robin replacement, and the policy was not read from the console.
+- **Limits.** The code is perfectly predicted straight-line arithmetic with no data accesses: it measures instruction fetch only. A real program's penalty depends on how much of its footprint is hot, and the 16 KiB size is inferred from the step, not read from the cache-type register.
+
 
 ### Keeping the hot path small
 
-`[hypothesis]` guidance derived from the facts above; each item can be tested with the I-cache-miss and fetch-stall counters (`PERFCOUNTEREVT_CORE_INST_CACHE_MISS`, `..._STALL_BY_LACK_OF_INST`; see [counters](#hardware-performance-counters)):
+Guidance derived from the facts above and the [measured I-cache cliff](#icachebench-on-an-old-3ds) (the 16 KiB budget is `[measured]`; the individual techniques remain `[hypothesis]` until compared on a real program); each item can be tested with the I-cache-miss and fetch-stall counters (`PERFCOUNTEREVT_CORE_INST_CACHE_MISS`, `..._STALL_BY_LACK_OF_INST`; see [counters](#hardware-performance-counters)):
 
 - **Count executed bytes, not source lines.** The question is how many distinct bytes of code run between two uses of the same code. Estimate with `arm-none-eabi-nm -S --size-sort`, confirm with the counter.
 - **Lay hot code out together.** Keep the functions of one frame stage in one translation unit built with `-ffunction-sections`; move cold paths (error handling, rare formats) out of hot functions, with `__attribute__((cold))` or into separate functions.
@@ -244,11 +264,15 @@ Interpreting the numbers:
 
 ### Counters versus the system tick
 
-The two clocks are different things. `svcGetSystemTick()` counts at the fixed base rate of 268,111,856 Hz on all models and clock modes ([performance](performance.md#cpu-time-the-system-tick)); 3dbrew describes it as the CPU ticks elapsed since power-on [documented: 3dbrew SVC page]. The CP15 cycle counter (`CCNT`) counts core cycles, or every 64th cycle with `PERFCOUNTEREVT_CORE_CYCLE_COUNT_64` [documented: libctru `svc.h`; DDI 0360E §3.4.27]. So on an Old 3DS you would expect `CCNT` to advance about 1:1 with the tick. **New 3DS:** in 804 MHz mode, about 3 times faster than the tick. That ratio is `[hypothesis]` until a run records both over the same interval; never mix the two units in one table, and convert with the measured ratio, not an assumed one.
+The two clocks are different things. `svcGetSystemTick()` counts at the fixed base rate of 268,111,856 Hz on all models and clock modes ([performance](performance.md#cpu-time-the-system-tick)); 3dbrew describes it as the CPU ticks elapsed since power-on [documented: 3dbrew SVC page]. The CP15 cycle counter (`CCNT`) counts core cycles, or every 64th cycle with `PERFCOUNTEREVT_CORE_CYCLE_COUNT_64` [documented: libctru `svc.h`; DDI 0360E §3.4.27]. So on an Old 3DS you would expect `CCNT` to advance about 1:1 with the tick. **New 3DS:** in 804 MHz mode, about 3 times faster than the tick. The Old 3DS ratio is `[measured]`: `icachebench`'s `loop_256b` control took 1,051,362 counted cycles in 3,917 µs, which is 268.4 cycles per microsecond against the tick's 268.11, so 1:1 within 0.1% (counting every cycle, not every 64th). The New 3DS ratio is a `[hypothesis]` until a run records both over the same interval; never mix the two units in one table, and convert with the measured ratio, not an assumed one.
 
-### Availability under Luma3DS (not yet verified)
+### Availability under Luma3DS
 
-What the sources show: the Luma3DS loader grants `.3dsx` programs an SVC access list covering numbers `0x00`–`0x7F` (`sysmodules/loader/source/hbldr.c`, "SVC ACL 0 to 0x7F"), and the Luma3DS source tree contains no code that uses or patches `svcControlPerformanceCounter` (searched at the pinned commit) [documented: absence in source, not proof of behaviour]. 3dbrew lists SVC `0x3E` ([3dbrew: SVC](https://www.3dbrew.org/wiki/SVC)) but this wiki has not seen a published run of it from a `.3dsx`. Whether the kernel accepts `PERFCOUNTEROP_ENABLE` for a normal process, whether it is already locked by something else, and whether the counters are saved and restored across context switches are all unknown. Treat the helper above as untested code and first run the open experiment below.
+`[measured]` **It works.** On an Old 3DS (system 11.17.0-50U, Luma3DS 13.0.2) a `.3dsx` built with devkitARM r68 and libctru 2.7.1 enabled the counters with `svcControlPerformanceCounter`, read the cycle counter and the instruction-cache-miss and fetch-stall events around timed loops, and printed sane values: no result-code failure in either of two sessions, CPI 1.00 for a loop that cannot miss, and miss counts that rise exactly where the code outgrows the cache ([`icachebench`](../benchmarks/README.md#icachebench)). The cycle counter ran 1:1 with the system tick ([above](#counters-versus-the-system-tick)).
+
+What the sources showed beforehand: the Luma3DS loader grants `.3dsx` programs an SVC access list covering numbers `0x00`-`0x7F` (`sysmodules/loader/source/hbldr.c`, "SVC ACL 0 to 0x7F") [documented: source at the pinned v13.5 commit; the console ran 13.0.2, so the run is evidence for 13.0.2 only]. 3dbrew lists SVC `0x3E` ([3dbrew: SVC](https://www.3dbrew.org/wiki/SVC)).
+
+Still unknown: whether this works on a New 3DS, whether another process can hold the performance monitor (this run had none), and whether the counters are saved and restored across context switches (the benchmark ran on one core with no other homebrew, so a thread migration would not have shown). The helper on this page is a different piece of code from the one `icachebench` uses and is still untested as written.
 
 Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a core, not to your thread, so they also count the kernel, interrupts and any other thread that runs on that core during the measurement; keep measured regions short and repeat them. Which core's counters `GET_VALUE` reads when called from another core is not documented in the sources used — read them from the thread you measure.
 
@@ -270,11 +294,11 @@ Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a c
 ## Open questions
 
 - Real per-event numbers for common workloads on Old 3DS first, then New 3DS (sprite update, vertex generation, decompression).
-- Whether the G-Diffuser I-cache cliff (CPI 1.06 / 4.10 / 5.62 at 16 / 24 / 32 KB) reproduces with a different probe. Experiment: run [`icachebench`](../benchmarks/README.md#icachebench) on an Old 3DS, compare cycles per instruction and the I-cache-miss counter across footprints, and read the cache-type register to confirm 16 KB. **New 3DS:** repeat with and without `osSetSpeedupEnable(true)`.
+- Whether the G-Diffuser I-cache cliff reproduces: it does on an Old 3DS with a different probe ([above](#icachebench-on-an-old-3ds)). Still open: read the cache-type register (`MRC p15,0,Rd,c0,c0,1`) to confirm 16 KB, and **New 3DS:** repeat with and without `osSetSpeedupEnable(true)`, since its L2 may soften a miss.
 - Whether grouping by operation type beats per-element indirect dispatch on a real workload (needs a dispatch-heavy loop in both forms, identical output, counters on).
 - Whether the 3DS kernel enables the MPCore's unaligned-access support for user processes.
 - Whether counter values read from one core can be affected by threads on another.
-- Whether `svcControlPerformanceCounter` works from a `.3dsx` under Luma3DS v13.5 on Old 3DS and New 3DS. Experiment: call `PERFCOUNTEROP_ENABLE`, print the result code, then run a loop of known size (for example 1,000,000 `nop`-like register adds, and a sequential versus a random walk over 256 KiB) and compare `CCNT`, `svcGetSystemTick` and the data-cache-miss event over the same interval. Expected if it works: cycles per add near 1, miss counts near zero for the sequential walk. Record the result code and the `CCNT`/tick ratio on an Old 3DS, and on a New 3DS with and without `osSetSpeedupEnable(true)`.
+- Whether `svcControlPerformanceCounter` works from a `.3dsx` under Luma3DS: yes on an Old 3DS under 13.0.2 ([above](#availability-under-luma3ds)). Still open: Luma3DS v13.5 itself, a New 3DS (with and without `osSetSpeedupEnable(true)`, where the cycle-counter-to-tick ratio is also open), and the data-cache-miss event on a sequential versus a random walk.
 
 ## Sources
 

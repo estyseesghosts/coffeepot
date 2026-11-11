@@ -6,6 +6,8 @@
 //   result,<program>,<test>,<variant>,<bytes_or_n>,<runs>,<min_us>,<med_us>,<max_us>
 //   note,<text>
 //   error,<where>,<detail>
+// Results go to sdmc:/coffeepot/s<NNN>/<program>.csv (see session.h); a standalone program
+// starts a new session, the micro-benchmark suite (COFFEEBENCH_SUITE) joins the one it started.
 // Header-only, all functions static inline, so each program can include it.
 #ifndef COFFEEPOT_BENCH_H
 #define COFFEEPOT_BENCH_H
@@ -16,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "session.h"
 
 static FILE *bench_fp;
 static int bench_error_count;
@@ -60,6 +63,11 @@ static inline void bench_report(const char *program, const char *test, const cha
                t[n - 1] / CPU_TICKS_PER_USEC);
 }
 
+static inline void bench_provenance_emit(const char *key, const char *value)
+{
+    bench_line("meta,%s,%s", key, value);
+}
+
 // Opens the sdmc output file and prints the metadata header. Call after
 // consoleInit(). Returns the New 3DS flag through *isNew (false on an Old 3DS,
 // which is the default target; nothing here needs a New 3DS). A failure to open
@@ -77,7 +85,12 @@ static inline void bench_begin(const char *program, bool *isNew)
         "Old 3DS", "Old 3DS XL", "New 3DS", "2DS", "New 3DS XL", "New 2DS XL"
     };
     char path[96];
-    snprintf(path, sizeof(path), "sdmc:/coffeepot-%s.csv", program);
+#ifdef COFFEEBENCH_SUITE
+    int session = coffee_session_read();
+#else
+    int session = coffee_session_new();
+#endif
+    coffee_result_path(path, sizeof(path), session, program);
     bench_fp = fopen(path, "w");
     if (!bench_fp) {
         bench_error_count++;
@@ -100,6 +113,8 @@ static inline void bench_begin(const char *program, bool *isNew)
     }
 
     bench_line("meta,program,%s", program);
+    bench_line("meta,session,%d", session);
+    coffee_provenance(bench_provenance_emit);
     bench_line("meta,build_date,%s %s", __DATE__, __TIME__);
     bench_line("meta,compiler,%s", __VERSION__);
     bench_line("meta,libctru_version,not-readable");
@@ -128,6 +143,12 @@ static inline void bench_begin(const char *program, bool *isNew)
 // Waits for START, so the screen stays readable.
 static inline void bench_wait_exit(void)
 {
+#ifdef COFFEEBENCH_SUITE
+    // Inside the suite the next module follows at once; the suite waits for START at the end.
+    bench_line("note,done errors=%d", bench_error_count);
+    if (bench_fp) { fclose(bench_fp); bench_fp = NULL; }
+    return;
+#endif
     bench_line("note,done errors=%d; press START to exit", bench_error_count);
     if (bench_fp) { fclose(bench_fp); bench_fp = NULL; }
     while (aptMainLoop()) {

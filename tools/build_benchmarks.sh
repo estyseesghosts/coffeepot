@@ -17,4 +17,7 @@ for dir in "$root"/ctr/benchmarks/*/; do
         echo "ok"
     fi
 done
+# The 20-binary tile-renderer suite (also fails on any warning).
+echo "== tile-renderer suite"
+if bash "$root/tools/build_tile_suite.sh" "$(mktemp -d)" >/dev/null 2>&1; then echo "ok"; else echo "FAILED: tile-renderer suite (run tools/build_tile_suite.sh <dir> to see why)"; status=1; fi
 exit $status

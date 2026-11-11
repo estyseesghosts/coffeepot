@@ -9,6 +9,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "session.h"
+#include "chain.h"
+
+/* ---- suite mode: this binary is one step of the tile-renderer suite (tools/build_tile_suite.sh) ----
+ * SUITE_INDEX (1..SUITE_TOTAL) makes the program write sdmc:/coffeepot/s<NNN>/tile-<SUITE_ID>.csv, dump
+ * a per-frame file next to it, and, if the run had no errors, chainload the next binary
+ * /3ds/coffeepot-tiles/t<NN>.3dsx. Index 1 starts a new session; later ones continue the session
+ * number they are given in argv[1]. Without SUITE_INDEX nothing changes (it writes tile-tilerenderer.csv). */
+#ifndef SUITE_INDEX
+#define SUITE_INDEX 0
+#endif
+#ifndef SUITE_TOTAL
+#define SUITE_TOTAL 0
+#endif
+#ifndef SUITE_ID
+#define SUITE_ID tilerenderer   /* a bare identifier: the build script passes -DSUITE_ID=t03_direct_t16 */
+#endif
+#define SUITE_DIR "/3ds/coffeepot-tiles"
 
 /* ---- compile-time modes ---- */
 #ifndef TILE_STRATEGY
@@ -303,6 +321,7 @@ static const char *const kPhaseName[PH_COUNT] = { "period", "update", "build", "
 static float gSamp[PH_COUNT][BENCH_FRAMES];   /* microseconds */
 static FILE *gCsv;
 static int gCsvErrors;
+static int gSession;
 
 static const char *strategyName(void)
 {
@@ -321,15 +340,20 @@ static void csvLine(const char *fmt, ...)
 	va_end(ap);
 }
 
+static void csvEmit(const char *key, const char *value) { csvLine("meta,%s,%s", key, value); }
+
 static void csvError(const char *where, Result rc) { gCsvErrors++; csvLine("error,%s,rc=0x%08lx", where, (unsigned long)rc); }
 
-/* Same meta keys as ctr/benchmarks/common/bench.h. The file is opened for append: several runs can share it. */
+static void csvEmit(const char *key, const char *value);
+
+/* Same meta keys as ctr/benchmarks/common/bench.h. One file per session and variant, so sessions never mix. */
 static void csvBegin(void)
 {
 	static const char *const models[] = { "Old 3DS", "Old 3DS XL", "New 3DS", "2DS", "New 3DS XL", "New 2DS XL" };
-	char path[96];
-	snprintf(path, sizeof path, "sdmc:/coffeepot-tilerenderer.csv");
-	gCsv = fopen(path, "a");
+	char path[128], name[80];
+	snprintf(name, sizeof name, "tile-%s", COFFEE_STR(SUITE_ID));
+	coffee_result_path(path, sizeof path, gSession, name);
+	gCsv = fopen(path, "w");
 	if (!gCsv) gCsvErrors++;
 	bool isNew = false;
 	Result rc = APT_CheckNew3DS(&isNew);
@@ -339,6 +363,11 @@ static void csvBegin(void)
 	if (R_SUCCEEDED(rc)) { rc = CFGU_GetSystemModel(&model); if (R_FAILED(rc)) csvError("CFGU_GetSystemModel", rc); cfguExit(); }
 	else csvError("cfguInit", rc);
 	csvLine("meta,program,tilerenderer");
+	csvLine("meta,session,%d", gSession);
+	csvLine("meta,suite_index,%d", SUITE_INDEX);
+	csvLine("meta,suite_total,%d", SUITE_TOTAL);
+	csvLine("meta,suite_id,%s", COFFEE_STR(SUITE_ID));
+	coffee_provenance(csvEmit);
 	csvLine("meta,build_date,%s %s", __DATE__, __TIME__);
 	csvLine("meta,compiler,%s", __VERSION__);
 	csvLine("meta,libctru_version,not-readable");
@@ -365,6 +394,26 @@ static void csvBegin(void)
 	csvLine("meta,bench_path,%d", BENCH_PATH);
 	csvLine("meta,warmup_frames,%d", BENCH_WARMUP);
 	csvLine("meta,measured_frames,%d", BENCH_FRAMES);
+}
+
+/* Every measured frame, every phase, in microseconds: shows rebuild spikes and what they do to the
+ * loop period, which the summary lines cannot. Written after the main CSV; a failure is a note, not an error. */
+static void dumpFrames(void)
+{
+	char path[128], name[96];
+	snprintf(name, sizeof name, "tile-%s-frames", COFFEE_STR(SUITE_ID));
+	coffee_result_path(path, sizeof path, gSession, name);
+	FILE *f = fopen(path, "w");
+	if (!f) { csvLine("note,frames_file_not_written"); return; }
+	fprintf(f, "frame");
+	for (int ph = 0; ph < PH_COUNT; ph++) fprintf(f, ",%s_us", kPhaseName[ph]);
+	fputc('\n', f);
+	for (int i = 0; i < BENCH_FRAMES; i++) {
+		fprintf(f, "%d", i);
+		for (int ph = 0; ph < PH_COUNT; ph++) fprintf(f, ",%.2f", (double)gSamp[ph][i]);
+		fputc('\n', f);
+	}
+	if (fclose(f)) csvLine("note,frames_file_close_failed");
 }
 
 static void csvResults(int visibleTiles, int rebuilds, int droppedBase, float cmdPeak, u32 vblanks)
@@ -400,8 +449,17 @@ static void csvResults(int visibleTiles, int rebuilds, int droppedBase, float cm
 }
 #endif
 
-int main(void)
+int main(int argc, char **argv)
 {
+	(void)argc; (void)argv;
+#if BENCH_AUTO
+#if SUITE_INDEX > 1
+	gSession = (argc >= 2) ? atoi(argv[1]) : 0;   /* continue the session the first binary started */
+	if (gSession <= 0) gSession = coffee_session_read();
+#else
+	gSession = coffee_session_new();
+#endif
+#endif
 	gfxInitDefault();
 	C3D_Init(CMDBUF_SIZE);
 	if (!C2D_Init(C2D_DEFAULT_MAX_OBJECTS)) { C3D_Fini(); gfxExit(); return 1; }
@@ -514,6 +572,10 @@ int main(void)
 	u32 vblankStart = 0;
 	int rebuildBase = 0, droppedBase = 0;
 	bool benchDone = false;
+#if SUITE_INDEX > 0
+	int suiteWait = 0;
+	bool suiteStop = false;
+#endif
 #endif
 
 	while (aptMainLoop()) {
@@ -781,6 +843,7 @@ int main(void)
 			}
 			if (frameNo == BENCH_WARMUP + BENCH_FRAMES - 1) {
 				csvResults(visibleTiles, rebuilds - rebuildBase, droppedBase, cmdPeak, C3D_FrameCounter(0) - vblankStart);
+				dumpFrames();
 				if (gCsv) { fclose(gCsv); gCsv = NULL; }
 				C2D_TextBufClear(dbgBuf);
 				C2D_TextParse(&dbgText, dbgBuf, gCsvErrors ? "bench done WITH ERRORS - no result" : "bench done - results on SD card. START quits");
@@ -788,6 +851,30 @@ int main(void)
 				benchDone = true;
 			}
 		}
+#if SUITE_INDEX > 0
+		else if (!suiteStop && ++suiteWait == 150) {   /* about 2.5 s to read the screen, then the next binary */
+			const char *msg = NULL;
+			if (gCsvErrors) {
+				msg = "suite STOPPED: this run had errors";
+			} else if (SUITE_INDEX >= SUITE_TOTAL) {
+				msg = "suite COMPLETE - press START";
+			} else {
+				char nextPath[96], sess[16], idx[16];
+				snprintf(nextPath, sizeof nextPath, SUITE_DIR "/t%02d.3dsx", SUITE_INDEX + 1);
+				snprintf(sess, sizeof sess, "%d", gSession);
+				snprintf(idx, sizeof idx, "%d", SUITE_INDEX + 1);
+				const char *extra[] = { sess, idx };
+				Result crc = chain_launch(nextPath, extra, 2);
+				if (R_SUCCEEDED(crc)) break;   /* leave the loop; returning from main starts the next binary */
+				msg = "chainload FAILED (needs Luma3DS): start the next tNN.3dsx by hand, START quits";
+				csvError("chain_launch", crc);
+			}
+			suiteStop = true;
+			C2D_TextBufClear(dbgBuf);
+			C2D_TextParse(&dbgText, dbgBuf, msg);
+			C2D_TextOptimize(&dbgText);
+		}
+#endif
 #else
 		(void)beginStart;
 #endif
