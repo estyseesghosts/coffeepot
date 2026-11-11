@@ -1,82 +1,106 @@
 # Switch homebrew toolchain and workflow
 
-This page is for a game developer who wants to build and run homebrew on the Nintendo Switch family (**NX**). It works on any Switch that can already run unofficial hobbyist software (**[homebrew](../../glossary.md#homebrew)**) — in practice an unpatched 2017–2018 unit, or a patched / OLED unit with a modchip, on firmware supported by Atmosphere — and the outcome is a working build-run loop: compile a game on PC, copy one file to the SD card, and launch it from the homebrew menu.
+This page is for a game developer who wants to build and run homebrew on the Nintendo Switch family (**NX**). It assumes a console that can already launch unofficial hobbyist software (**[homebrew](../../glossary.md#homebrew)**) through the homebrew menu; getting there is covered by [Atmosphere and running](atmosphere-and-running.md) and the guide it links. The outcome is a working build-run loop: compile a program on a PC, send one file to the console, see its text output on the PC, and start over.
 
-If you only want to know which libraries to program against, read [libnx and deko3d](deko3d-and-libnx.md). If you have not set up the console side yet, read [Atmosphere and running](atmosphere-and-running.md).
+If you only want to know which libraries to program against, read [libnx and deko3d](deko3d-and-libnx.md).
 
 ## What you need
 
-- A PC (Windows, Linux, or macOS) with devkitA64 installed via devkitPro pacman [documented] (devkitPro install docs and pacman package definitions).
-- The `switch-dev` pacman group: `libnx`, `deko3d` + `dekotools`, and `switch-portlibs` for ports (SDL2, freetype, curl) [documented] (package list in devkitPro's `switch-dev` meta-package).
-- A Switch able to launch the homebrew menu (hbmenu), plus an SD card. No Nintendo SDK, no devkit hardware.
-- A text editor and `make`. The stock project template uses GNU Make; no IDE is required.
+- A PC (Windows, Linux or macOS) with devkitA64 installed through devkitPro's `pacman` `[documented]` (SwitchBrew "Setting up Development Environment", oldid 8289: "run `sudo (dkp-)pacman -S switch-dev` to install the tools and libraries for switch development"; on Windows the graphical installer sets up an MSYS2 shell with `pacman`).
+- `pacman -S switch-dev` installs a **package group**, not a single package. On the machine this page was checked on, the group contains `libnx`, `deko3d`, `uam`, `switch-tools` (which holds `nxlink`), `general-tools`, `catnip`, `switch-cmake`, `switch-pkg-config`, `switch-examples`, `devkita64-cmake`, `devkita64-binutils`, `devkitA64-gdb` and `devkit-env`; the compiler (`devkita64-gcc`) and C library (`devkita64-newlib`) come in as dependencies of `devkitA64` `[documented]` (`pacman -Sg switch-dev` and `pacman -Si devkitA64`, versions on [source versions](../engineering/source-versions.md)). Ports such as SDL2, freetype and curl are in separate groups, `switch-portlibs` and `switch-sdl2`; install them only when you need them.
+- A console that can run the homebrew menu (hbmenu), an SD card, and for printf debugging a network connection that both the console and the PC share.
+- A text editor and `make`. The stock template uses GNU Make; no IDE is required. Keep the project path free of spaces, and do not put it in a cloud-synced folder `[reported]` (old Homebrew Guide, `homebrew_dev/app_dev.rst`, 2022).
 
-Install command (PC):
+## Install by operating system
+
+- **Windows:** use devkitPro's graphical installer and pick the Switch development option, then work in the devkitPro MSYS2 shell it installs. The installer's shell sets `DEVKITPRO`, `DEVKITA64` and `PATH` for you. In a plain PowerShell or Git Bash, `make` on a template Makefile stops with "Please set DEVKITPRO in your environment" until you set `DEVKITPRO` and `DEVKITA64` and put `devkitA64\bin`, `tools\bin` and the MSYS2 `usr\bin` on `PATH`; that is how the builds for this wiki were run [documented] for the installer (SwitchBrew "Setting up Development Environment"), observed here for the plain-shell failure.
+- **Linux and macOS:** install devkitPro's `pacman` (the package is called `dkp-pacman` on some systems), then `sudo (dkp-)pacman -S switch-dev`, and log out and in again so the environment variables take effect [documented] (same SwitchBrew page). Linux x86_64 binaries also run under WSL.
+- **Containers:** devkitPro also publishes Docker images with the toolchain and ports preinstalled [documented] (same page); this wiki has not used them.
+- **Check the install** by building the template (above). If `make` fails before compiling, the environment variables are the usual cause; if it fails at link time with `undefined reference to sinf` or similar, add `-lm` to `LIBS`.
+
+## Build the template
 
 ```sh
-pacman -S switch-dev
+# in the devkitPro MSYS2 shell on Windows, or a shell with DEVKITPRO set on Linux/macOS
+cp -r $DEVKITPRO/examples/switch/templates/application ~/projects/myswitchproject
+cd ~/projects/myswitchproject
+make
 ```
 
-This pulls the compiler, `libnx`, `deko3d`, tools, and example templates in one step.
+Result checked for this page: `make` compiled `source/main.c`, linked `myswitchproject.elf` and produced `myswitchproject.nacp` and `myswitchproject.nro` (about 166 KB) with no warnings, using devkitA64 r30-1 and `libnx` 4.12.0-1. Not run on a console.
 
-## How it works
+The `.nro` is named after the folder because the template Makefile sets `TARGET := $(notdir $(CURDIR))` `[documented]` (`switch-examples` `templates/application/Makefile`). Rename the folder or edit that line to rename the output. The template Makefile uses `icon.jpg` or `<TARGET>.jpg` in the project folder if one exists and falls back to `libnx`'s default icon; it writes the program name, author and version from `APP_TITLE`, `APP_AUTHOR` and `APP_VERSION` into a `.nacp` metadata file and embeds it `[documented]` (same Makefile, comments at lines 20-30 and 129-132).
 
-You write ordinary C / C++ against `libnx`, compile to an `.nro` file, and run that file from the SD card. There is no install step and no signing step for this path.
+## Run it on the console
 
-The high-level loop is:
+1. Copy the `.nro` to `/switch/` on the SD card (any folder works for hbmenu; `/switch/<name>/<name>.nro` is the usual layout).
+2. Start the homebrew menu and pick it.
+3. Press `+` to exit if your program handles it the way the template does (`if (kDown & HidNpadButton_Plus) break;`).
 
-1. Scaffold from the template (`templates/application` in the `switch-examples` repo) and edit code.
-2. Run `make`. You get an `.nro` with its name and icon embedded.
-3. Copy the `.nro` to `/switch/` on the SD card.
-4. Launch hbmenu on the console and pick it. Print debug text back to the PC over the network with `nxlink`.
+For a program that exercises input, drawing, audio, saves, logging and a crash dump, see [a first Switch game](../engineering/first-game.md); for what to do when it misbehaves, see [debugging](../engineering/debugging.md).
 
-`.nro` (relocatable homebrew executable, run by hbmenu/hbloader with no install) is the normal dev format. `.nsp` (installable package handled by the `ns` system service, requiring signatures / modified system software (**[custom firmware](../../glossary.md#cfw)**)) is only needed when you want a home-screen icon or full product packaging; prefer `.nro` during development.
+Two launch modes change how much memory the program gets: the Album applet versus title override. They are explained on [Atmosphere and running](atmosphere-and-running.md); start in title override as soon as your program loads real assets.
 
-Two launch modes matter because they change how much memory your game gets:
+## Print debug text to the PC with nxlink
 
-- Album / applet mode: open hbmenu from the Album. Quick, but the system keeps most RAM for the suspended game. Your homebrew runs in a small applet budget.
-- Title override: hold R while launching any installed title, so hbmenu takes over a full game slot instead. Your homebrew gets the full application memory budget (gigabyte-class). Use this as soon as your game loads real assets.
+`nxlink` sends the `.nro` to the console over the network and then prints whatever the program writes to `stdout` and `stderr` on the PC. It needs three things: the console in NetLoader mode, a program that redirects its output, and the `.nro` file itself.
+
+1. On the console, open the homebrew menu and press **Y** to enter NetLoader mode `[reported]` (old Homebrew Guide, `homebrew_dev/app_dev.rst` lines 180-181).
+2. In the program, initialise sockets and redirect output once at startup:
+
+```c
+consoleInit(NULL);
+socketInitializeDefault();   // sockets first,
+nxlinkStdio();               // then redirect stdout and stderr to the nxlink host
+printf("appears in the PC terminal when started with nxlink -s\n");
+/* ... main loop ... */
+socketExit();
+consoleExit(NULL);
+```
+
+3. On the PC, from the project folder after `make`:
+
+```sh
+nxlink -a <console-ip> -s myswitchproject.nro
+```
+
+Verification of the program fragment: compiles, `-Wall`, no warnings; not run on a console. The command line options come from `nxlink --help` of `switch-tools` 1.13.1: `-a`/`--address` is the console's hostname or IPv4 address, `-s`/`--server` starts the output server after the upload, `-p`/`--path` sets the upload path, `--args` sends arguments to the program, `-r` sets retries `[documented]`. If you omit `-a`, `nxlink` tries to find the console itself; the old guide says to pass `-a` when it cannot `[reported]`.
+
+- The file you pass must be the `.nro`, not the `.elf`. The old guide reports a fatal error screen (2347-0005, 0xb5b) when something else is sent `[reported]`.
+- The upstream demonstration is `network/nxlink_stdio` in `switch-examples`: it calls `socketInitializeDefault()` then `nxlinkStdio()`, and its header comment gives the command `nxlink <-a switch_ip> nxlink_stdio.nro -s <arguments>` `[documented]` (`switch-examples` `network/nxlink_stdio/source/main.c`). The old wiki text `nxlink -s server.nro` used a file name your project will not produce.
+- `nxlinkStdio()` sets its socket to non-blocking mode, so a stalled PC does not by itself freeze your frame `[documented]` (`libnx` `nx/source/runtime/nxlink_stdio.c`). The default client port is 28771 and the server port 28280 (`libnx` `nx/include/switch/runtime/nxlink.h`), which matters if a firewall blocks them.
+- How it fails: no output appears if `socketInitializeDefault()` was not called first, if the console is not in NetLoader mode, or if the PC firewall blocks the port.
+
+> Unknown: how `nxlink` finds the console without `-a`. The `switch-tools` source was not among the saved sources and no discovery test was run.
 
 ## Technical details
 
-Build inputs and outputs [documented] (readable in `switch-examples/templates/application/Makefile` and `switch-tools` source):
+| Item | What it is | Source |
+| ---- | ---------- | ------ |
+| `devkitA64` | GCC and binutils targeting 64-bit **[ARM](../../glossary.md#arm)** (`aarch64-none-elf`), cross-compiler that runs on the PC | installed `devkita64-gcc` 16.1.0 |
+| `libnx` | C library for Switch user programs: startup code, kernel wrappers, service clients. See [libnx and deko3d](deko3d-and-libnx.md) | `libnx` source |
+| `deko3d`, `uam` | GPU API and its offline shader compiler | [libnx and deko3d](deko3d-and-libnx.md) |
+| `switch-tools` | `elf2nro`, `nacptool`, `build_romfs`, `nxlink` and related packaging tools | installed `switch-tools` 1.13.1 |
+| `switch-portlibs`, `switch-sdl2` | Ports such as SDL2, installed under `$DEVKITPRO/portlibs/switch` | `pacman -Sg` |
+| `.nro` | Nintendo relocatable object, the homebrew executable format: loadable at any address, with optional embedded name, author and icon; run by the homebrew loader and never installed | `libnx` `nx/include/switch/nro.h`, `switch-examples` Makefile |
+| `.nsp` | Installable package handled by system services; installing an unsigned one needs patched system software | [Atmosphere and running](atmosphere-and-running.md) |
 
-| Item | What it is |
-| ---- | ---------- |
-| `devkitA64` | GCC/binutils targeting 64-bit **[ARM](../../glossary.md#arm)** (`aarch64-none-elf`). Cross-compiler that runs on PC and emits Switch code. |
-| `libnx` | C library for Switch user programs. Wraps privileged kernel calls and system services. See [libnx and deko3d](deko3d-and-libnx.md). |
-| `deko3d` + `dekotools` | Homebrew GPU API and its shader compiler. See [libnx and deko3d](deko3d-and-libnx.md). |
-| `switch-portlibs` | Prebuilt ports (SDL2, zlib, freetype, curl, etc.) installed under `$DEVKITPRO/portlibs/switch`. |
-| `templates/application` | Minimal project: `source/main.c`, `Makefile`, `icon.jpg`, metadata source. `make` embeds the name/icon into the `.nro`. |
-| `.nro` | Nintendo relocatable object. Loadable anywhere in memory; contains code, data, embedded name/icon. Run by hbloader; never installed. |
-| `.nsp` | Installable package. Installed and ticket-checked by system services; unsigned install requires patched install service under CFW. |
+The Makefile flags used for the build checks on this wiki are the template's (`-g -Wall -O2 -ffunction-sections`, linked with `-lnx`) `[documented]` (`deko_basic` Makefile in `switch-examples`; the `deko_basic` build links `-ldeko3dd -lnx`).
 
-Dev-loop network logging [documented] (readable in `libnx` `nxlink` source and `switch-examples/network/nxlink`):
-
-```sh
-# PC side: build, then send and listen in one step
-make && nxlink -s server.nro
-```
-
-`nxlink` serves the `.nro` over TCP and relays `printf` output back to the PC terminal. Useful when iterating without ejecting the SD card. The network setup on the console must already work; `nxlink` does not configure networking itself.
-
-Memory-mode rule of thumb [documented] (readable in `hbmenu` / `hbloader` docs and Atmosphere `loader` source: applet memory budget vs. application memory budget):
-
-- Applet (Album) hbmenu: small heap, large assets fail or fragment early. Good for menus and hello-world.
-- Title override (hold-R game launch): full game-class heap and a 39-bit virtual address space for forwarders. Required before profiling asset budgets or GPU streaming.
+For virtual-address-space notes (including why one page says 38-bit and another 39-bit) see [NX memory](../hardware/memory.md#address-space-widths).
 
 ## Limits and risks
 
-- This page does not jailbreak the console. Without a working entry point (unpatched RCM unit, modchip, or software entry on exploitable firmware) there is nothing to run the `.nro` with. See [Atmosphere and running](atmosphere-and-running.md).
-- Applet-mode out-of-memory crashes look like random aborts. If a demo works in the template but dies when art is added, retry under title override before debugging the renderer.
-- `.nsp` distribution adds signing, install-service, and ban risk. Ship examples and test builds as `.nro`.
-- Overclocking via CFW sysmodules does not change what `make` produces; it only changes console-side clocks. Do not bake overclock assumptions into asset budgets.
+- This page does not get a console into a state where it can run homebrew. See [Atmosphere and running](atmosphere-and-running.md).
+- Applet-mode out-of-memory crashes can look like random aborts. If a demo works in the template but dies when assets are added, retry under title override before debugging the renderer.
+- Distributing a `.nsp` adds signing, installation and ban risk (see [Atmosphere and running](atmosphere-and-running.md)). Ship examples and test builds as `.nro`.
+- An overclocking sysmodule does not change what `make` produces; it changes console clocks. Do not bake overclock assumptions into asset budgets.
 
 ## Sources
 
-- [devkitPro Getting Started](https://devkitpro.org/wiki/Getting_Started) — what `switch-dev` installs (`devkitA64`, `libnx`, `deko3d`).
-- [switch-examples](https://github.com/switchbrew/switch-examples) — what `templates/application` covers (scaffold, `Makefile`, `.nro` with embedded name/icon) and the per-topic demo map.
-- [libnx](https://github.com/switchbrew/libnx) — what the toolchain links against (startup, service wrappers, `nxlink`/`romfs` runtime support).
-- [hbmenu](https://github.com/switchbrew/nx-hbmenu) — what Album vs. title-override launch covers (applet budget vs. full application memory).
-- [switch-tools](https://github.com/switchbrew/switch-tools) — what network `printf` relay covers.
-- [switch.homebrew.guide](https://switch.homebrew.guide/) — what console setup covers (linked, not duplicated here).
+- SwitchBrew [Setting up Development Environment](https://switchbrew.org/wiki/Setting_up_Development_Environment) (oldid 8289, edited 2019-11-10) — `pacman -S switch-dev`, template location, `TARGET` naming; older than the other sources, so installer details may have changed.
+- [switch-examples](https://github.com/switchbrew/switch-examples) at `669786898205b7beb25ff1731e72982e6d0397d3` — `templates/application/Makefile` and `source/main.c`, `network/nxlink_stdio/source/main.c`.
+- [libnx](https://github.com/switchbrew/libnx) at `b156b4774fb2df7b93402169509266da7547fc4c` — `nx/include/switch/runtime/nxlink.h`, `nx/source/runtime/nxlink_stdio.c`, `nx/include/switch/nro.h`.
+- [switch-tools](https://github.com/switchbrew/switch-tools) — `nxlink`, `nacptool`, `elf2nro`; behaviour read from the installed `switch-tools` 1.13.1 `--help` output (source not read).
+- [noahc3 Homebrew Guide](https://github.com/noahc3/Homebrew-Guide) at `6d7b7bc` (2022-08-02, archived guide) — `homebrew_dev/app_dev.rst`: NetLoader (Y button), `-a` option, fatal error when the wrong file type is sent. Old and unmaintained; confirm on current hbmenu.
+- [switch.homebrew.guide](https://switch.homebrew.guide/) — current console setup (linked, not duplicated here).

@@ -8,36 +8,42 @@ The drawing hardware (the **[GPU](../../glossary.md#gpu)**) is the **[Maxwell](.
 
 ## How it works
 
-Games describe what to draw with small programs that run on the graphics hardware (called **[shaders](../../glossary.md#shader)**) and lists of drawing commands. Retail games use Nintendo's NVN library; homebrew normally uses the community deko3d library instead, which targets the same hardware through the open Nouveau-based driver stack. Small fast memories next to the compute units (called **[caches](../../glossary.md#cache)**) reward textures and render targets stored in block-linear layout, and the CPU and GPU do not see each other's writes automatically — software must flush, invalidate and fence explicitly.
+Games describe what to draw with small programs that run on the graphics hardware (called **[shaders](../../glossary.md#shader)**) and lists of drawing commands. Retail games use Nintendo's NVN library; homebrew normally uses the community **[deko3d](../glossary.md#deko3d)** library instead, a separate low-level implementation written from the reverse-engineered behaviour of NVN. It is not built on the open-source Nouveau driver; only its offline shader compiler (**[uam](../glossary.md#uam)**) reuses Mesa and Nouveau code. Homebrew that draws through OpenGL does use Mesa/Nouveau (see [libnx and deko3d](../homebrew/deko3d-and-libnx.md)). Small fast memories next to the compute units (called **[caches](../../glossary.md#cache)**) reward textures and render targets stored in block-linear layout, and the CPU and GPU do not see each other's writes automatically — software must flush, invalidate and fence explicitly.
 
 ## Technical details
 
 | Item | Value | Evidence |
 | ---- | ----- | -------- |
-| Architecture | Maxwell GM20B, 256 CUDA cores in 2 streaming multiprocessors, 16 texture units, 16 render-output units | [documented] (NVIDIA Tegra X1 / GM20B materials) |
-| L2 for the GPU | 256 KB | [documented] (NVIDIA) |
-| Per-multiprocessor shared memory | 64 KB | [documented] (NVIDIA) |
-| Half-precision throughput | 2x single-precision rate | [documented] (NVIDIA Maxwell whitepaper) |
+| Architecture | NVIDIA Maxwell, 256 cores, FP16 support, on the Tegra X1 (20 nm Erista) and X1+ (16 nm Mariko) | [documented] (SwitchBrew Tegra X1, oldid 14745: "256-core Maxwell GPU with support for FP16") |
+| Multiprocessors | 2 (256 cores ÷ 128 per multiprocessor; each has four partitions of 32 lanes) | arithmetic from [reported] (Chips and Cheese, 2023-12-23) |
+| L2 for the GPU | 256 KB | [reported] (Chips and Cheese) |
+| Shared memory per multiprocessor | 64 KB (cut from 96 KB on desktop Maxwell) | [reported] (Chips and Cheese) |
+| Half-precision | Hardware FP16 is present; two values can be packed in a 32-bit register for double rate | [reported] (Chips and Cheese; they verified higher FP16 throughput with `vkpeak`) |
 
-| GPU clock target | Frequency | Single-precision rate | Notes |
-| ---- | ----- | ----- | ----- |
-| Handheld base | 307.2 MHz | ~157 GFLOPS | [documented] (NVIDIA clock/throughput math; SwitchBrew Clocks) |
-| Handheld higher | 384 MHz | — | [reported] (SwitchBrew Clocks page) |
-| Docked | 768 MHz | ~393 GFLOPS FP32 / ~786 GFLOPS FP16 | [documented] (NVIDIA Maxwell rates; SwitchBrew Clocks for the 768 MHz value) |
-| Memory clock range | 1331–1600 MHz | feeds the ~21.3 GB/s handheld stock figure below | [reported] (SwitchBrew Clocks page) |
+> Unknown: texture-unit and render-output-unit counts, and the silicon name of this Maxwell variant. The saved sources do not state them; earlier text on this page gave numbers without a source.
 
-| Memory path | Value |
-| ---- | ----- |
-| Bus to shared LPDDR4 | 64-bit |
-| Theoretical peak, Tegra X1 | 25.6 GB/s |
-| Theoretical peak, X1+ (Mariko-era I/O) | 31.8 GB/s |
-| Typical handheld stock setting | ~21.3 GB/s |
+| GPU clock | Frequency | Peak FP32 | Notes |
+| --------- | --------- | --------- | ----- |
+| Handheld, starting clock | 307.2 MHz | ~157 GFLOPS | [reported] (`nfsmw-nx` `docs/platform-notes.md`: a program starts at 307.2 MHz in handheld mode) |
+| Handheld, performance mode | 460.8 MHz | ~236 GFLOPS | [reported] (`nfsmw-nx`: obtained by asking the system for an official performance mode) |
+| Handheld, 384 MHz profile | 384 MHz | ~197 GFLOPS | [reported] (`SwitchWakerHD` `docs/perf-results.md`: `switchGpuProfile=384`; Chips and Cheese: "in handheld mode ... the gpu is limited to 384mhz", a reader comment) |
+| Docked | 768 MHz | ~393 GFLOPS FP32, ~786 GFLOPS FP16 | [reported] (`nfsmw-nx` `README.md`; Chips and Cheese: "runs the iGPU at 768 MHz") |
 
-Bandwidth rows are [documented] for the theoretical peaks (NVIDIA memory-controller data) and [reported] for the stock handheld figure (SwitchBrew Clocks).
+Peak rates are arithmetic: 256 cores × 2 operations × clock. They are upper bounds, not game throughput. Every clock figure here is a port report; the SwitchBrew Clocks page that older text cited was not available when this page was checked (see [source versions](../engineering/source-versions.md)).
 
-Texture and render-target layout: block-linear tiling in units of 64 bytes wide by 8 rows (GOB 64B×8 rows) [reverse-engineered] (Nouveau / deko3d tiling code and SwitchBrew GPU notes). Linear data must be tiled before the GPU samples or renders it efficiently.
+| Memory path | Value | Evidence |
+| ----------- | ----- | -------- |
+| Bus to shared LPDDR4 | 64-bit | [documented] (SwitchBrew Tegra X1) |
+| Theoretical peak, Tegra X1 (LPDDR4-1600) | ~25.6 GB/s | [documented] (SwitchBrew Tegra X1) |
+| Theoretical peak, X1+ | ~31.8 GB/s with LPDDR4X-2133 | [documented] (SwitchBrew Tegra X1) |
+| Handheld stock memory clock | 1331.2 MHz, ~21.3 GB/s by arithmetic (1331.2 MHz × 2 transfers × 8 bytes) | clock [reported] (`nfsmw-nx` `README.md`) |
+| Docked stock memory clock | 1600 MHz, ~25.6 GB/s | clock [reported] (`nfsmw-nx`) |
 
-Coherence: no automatic CPU↔GPU coherence. Software must flush CPU writes before GPU reads, invalidate CPU caches after GPU writes, and insert fences between GPU work and CPU reuse [documented] (deko3d memory/barrier API; Nouveau driver behavior).
+The CPU shares this bus, so these are totals, not GPU-only figures.
+
+Texture and render-target layout: block-linear tiling, in blocks (GOBs) of 64 bytes by 8 rows. Linear data must be converted before the GPU samples it in the default layout, or the image must be created pitch-linear [documented] (`tegra_swizzle` `tiling.md`, commit `d7ed318`; `deko3d.h`: `DkImageFlags_BlockLinear` is the default).
+
+Coherence: the CPU and GPU do not see each other's writes automatically. For CPU-cached memory the CPU cache must be flushed before the GPU reads, the CPU cache cannot be invalidated from userland, and GPU writes become visible to the CPU only when a fence is signalled with the flush option [documented] (`deko3d` `Primer.md`, "Memory Blocks" and "Queues").
 
 ## Homebrew notes
 
@@ -45,8 +51,10 @@ Use deko3d for new homebrew rendering; use NVN-style patterns (command buffers, 
 
 ## Sources
 
-- [SwitchBrew — Tegra X1 / GPU clocks](https://switchbrew.org/wiki/Tegra_X1) — handheld/docked GPU and memory clocks.
-- [SwitchBrew — Clocks](https://switchbrew.org/wiki/Clocks) — 307.2 / 384 / 768 MHz GPU targets and 1331–1600 MHz memory range.
-- [NVIDIA Tegra X1 whitepaper and GM20B docs](https://developer.nvidia.com/tegra-x1) — 256 CUDA cores, 2 multiprocessors, 16 texture / 16 render-output units, 256 KB L2, FP16 2x rate, 25.6 GB/s peak.
-- [deko3d — homebrew GPU library](https://github.com/fincs/deko3d) — block-linear GOB layout, explicit flush/invalidate/fence API, NVN-alternative for homebrew.
-- [libnx — GPU / display helpers](https://github.com/switchbrew/libnx) — how homebrew submits work and presents framebuffers.
+- SwitchBrew [Tegra X1](https://switchbrew.org/wiki/Tegra_X1) (oldid 14745, edited 2026-05-30) — 256-core Maxwell, FP16, memory interface and bandwidth.
+- [Chips and Cheese: Nintendo Switch's iGPU: Maxwell Nerfed Edition](https://chipsandcheese.com/) (2023-12-23) — 768 MHz clock, 256 KB L2, 64 KB shared memory, FP16 behaviour. The 384 MHz handheld remark is in the article's reader comments.
+- [nfsmw-nx](https://github.com/StevensND/nfsmw-nx) at `20f8dc1` — stock-clock table and handheld start clock `[reported]`.
+- [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) at `9aec4e3` — 384 MHz handheld profile `[reported]`.
+- [tegra_swizzle](https://github.com/ScanMountGoat/tegra_swizzle) at `d7ed318` — block-linear GOB layout.
+- [deko3d](https://github.com/devkitPro/deko3d) at `373bfd4` — `include/deko3d.h`, `Primer.md`, `README.md`: not Nouveau-based; explicit flush, invalidate and fence rules.
+- [libnx](https://github.com/switchbrew/libnx) — how homebrew obtains the display and submits work.

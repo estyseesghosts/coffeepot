@@ -2,9 +2,13 @@
 
 A custom **firmware** ([**firmware**](../../../glossary.md#firmware)) stack for the Nintendo **NX** ([**NX**](../../glossary.md#nx)) family that replaces the package1/package2 boot chain, owns the TrustZone monitor and reimplements kernel and sysmodules. What follows summarises the project's own tree and docs. Nothing was measured by Coffeepot. Tree facts are `[documented]`; ban and thermal claims are `[reported]` with conditions.
 
+## When is this useful?
+
+This page overlaps [Atmosphere and running](../../homebrew/atmosphere-and-running.md), which is canonical. Use it for the component-to-source-file map.
+
 ## Before you start
 
-- Evidence: `Atmosphere/README.md`, `docs/components/`, `docs/features/` (`cheats.md`, `dns_mitm.md`, `configurations.md`), `docs/changelog.md`, nine SwitchBrew HTMLs (named in Sources), and `Homebrew-Guide/`. Source files named below were opened and read.
+- Evidence: `Atmosphere/README.md`, `docs/components/`, `docs/features/` (`cheats.md`, `dns_mitm.md`, `configurations.md`), `docs/changelog.md`, nine SwitchBrew HTMLs (named in Sources), and `Homebrew-Guide/`. Source files named below are in Atmosphere commit `4e3f370` (see [source versions](../source-versions.md)). This page overlaps [Atmosphere and running](../../homebrew/atmosphere-and-running.md), which is canonical.
 - Hardware: unpatched Erista (RCM entry) vs patched/Mariko (modchip only); Tegra X1, Cortex-A57 cores, 256-core Maxwell GPU. Companions: [rendering](../rendering.md), [performance and porting](../performance-and-porting.md), [NX GPU](../../hardware/gpu.md).
 - Not in-tree: Hekate and sys-clk are absent (no matches; `utilities/` holds only scripts), so Hekate flow is cited from `Homebrew-Guide/usingcfw/hekate.rst` and OC rows stay `[reported]`. The RCM bug is cited without a CVE number. `faq.md` lacks ban/OC guidance (rows unpinned).
 - Unknown: the `Memory layout` HTML documents 32/36-bit userspace VA (38-bit from 2.0.0+) but not 39-bit or any applet-pool size, so the pool size below is `Unknown`.
@@ -20,7 +24,7 @@ Jargon: a **custom firmware** ([**CFW**](../../../glossary.md#cfw)) patches syst
 | Mesosphere | Reimplemented Horizon kernel, not a patch set: scheduler, threads, memory, processes, capabilities, IPC, and the full SVC table in `libraries/libmesosphere/source/` (`kern_k_scheduler.cpp`, `kern_k_process.cpp`, 37 `svc/kern_svc_*.cpp` files), instantiated per-core in `kern_kernel_instantiations.cpp`. |
 | Thermosphere | EL2 hypervisor (`thermosphere/README.md`); emuNAND redirection rides on it (`docs/components/thermosphere.md`, `emummc.md`). |
 | Stratosphere | Reimplemented sysmodules on `libstratosphere`: `loader`, `sm`, `pm`, `ro`, `ncm`, `spl`, `boot`/`boot2`, `creport`/`fatal`/`erpt`, `dmnt`, `ams_mitm`. IPS exefs and embedded loader patches sit at the edges. |
-| Troposphere | Thin app layer; only a `reboot_to_payload` sample. |
+| Troposphere | "Application-level Horizon OS patches" per the README; the directory holds small applications (`daybreak`, `haze`, `reboot_to_payload`). `dns.mitm` and the cheat manager are Stratosphère components, not Troposphère. |
 
 On top: LayeredFS (`fs_mitm/fsmitm_layered_romfs_storage.cpp`: `LayeredRomfsStorageImpl::Read/GetSize` merging SD over base ROMFS), `ns:am`/`ns:web` intercepts (`ns_mitm/nsmitm_module.cpp`: `AcknowledgeMitmSession`), `dns.mitm` telemetry redirect (`dns_mitm/` sources), and the `dmnt` cheat VM (`dmnt/source/cheat/impl/dmnt_cheat_vm.cpp`, `dmnt_cheat_api.cpp`: attach via `svc::DebugActiveProcess` plus a debug-events thread).
 
@@ -68,6 +72,8 @@ Title override is the key CPU/memory interaction. `libstratosphere/source/cfg/cf
 - Which Horizon IPC or keyblob change forces the next rework is unknown until the next major firmware.
 
 ## Sources
+
+Repositories at pinned commits: [Atmosphere-NX/Atmosphere](https://github.com/Atmosphere-NX/Atmosphere) `4e3f37038d9e82dde7054897213ab32b2ecf651f`, [noahc3/Homebrew-Guide](https://github.com/noahc3/Homebrew-Guide) `6d7b7bc` (archived). Files:
 
 - `Atmosphere/README.md` — component split, credits, licensing.
 - `Atmosphere/docs/components/fusee.md`, `exosphere.md` — boot duties; monitor design and custom SMCs (read against `secmon_smc_handler.cpp`, `secmon_key_storage.cpp`).

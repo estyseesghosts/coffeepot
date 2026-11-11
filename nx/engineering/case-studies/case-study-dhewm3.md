@@ -2,9 +2,13 @@
 
 A native Switch homebrew port of dhewm3 (the GPL Doom 3 source port) by fgsfds: the full id Tech 4 engine built to an NRO with `Makefile.nx`, drawing through switch-mesa OpenGL. This page summarises what the vendored tree's docs and code say; no scene was benchmarked, so there are no fps figures. It ends with what to copy first for stencil-shadow forward renderers on a Tegra X1 homebrew build.
 
+## When is this useful?
+
+Read this if you are porting a stencil-shadow, per-light forward renderer (Doom 3 style) through OpenGL on switch-mesa, to see where its cost is likely to land.
+
 ## Before you start
 
-- Evidence: tree facts are `[documented]` (file named); unmeasured costs are `[hypothesis]`. Coffeepot ran no benchmark or build.
+- Evidence: tree facts are `[documented]` (file named); unmeasured costs are `[hypothesis]`. Source: [fgsfdsfgs/dhewm3](https://github.com/fgsfdsfgs/dhewm3) commit `920e759` (2019-06-07; see [source versions](../source-versions.md)). Coffeepot ran no benchmark or build.
 - Tree: `neo/` engine, `base/` retail data (patch 1.3.1); Switch glue in `neo/sys/nx/`; build in `neo/Makefile.nx` (0.2.0; `dhewm3nx` and `d3xp` targets). Install goes to `/switch/dhewm3/`; nxlink stdio only under `DEBUG`/`NXLINK_DEBUG` [documented] (`main.cpp`, `README.md`).
 - Companion pages: [rendering](../rendering.md), [performance and porting](../performance-and-porting.md), [NX GPU](../../hardware/gpu.md).
 
@@ -58,6 +62,8 @@ Jargon used here: the **[CPU](../../../glossary.md#cpu)** runs game logic and bu
 | 5 | Applet hitching on pk4 streaming — require title override, compress bump pages, stream sound via the OpenAL cache [documented] (`main.cpp`, `README.md`). |
 | 6 | Overclock as the only lever — menu-expose the `nx_overclock` triple with restore-on-exit, log which clock moved the bottleneck [documented] (`nx_main.cpp`). |
 
+The lessons are inferences from the mechanisms the code shows. A `[documented]` tag cites the code that shows the mechanism, not a measurement that the fix works; none was tested on a console by Coffeepot.
+
 ## Open questions
 
 - No fps, draw-count, or resolution-vs-time figures exist in-tree; all costs above are mechanism-based.
@@ -66,11 +72,11 @@ Jargon used here: the **[CPU](../../../glossary.md#cpu)** runs game logic and bu
 
 ## Sources
 
-All in `private_please_gitignore/switch/dhewm3/`:
+[fgsfdsfgs/dhewm3](https://github.com/fgsfdsfgs/dhewm3) commit `920e759`:
 
-- `README.md` — dhewm3 scope, Switch prerequisites, `make -f Makefile.nx`, stencil depth-fail note.
-- `neo/Makefile.nx` — targets, A57 flags, renderer/idlib/game lists, `D3XP` variant.
-- `neo/renderer/draw_arb2.cpp`, `draw_common.cpp` — interactions, `interaction.vfp`.
+- `README.md` — scope, Switch prerequisites, `make -f Makefile.nx`, stencil "depth fail" note (line 167).
+- `neo/Makefile.nx` — targets, A57 flags (`-mtune=cortex-a57 ... -mcpu=cortex-a57+crc+fp+simd`, line 62), file lists.
+- `neo/renderer/draw_arb2.cpp`, `draw_common.cpp` — interactions, `interaction.vfp` (line 327).
 - `neo/renderer/tr_stencilshadow.cpp`, `tr_turboshadow.cpp`, `tr_shadowbounds.cpp` — volumes, bounds.
-- `neo/sys/glimp.cpp` — SDL window, GL 4.3 context, depth/stencil ladder, swap interval.
-- `neo/sys/nx/nx_main.cpp`, `main.cpp`, `nx_events.cpp` — overclock, paths/RAM/pump, SDL input.
+- `neo/sys/glimp.cpp` — SDL window, GL 4.x context request (line 184), depth/stencil ladder.
+- `neo/sys/nx/main.cpp` (`Sys_GetSystemRam`, 304 MB fallback at line 85, `svcGetInfo`), `neo/sys/nx/nx_main.cpp` (`nx_overclock`, line 74).

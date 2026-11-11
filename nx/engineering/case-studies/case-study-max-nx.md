@@ -2,9 +2,13 @@
 
 A Switch homebrew port of Max Payne Mobile (Android 1.7, `arm64-v8a`) running the original `libMaxPayne.so` natively. A launcher maps the shared object into memory, relocates it, resolves imports against Switch libraries, patches OS/graphics/audio entry points, and jumps into the game's main loop. Coffeepot has run none of this code.
 
+## When is this useful?
+
+Read this if you want to run an existing AArch64 Android game binary by loading it and hooking a few entry points instead of rewriting the engine.
+
 ## Before you start
 
-- Evidence: every behaviour is `[documented]` in the vendored tree (`README.md`, `Makefile`, `source/`, `source/hooks/`). No commit hash is recorded, so pin the source before relying on line detail (see [source versions](../source-versions.md)).
+- Evidence: every behaviour is `[documented]` in the vendored tree (`README.md`, `Makefile`, `source/`, `source/hooks/`). Source: [fgsfdsfgs/max_nx](https://github.com/fgsfdsfgs/max_nx) commit `264a0cc` (2025-11-27; see [source versions](../source-versions.md)).
 - No performance figures: the tree states no frame rates, frame times, or clocks. Expectations below are inference with conditions unstated, never measured results.
 - Baseline: GLES2 on `switch-mesa` / `switch-libdrm_nouveau`, RGBA8 with 24-bit depth + 8-bit stencil [documented]. 1280x720 handheld, 1920x1080 docked, overridable in `config.txt` [documented].
 - Companion pages: [rendering](../rendering.md), [performance and porting](../performance-and-porting.md), [NX GPU](../../hardware/gpu.md).
@@ -19,7 +23,7 @@ Jargon: the **[CPU](../../../glossary.md#cpu)** runs logic and graphics calls; t
 | Loader | Custom ELF loader: splits heap in `__libnx_initheap`, maps code via code-memory syscalls, relocates, resolves symbols, flushes caches, runs init array [documented]. |
 | OS shim | Fake-Android layer: device spoofing, archive-path redirect, stubbed movie/network/vibration/JNI, libc shims [documented]. |
 | Graphics | Four EGL functions hooked (init, make/unmake current, swap); GLES2 stream passes to Mesa untouched [documented]. |
-| Audio | ~130 OpenAL symbols re-pointed at Switch openal-soft, context forced to 44,100 Hz [documented]. |
+| Audio | ~130 OpenAL symbols re-pointed at Switch openal-soft; the hook overrides a 22,050 Hz request with 44,100 Hz (`source/hooks/openal.c` line 28) [documented]. |
 | Assets | Ships none; user extracts APK assets, the `arm64-v8a` `.so`, and OBB archives [documented]. |
 | Simulation | Variable-step mobile loop preserved; `config.txt` scales decals, debris, shadows, LOD instead [documented]. |
 
@@ -62,6 +66,8 @@ On Maxwell the path is GLES2 via Nouveau Mesa [documented]. Batch discipline is 
 | 4 | 1080p fill collapse — default bloom off via device spoof; live decal/shadow/LOD multipliers [documented]. |
 | 5 | Silent missing-data boot — stat every archive first; name the missing file [documented]. |
 | 6 | Exit leaks — capture device/context in hooks; tear down with EGL and unload [documented]. |
+
+The lessons are inferences from the mechanisms the code shows. A `[documented]` tag cites the code that shows the mechanism, not a measurement that the fix works; none was tested on a console by Coffeepot.
 
 ## Open questions
 

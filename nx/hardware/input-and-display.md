@@ -14,9 +14,10 @@ Each frame the game reads buttons, analog sticks, gyroscope/accelerometer and to
 
 | Controller | Hardware inside | Notes |
 | ---- | ----- | ----- |
-| Joy-Con left / right | Broadcom BCM20734 Bluetooth radio; STMicro STM32 **[microcontroller](../../glossary.md#mcu)**; laser-trimmed sticks | [reverse-engineered] (SwitchBrew Joy-Con hardware notes; community teardowns) |
-| Motion sensing | STMicro LSM6DS3H inertial module (gyro + accelerometer) in each Joy-Con / Pro Controller | [reverse-engineered] (SwitchBrew HID/Joy-Con notes; driver code) |
-| Touch-tag reader | NFC reader in the right Joy-Con for figures and cards | [reverse-engineered] (SwitchBrew NFC / NFP service notes) |
+| Joy-Con left (internal name Sakyo) | Broadcom BCM20734 SoC; STMicroelectronics LSM6DS3H motion sensor; TI BQ24072 power IC; 4 Mb Macronix flash. No separate microcontroller or NFC part is listed | [reverse-engineered] (SwitchBrew Joy-Con, "Hardware", oldid 13113) |
+| Joy-Con right (Ukyo) | The same parts plus an STMicroelectronics **[microcontroller](../../glossary.md#mcu)** (listed as STM32P411) and an ST21NFCB NFC controller | [reverse-engineered] (same page) |
+| Motion sensing | STMicroelectronics LSM6DS3H inertial module in each Joy-Con; the Pro Controller was not checked | [reverse-engineered] (SwitchBrew Joy-Con) |
+| Touch-tag reader | NFC controller in the right Joy-Con only, for figures and cards | [reverse-engineered] (SwitchBrew Joy-Con; the NFC/NFP service pages were not saved) |
 
 | HID path | Value |
 | ---- | ----- |
@@ -24,7 +25,7 @@ Each frame the game reads buttons, analog sticks, gyroscope/accelerometer and to
 | Snapshot region size | 0x40000 bytes |
 | Motion rate | Higher-rate sensor sampling decimated into the polled snapshot |
 
-The 0x40000-byte shared-memory size and poll-don't-call-per-frame behavior are [reverse-engineered] (SwitchBrew HID notes; libnx `hid` implementation).
+The 0x40000-byte shared-memory size is read from the code: `libnx` maps the HID shared-memory handle with `shmemLoadRemote(..., 0x40000, Perm_R)` [documented] (`libnx` `nx/source/services/hid.c` line 61). Polling the snapshot once per frame instead of sending IPC for each button is the documented design of `padUpdate` and the `PadState` API (`nx/include/switch/runtime/pad.h`). The SwitchBrew HID page was not saved.
 
 | Output | Behavior |
 | ---- | -------- |
@@ -32,17 +33,17 @@ The 0x40000-byte shared-memory size and poll-don't-call-per-frame behavior are [
 | Docked | HDMI through the dock; higher GPU clock and render resolution typical; audio follows HDMI when present |
 | Capture | System screenshot / video capture handled by the OS display service |
 
-Exact panel and HDMI mode tables live with the OS display service; this page only records the handheld-vs-docked split and that games pick from system-offered modes [reverse-engineered] (SwitchBrew display / capture notes).
+Exact panel and HDMI mode tables live with the OS display service; this page only records the handheld-versus-docked split. Programs learn which they are in through the applet service: `appletGetOperationMode()` returns `AppletOperationMode_Handheld` or `AppletOperationMode_Console` and an applet hook reports changes [documented] (`libnx` `nx/include/switch/services/applet.h`; see [performance and porting](../engineering/performance-and-porting.md)). The `deko_basic` example uses 1280x720, with 1920x1080 as the commented alternative [documented] (`switch-examples` `graphics/deko3d/deko_basic/source/main.c`).
 
 Audio (brief): software-mixed PCM through the system audio service to speakers, 3.5 mm jack, USB audio or HDMI. No elaboration here — formats and latency belong with a future audio page.
 
 ## Homebrew notes
 
-Use libnx `hid` polling (`hidScanInput`, shared-memory reads) every frame; never open an IPC session per button, and always apply the system motion calibration rather than raw sensor values. Expect different display sizes handheld versus docked — query the current mode and reallocate framebuffers on mode change.
+Use the libnx pad API: `padConfigureInput`, `padInitializeDefault`, then `padUpdate` once per frame and `padGetButtons` / `padGetButtonsDown` to read it (see [libnx and deko3d](../homebrew/deko3d-and-libnx.md)). The older `hidScanInput` / `hidKeysHeld` calls were removed in libnx 4.1.3. Whether the system's motion calibration is applied for you or must be applied by the game was not checked; the `sixaxis` example in `switch-examples` `hid/` is the place to read it. Expect different display sizes handheld versus docked — query the current mode and reallocate framebuffers on mode change.
 
 ## Sources
 
-- [SwitchBrew — HID / shared memory](https://switchbrew.org/wiki/HID) — 0x40000-byte polled snapshot, device map, motion handling.
-- [SwitchBrew — Joy-Con](https://switchbrew.org/wiki/Joy-Con) — BCM20734, STM32 microcontroller, LSM6DS3H motion module, right-controller NFC reader.
-- [SwitchBrew — Display / capture services](https://switchbrew.org/wiki/Display_services) — handheld vs. docked modes, framebuffer handoff, system capture.
-- [libnx — HID input API](https://github.com/switchbrew/libnx) — polling model and calibration helpers for homebrew (`hid.c`).
+- SwitchBrew [Joy-Con](https://switchbrew.org/wiki/Joy-Con) (oldid 13113, edited 2025-04-26) — Sakyo and Ukyo hardware lists.
+- [libnx](https://github.com/switchbrew/libnx) at `b156b4774fb2df7b93402169509266da7547fc4c` — `nx/source/services/hid.c` (shared-memory size), `nx/include/switch/runtime/pad.h`, `nx/include/switch/services/applet.h`.
+- [switch-examples](https://github.com/switchbrew/switch-examples) at `669786898205b7beb25ff1731e72982e6d0397d3` — `hid/` examples, `deko_basic` resolution constants.
+- SwitchBrew HID and display-services pages — referenced by earlier text; not saved with the research sources and not re-verified here.

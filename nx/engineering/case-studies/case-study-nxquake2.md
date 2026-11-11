@@ -2,9 +2,13 @@
 
 A native Switch port of Yamagi Quake II (enhanced GPLv2 Quake II client on Icculus 3.21) by fgsfds, built with devkitA64, SDL2 and switch-mesa: an NRO plus renderer and `game.so` loaded via libsolder, with retail `baseq2/` assets on SD [documented]. Coffeepot measured none of it; the tree gives no Switch frame figures.
 
+## When is this useful?
+
+Read this for how a Quake II client handles the Switch's applet, display and gyro details around an unmodified GL path, and for its renderer-as-a-cvar approach.
+
 ## Before you start
 
-- Tree at `private_please_gitignore/switch/nxquake2`, HEAD `a8fdda02`, dirty; Coffeepot built and ran none of it.
+- Source: [fgsfdsfgs/nxquake2](https://github.com/fgsfdsfgs/nxquake2) commit `a8fdda02` (2022-12-19; see [source versions](../source-versions.md)); Coffeepot built and ran none of it.
 - Ships `ref_gl3.so` (desktop GL 3.2 on switch-mesa/nouveau) next to the NRO per the install doc [documented] (`doc/990_switch.md`).
 - Only upstream performance note: playable on Raspberry Pi with the GL1 renderer, frame rate heavily resolution-dependent [reported] (`CHANGELOG`, no model, clocks, or scene stated).
 - Companion pages: [rendering](../rendering.md), [performance and porting](../performance-and-porting.md), [NX GPU](../../hardware/gpu.md).
@@ -62,6 +66,8 @@ Jargon: the **[CPU](../../../glossary.md#cpu)** runs game and submission on one 
 | 5 | `mmap` reservation does not port — keep a plain-`calloc` hunk backend and size the set for applet memory unless you require title-override [documented]. |
 | 6 | Vendored SDL predates sensor APIs — poll `hidGetSixAxisSensorStates` directly with a calibration pause and archived cvars [documented]. |
 
+The lessons are inferences from the mechanisms the code shows. A `[documented]` tag cites the code that shows the mechanism, not a measurement that the fix works; none was tested on a console by Coffeepot.
+
 A new homebrew FPS should copy the architecture, not the call stream: baked PVS + lightmaps, fixed-tick prediction, reloadable renderer, portable saves with crash logs, focus-hook pausing — then its own batched Maxwell path.
 
 ## Open questions
@@ -72,4 +78,4 @@ A new homebrew FPS should copy the architecture, not the call stream: baked PVS 
 
 ## Sources
 
-Vendored tree `private_please_gitignore/switch/nxquake2` at `a8fdda02`: `doc/990_switch.md`; `CMakeLists.txt`; `Makefile`; `src/backends/nx/system.c` + `nx/shared/hunk.c`; `src/backends/unix/main.c` + `system.c`; `src/client/vid/glimp_sdl.c`; `src/client/input/sdl.c` + `menu/menu.c`; `src/client/sound/sdl.c`; `src/common/frame.c` + `src/server/`; `doc/030_configuration.md`, `doc/040_cvarlist.md`, `CHANGELOG`.
+[fgsfdsfgs/nxquake2](https://github.com/fgsfdsfgs/nxquake2) at `a8fdda02`: `doc/990_switch.md`; `CMakeLists.txt`; `Makefile`; `src/backends/nx/system.c` + `nx/shared/hunk.c`; `src/backends/unix/main.c` + `system.c`; `src/client/vid/glimp_sdl.c`; `src/client/input/sdl.c` + `menu/menu.c`; `src/client/sound/sdl.c`; `src/common/frame.c` + `src/server/`; `doc/030_configuration.md`, `doc/040_cvarlist.md`, `CHANGELOG`.

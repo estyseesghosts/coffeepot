@@ -40,7 +40,7 @@ The community homebrew GPU library for Switch, an explicit Vulkan-like alternati
 <a name="libnx"></a>
 
 ### libnx
-The community C library for Switch user programs: kernel wrappers plus clients for ~100 system services. See [libnx and deko3d](homebrew/deko3d-and-libnx.md).
+The community C library for Switch user programs: kernel wrappers plus clients for the system services (one header per service under `nx/include/switch/services/`). See [libnx and deko3d](homebrew/deko3d-and-libnx.md).
 
 <a name="title-override"></a>
 
@@ -51,3 +51,23 @@ Launching the homebrew menu in place of a full game (hold R on launch) to get th
 
 ### Atmosphere
 The standard Switch custom firmware: loader and service patches that allow homebrew with full memory. See [Atmosphere and running](homebrew/atmosphere-and-running.md).
+
+<a name="fence"></a>
+
+### Fence
+A marker in the GPU's work queue that the GPU signals when it reaches that point, so software can tell when earlier work has finished. In `deko3d`, the CPU waits on one with `dkFenceWait`; `dkQueueWaitFence` makes the GPU wait instead. See [rendering](engineering/rendering.md).
+
+<a name="dksh"></a>
+
+### DKSH
+The file format `deko3d` uses for a precompiled shader module (native Maxwell GPU code plus metadata). It is produced on the PC by [uam](#uam); `deko3d` cannot compile shaders at run time. See [libnx and deko3d](homebrew/deko3d-and-libnx.md).
+
+<a name="uam"></a>
+
+### uam
+The shader compiler for `deko3d`: a PC tool that turns GLSL into [DKSH](#dksh) files. It is based in part on Mesa's GLSL parser and Nouveau's code generator, but it is a separate project from `deko3d` itself. See [libnx and deko3d](homebrew/deko3d-and-libnx.md).
+
+<a name="gob"></a>
+
+### GOB and block-linear layout
+The way the Switch GPU stores images in memory: in tiles called GOBs, 64 bytes wide by 8 rows, grouped into blocks, instead of one row after another (pitch-linear). It is the default image layout in `deko3d`. See [NX GPU](hardware/gpu.md) and [rendering](engineering/rendering.md).

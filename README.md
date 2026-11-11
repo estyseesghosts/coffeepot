@@ -9,10 +9,10 @@ To prepare a 3DS for homebrew, follow the [3DS Hacks Guide](https://3ds.hacks.gu
 ## Platforms
 
 - [Nintendo 3DS family (CTR)](ctr/index.md) — processors, GPU, memory, firmware, OS, security and the homebrew scene.
-- [Nintendo Switch family (NX)](nx/index.md) — scaffolded; research pass pending.
+- [Nintendo Switch family (NX)](nx/index.md) — processors, GPU, memory, firmware, OS, Atmosphere and the homebrew toolchain, plus engineering guides on rendering, performance and porting. The engineering guides include a complete small game ([first game](nx/engineering/first-game.md)) and a [debugging guide](nx/engineering/debugging.md); all code is compile-checked but not yet run on a console (see [NX source versions](nx/engineering/source-versions.md)).
 
 ## Reading guide
 
 - Jargon is explained on first use and defined in the [global glossary](glossary.md) or the per-console glossary ([CTR](ctr/glossary.md), [NX](nx/glossary.md)).
-- Each console has hardware, software and homebrew sections, and the 3DS also has engineering guides (debugging, performance, memory, rendering, assets, testing); start from the console's `index.md`.
+- Each console has hardware, software and homebrew sections; the 3DS has engineering guides for debugging, performance, memory, rendering, assets and testing, and the Switch has guides for rendering and performance and porting. Start from the console's `index.md`.
 - Every page ends with Sources. Contributors: read [AGENTS.md](AGENTS.md) first.

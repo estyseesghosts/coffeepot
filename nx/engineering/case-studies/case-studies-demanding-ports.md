@@ -2,9 +2,13 @@
 
 Ultra Street Fighter IV and Need for Speed: Most Wanted are both static recompilations of Xbox 360 games for the Switch, built on ahead-of-time recompilation plus a native renderer. They took opposite paths once Vulkan-on-NVK became the limit: USF4 abandoned NVK for deko3d; NFSMW stayed on NVK and made it pay. Both trees document every step. None of the numbers were measured by Coffeepot; all are `[reported]`.
 
+## When is this useful?
+
+Read this when you must choose between a Vulkan-on-NVK renderer and `deko3d` for a demanding port, or want to see how two teams found their real bottleneck. Skip it for small games.
+
 ## Before you start
 
-- Evidence: every figure below is `[reported]` by the named project. Coffeepot has run no benchmark and no code from these projects.
+- Evidence: every figure below is `[reported]` by the named project (usf4-nx commit `30ffae024fc30856bebe63a421221e35b5e2d9ea`, nfsmw-nx commit `20f8dc122bf0cd95211606ebacd3fda550cb21a8`; see [source versions](../source-versions.md)). Coffeepot has run no benchmark and no code from these projects.
 - USF4 target: locked 60 fps — frame pacing and input latency are correctness, not polish. NFSMW target: sustained ~30 fps while streaming an open city, at stock clocks with no overclock.
 - Companion pages: [rendering](../rendering.md), [performance and porting](../performance-and-porting.md), [NX GPU](../../hardware/gpu.md).
 
@@ -14,7 +18,7 @@ Ultra Street Fighter IV and Need for Speed: Most Wanted are both static recompil
 
 **What it gets right.**
 
-- **deko3d over NVK, A/B on one build.** Same Training fight, docked, CPU 1887 / GPU 844.8 / MEM 1862.4 MHz: native Vulkan render thread 18.6 ms (53.5 fps) at 720p vs Renut-on-deko3d 2.8 ms (59.9 fps) at 720p; NRO 66.7 MB to 56.3 MB with NVK unlinked [reported].
+- **deko3d over NVK, A/B on one build.** Same Training fight (Juri vs Hakan, two minutes each), docked, on a V1 Switch (Erista) at firmware 22.5.0 under emuMMC, CPU 1887 / GPU 844.8 / MEM 1862.4 MHz, which are overclocked values: native Vulkan render thread 18.6 ms (53.5 fps) at 720p vs Renut-on-deko3d 2.8 ms (59.9 fps) at 720p; GPU per frame 9.3 ms vs 8.4 ms; NRO 66.7 MB to 56.3 MB with NVK unlinked [reported] (`docs/deko3d-renderer-usf4.md` section 1). The stock-clock result is not given.
 - **Depth-target clipping fix.** USF4 leaves a 320×180 depth target bound during full-screen 1280×736 passes; **[Maxwell](../../glossary.md#maxwell)** discards everything outside the smallest bound target, so only the top-left drew. Draws and clears that neither test nor write depth no longer bind the smaller depth target [reported]. Emulators never showed it.
 - **Depth hand-over resolve kept.** Whole-target depth resolve sampled from the target image saves ~0.4 ms GPU per frame; first suspect in the clipping bug, bisected innocent, kept on [reported].
 - **Static-after-60 plus staggered full hash.** Linear textures hashed 11.3 GB per 10 s (~19 MB per frame); after 60 unchanged full checks a texture gets sampled hash per frame plus full hash every 16 frames staggered by address: 11.3 to 0.7 GB per 10 s, render thread 6.4 to 2.8 ms per frame. Cost: a write missed by both hashes shows up to 16 frames late [reported].
@@ -24,7 +28,7 @@ Ultra Street Fighter IV and Need for Speed: Most Wanted are both static recompil
 
 **What it gets wrong.**
 
-- **Overclock dependence.** Fights hold 60 fps only at CPU 1785 / GPU 768 MHz; stock clocks do not hold it. The README states this outright [reported].
+- **Overclock dependence.** The README reports fights holding 60 fps with the CPU at 1785 MHz and the GPU at 768 MHz, "set with sys-clk", measured in October 2026; it gives no stock-clock result, so whether stock clocks hold 60 fps is unstated [reported] (`README.md`).
 - **NVK validation and descriptor overhead.** ~3 µs per pipeline bind, ~2.4–2.9 µs per draw on the A57; ~400–500 draws per frame saturated the ring thread at 18.6 ms while the GPU sat at 9.3 ms [reported].
 - **Emulator-only bugs.** The Maxwell clipping and a log-socket freeze (~37 s, blocking send under mutex) never reproduced on PC; fixed with the smallest-target rule and a non-blocking log socket [reported].
 - **Empty-cache comparison trap.** The first NVK-vs-Renut A/B ran the native renderer with no shader package beside the NRO: it drew 0 draws, presented black screenshots, and "won" at 60 fps. Rule adopted: screenshot plus draw count per presented frame before any comparison [reported].
@@ -47,6 +51,8 @@ Ultra Street Fighter IV and Need for Speed: Most Wanted are both static recompil
 - **Config overriding code defaults** silently disabled changes for several builds; now every log echoes effective settings [reported].
 - **Counters that lied:** wall-clock "busy 97%" was 76% CPU plus 21% wait; cumulative-vs-interval mix; a 200-entry stutter log hiding second-half races; a guard reporting "0 conflicts" with the feature switched off [reported].
 
+> Thread pinning, lock-free queues and similar structures below were responses to contention these projects measured on their own workloads. They are not defaults: add them after a profile shows the contention, and check for a regression, since the SA2 notes record one lock-free queue making the game thread slower at first.
+
 ## Shared techniques
 
 | Problem | USF4 answer | NFSMW answer | Transferable rule |
@@ -67,11 +73,5 @@ Ultra Street Fighter IV and Need for Speed: Most Wanted are both static recompil
 
 ## Sources
 
-- usf4-nx `docs/deko3d-renderer-usf4.md` — A/B table, clipping fix, hashing, latency, rig, traps.
-- usf4-nx `docs/usf4-notes.md` — 0.1.0 to 0.8.1 timeline, ring limits, save-hitch, limiter fixes.
-- usf4-nx `README.md` — 60 fps at 1785/768 claim, installer, 0.8.x update path.
-- nfsmw-nx `docs/performance-history.md` — 1–3 to 32–35 fps timeline, stock-clock table.
-- nfsmw-nx `docs/native-renderer.md` — ring design, per-draw pipeline, guards, texture and memory rules.
-- nfsmw-nx `docs/mesa.md` — ZCULL, scheduling fixes, per-draw NVK cuts.
-- nfsmw-nx `docs/platform-notes.md` — clocks, priorities, 2-submit idle, allocation limits, presentation caps.
-- nfsmw-nx `docs/measuring.md` — timestamp correction, A/B alternation, pacing over mean.
+- [usf4-nx](https://github.com/Thorhax/usf4-nx) commit `30ffae024fc30856bebe63a421221e35b5e2d9ea`: `docs/deko3d-renderer-usf4.md` (A/B table in section 1, clipping fix, hashing, latency, rig, traps), `docs/usf4-notes.md` (0.1.0 to 0.8.1 timeline, ring limits, save hitch, limiter fixes), `README.md` (60 fps at 1785/768 claim, installer).
+- [nfsmw-nx](https://github.com/StevensND/nfsmw-nx) commit `20f8dc122bf0cd95211606ebacd3fda550cb21a8`: `docs/performance-history.md` (1-3 to 32-35 fps timeline; step table), `docs/native-renderer.md` (ring design, per-draw pipeline, texture cache 512 MB, 113 of 113 pipelines), `docs/mesa.md` (ZCULL, scheduling fixes), `docs/platform-notes.md` (clocks, priorities, two-submit idle of 3.6 ms), `docs/measuring.md` (timestamp correction by 1.627, A/B alternation).

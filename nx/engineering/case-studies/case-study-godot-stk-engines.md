@@ -2,9 +2,13 @@
 
 A Godot 3.x `switch` target and a SuperTuxKart (STK) CMake Switch build take the GLES path instead of native deko3d. Both ship as homebrew NROs through GLES; neither touches native Maxwell controls. Coffeepot measured nothing; every tree claim is `[reported]` or `[documented]` in the named file.
 
+## When is this useful?
+
+This page overlaps [open-engine ports](case-studies-open-engines.md), which is the canonical summary. Use it only for the Godot audio and input details.
+
 ## Before you start
 
-- Trees: `private_please_gitignore/switch/godot_switch/` and `private_please_gitignore/switch/stk-code/` (`switch/make.sh`, `switch/package.sh`, `.github/workflows/switch.yml`).
+- Trees: [redthing1/godot_switch](https://github.com/redthing1/godot_switch) at `0918643f6` and [supertuxkart/stk-code](https://github.com/supertuxkart/stk-code) at `b2a9f2233` (see [source versions](../source-versions.md)) (`switch/make.sh`, `switch/package.sh`, `.github/workflows/switch.yml`). This page overlaps [open-engine ports](case-studies-open-engines.md); that page is the canonical summary..
 - Builds [documented]: Godot `scons platform=switch` (`platform/switch/detect.py`); STK `switch/make.sh` (`aarch64-none-elf-cmake -DNO_SHADERC=on`, `make install`, `switch/package.sh`).
 - Launch: NRO from SD. The applet-vs-title memory trap applies to both.
 - Companions: [rendering](../rendering.md), [performance and porting](../performance-and-porting.md).
@@ -26,7 +30,7 @@ Neither tree pins threads to the 3 app cores or ships PGO/LTO [documented]. Godo
 
 ## Maxwell interaction
 
-Both push work through EGL/GLES, so tiling, Zcull, and bandwidth control stay inside the driver. Godot's surface is fixed [documented]: RGBA8 plus D24S8, window surface on the default window, GLES 3 requested, size stubs return 1280x720, with no resolve negotiation or compression calls. STK builds the GLES2 renderer with offline compile disabled (`-DNO_SHADERC=on` adds `-DDISABLE_SHADERC`), so shaders compile on-console at load time [documented]. Neither sets Zcull, tile modes, or compression, so full-res passes pay full bandwidth at driver defaults [reported]. Error checking stays on in both; neither sets `MESA_NO_ERROR=1` [documented].
+Both push work through EGL/GLES, so tiling, Zcull, and bandwidth control stay inside the driver. Godot's surface is fixed [documented]: RGBA8 plus D24S8, window surface on the default window, GLES 3 requested, size stubs return 1280x720, with no resolve negotiation or compression calls. STK is built with `-DNO_SHADERC=on`, which `CMakeLists.txt` (lines 273-284) describes as disabling Vulkan support when the shaderc library is missing; the define `DISABLE_SHADERC` is consumed in `lib/graphics_engine` (the Vulkan engine). The tree does not show when the GLES shaders compile on the console, so first-run stutter is `[hypothesis]`. Neither sets Zcull, tile modes, or compression, so full-res passes pay full bandwidth at driver defaults [reported]. Error checking stays on in both; neither sets `MESA_NO_ERROR=1` [documented].
 
 ## What each does well
 
@@ -42,7 +46,7 @@ Both push work through EGL/GLES, so tiling, Zcull, and bandwidth control stay in
 
 | Trap | Detail |
 | ---- | ------ |
-| Compile stutter | STK disables offline compile (`NO_SHADERC=on`) [documented]; Godot ships no precompiled GLES cache, so first runs compile on-console [reported]. Neither has the sealed-cache plus background-compile defense [reported]. |
+| Compile stutter | GLES drivers compile shaders from source at run time, so first-use hitches are plausible in both `[hypothesis]`; no tree here measures it, and `NO_SHADERC` concerns the Vulkan engine, not this. Neither tree has the sealed-cache plus background-compile defence the deko3d ports built `[documented]`. |
 | No bandwidth budget | Fixed RGBA8+D24S8 surface and full-res GLES passes with no Zcull/tiling/compression or MSAA tradeoff pass in either tree [documented]. Overdraw is paid in full [reported]. |
 | Applet OOM | Godot gates applet types with a splash screen [documented] but neither documents a title-only budget; STK's large `stk-data` sidecar invites the same Album-launch failure behind **[title override](../../glossary.md#title-override)** warnings [reported]. |
 | SD streaming | Large data/pck sidecars sit on SD with no prefetch in the Switch scripts; slow cards stall boot and loads [reported]. |
@@ -53,8 +57,8 @@ Both push work through EGL/GLES, so tiling, Zcull, and bandwidth control stay in
 
 | # | Rule |
 | - | ---- |
-| 1 | 2D or modest 3D at 30 fps sub-native with a few hundred draws: stay on GLES. Past ~1,000 draws/frame, heavy transparency, or full-res shadows: move to deko3d [reported]. |
-| 2 | Recurring first-draw hitches with no offline store: GLES has no in-tree answer; the deko3d sealed-cache plus warmup is the fix [reported]. |
+| 1 | 2D or modest 3D at 30 fps sub-native with a few hundred draws: stay on GLES `[hypothesis]`. Past roughly 1,000 draws/frame, heavy transparency, or full-res shadows: consider deko3d. The threshold is a `[hypothesis]`; the benchmark that would set it is on [rendering](../rendering.md). |
+| 2 | Recurring first-draw hitches with no offline store: GLES has no in-tree answer; the deko3d ports' sealed cache plus warm-up is the answer they built [reported]; whether GLES hitches occur here is untested. |
 | 3 | 720p RGBA8+D24S8 missing frame on stock clocks: GLES exposes no tile/Zcull/compression knobs; only a native pass rewrite helps [documented]. |
 | 4 | Script/physics plus audio plus render sharing 3 cores with no pinning or PGO: pin, profile, cut submission first [documented]. |
 
@@ -67,6 +71,9 @@ Both push work through EGL/GLES, so tiling, Zcull, and bandwidth control stay in
 - Would one scene per engine in deko3d show tile/Zcull wins? Proposed, not done [reported].
 
 ## Sources
+
+Repositories at pinned commits: [redthing1/godot_switch](https://github.com/redthing1/godot_switch) `0918643f62a6b7664a9d9bc6bcfdb280510a1b17`, [supertuxkart/stk-code](https://github.com/supertuxkart/stk-code) `b2a9f223326422aa2dd4eea28319b0c5115fde03`. Files:
+
 
 - `godot_switch/platform/switch/` — `context_gl_switch_egl.cpp` (EGL RGBA8+D24S8, GLES 3, 1280x720 stubs), `audio_driver_switch.cpp/.h` (48 kHz, 24 voices, aligned pool, `0x2B` thread), `joypad_switch.cpp` (8-slot Npad map, per-frame poll), `export/export.cpp` (NRO plus `.pck`, fused romfs, nxlink push), `godot_switch.cpp` (applet splash gate), `detect.py` plus `os_switch.cpp` (scons target, cortex-a57 flags, GLES libs, visual-server wrap).
 - `stk-code/switch/make.sh`, `switch/package.sh`, `.github/workflows/switch.yml` — aarch64 cmake `NO_SHADERC=on`, NRO plus `stk-data` zip, devkitA64 CI.

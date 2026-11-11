@@ -1,11 +1,14 @@
 # Case study: deko3d GPU stack on Tegra X1
 
-deko3d is the community homebrew low-level 3D API for the Nintendo Switch: an explicit, Vulkan-like layer over the second-generation Maxwell GPU (GM20B) in the **[Tegra X1](../../glossary.md#tegra-x1)**, built from a year-and-a-half of reverse engineering NVIDIA's NVN. This page summarises the project's own tree — Primer.md, README.md, `deko3d.h`, the uam compiler, tegra_swizzle, and switch-examples 01–09. Nothing was measured by Coffeepot; header facts `[documented]`, silicon and port costs `[reported]`.
+deko3d is the community homebrew low-level 3D API for the Nintendo Switch: an explicit, Vulkan-like layer over the second-generation Maxwell GPU in the **[Tegra X1](../../glossary.md#tegra-x1)**, built from a year-and-a-half of reverse engineering NVIDIA's NVN. This page summarises the project's own tree — Primer.md, README.md, `deko3d.h`, the uam compiler, tegra_swizzle, and switch-examples 01–09. Nothing was measured by Coffeepot; header facts `[documented]`, silicon and port costs `[reported]`.
+
+## When is this useful?
+
+This page overlaps [libnx and deko3d](../../homebrew/deko3d-and-libnx.md) and [rendering](../rendering.md), which are canonical. Use it as a one-page recap of the `deko3d` object model and its limits.
 
 ## Before you start
 
-- Evidence: API behaviour `[documented]` from `private_please_gitignore/switch/deko3d/`; clocks, bandwidth, occupancy, bind costs `[reported]`.
-- Clocks: ~307.2 MHz handheld, 384 MHz higher-handheld, 768 MHz docked; 25.6 GB/s shared peak docked, lower handheld `[reported]`.
+- Evidence: API behaviour `[documented]` from [devkitPro/deko3d](https://github.com/devkitPro/deko3d) at `373bfd4`; clocks and bind costs `[reported]`. This page duplicates parts of [libnx and deko3d](../../homebrew/deko3d-and-libnx.md) and [rendering](../rendering.md), which are canonical.
 - Scope: user-space rendering through **[deko3d](../../glossary.md#deko3d)** plus **[libnx](../../glossary.md#libnx)** on **[NX](../../glossary.md#nx)**. Kernel internals and NVN are background.
 
 Jargon: the **[CPU](../../../glossary.md#cpu)** records command words the GPU executes; both share one **[system-on-a-chip](../../../glossary.md#soc)** and bus; a **[shader](../../../glossary.md#shader)** is a GPU program; each swapchain **[framebuffer](../../../glossary.md#framebuffer)** is one displayable image; **[cache](../../../glossary.md#cache)** is the CPU/image/descriptor/L2 caches barriers invalidate; **[texture tiling](../../../glossary.md#tiling)** is the block-linear GOB layout images must use; **[Maxwell](../../glossary.md#maxwell)** is the GPU architecture generation.
@@ -38,11 +41,11 @@ CPU records into `GpuCached|CpuUncached` memory, submitted as one batch at flush
 
 | GPU fact | Value |
 | -------- | ----- |
-| Cores | 256 CUDA in 2 SMMs, 16 texture units, 16 ROPs `[reported]` (Chips & Cheese). |
-| Clocks, bus | 307.2 / 384 / 768 MHz; 25.6 GB/s shared peak docked, lower handheld `[reported]`. |
+| Cores | 256 CUDA cores (SwitchBrew Tegra X1) in 2 multiprocessors (arithmetic, Chips and Cheese) `[reported]`. Texture-unit and ROP counts are Unknown: no saved source states them. |
+| Clocks, bus | 307.2 / 460.8 / 768 MHz stock per `nfsmw-nx`; 25.6 GB/s theoretical shared peak, 21.3 GB/s at the handheld memory clock (arithmetic) `[reported]`. See [NX GPU](../../hardware/gpu.md). |
 | Layout | Block-linear GOB 64×8; tegra_swizzle implements tile/untiling `[documented]`. |
-| Occupancy | 64 warps/SM, 255 regs/thread, 64 KiB shared/SM; FP64 div/sqrt approximated `[reported]` (Tuning Guide). |
-| Precision | FP16 at reduced cost, never autopacked; variable int div/mod decays to float `[documented]`. |
+| Occupancy | The CUDA Maxwell Tuning Guide's occupancy numbers describe desktop CUDA kernels; whether they apply to uam graphics shaders is a `[hypothesis]`. Shared memory is 64 KB per multiprocessor `[reported]` (Chips and Cheese). |
+| Precision | uam: integer division and modulo by non-constants decay to floating point with a warning; 64-bit float divide and square root are approximated `[documented]` (`uam` `README.md`). NVIDIA's own compiler on the Switch did not pack FP16 automatically `[reported]` (Chips and Cheese); uam's behaviour is untested. |
 
 ## What it does well
 
@@ -51,7 +54,7 @@ CPU records into `GpuCached|CpuUncached` memory, submitted as one batch at flush
 | Explicit control | No hidden allocator or driver thread; queues, barriers, layouts, slots are yours. |
 | Validation layer | `-ldeko3dd` catches bad state on dev machines; ship on `-ldeko3d`. |
 | No runtime compiler | Precompiled DKSH, ~500 KiB apps vs ~8 MB switch-mesa, no first-run stutter `[reported]`. |
-| Maxwell features | Zcull, tiled cache, compressed targets nouveau had not picked up `[reported]`. |
+| Maxwell features | Zcull, tiled cache, compressed targets that, per the deko3d README, nouveau had not picked up `[documented]` (README's claim). |
 
 ## What it does poorly
 
@@ -71,8 +74,8 @@ CPU records into `GpuCached|CpuUncached` memory, submitted as one batch at flush
 | 1 | Bind-scale CPU cost `[reported]` — capture repeated state once, replay it. |
 | 2 | Uniform-update stalls — 64 KiB push-style updates between flushes. |
 | 3 | Ring-wrap stalls — grow the ring, tune the threshold (size/8) so the GPU drains first. |
-| 4 | G-buffer saturation on the shared 25.6 GB/s bus `[reported]` — keep passes in the tiled cache (Example 08). |
-| 5 | Depth cost on 16 ROPs `[reported]` — keep Zcull on, discard rather than clear overwritten attachments. |
+| 4 | G-buffer traffic on the shared memory bus — Example 08 keeps deferred G-buffers in tile memory; the benefit is `[hypothesis]` until measured. |
+| 5 | Depth cost — Zcull is on by default; discarding attachments whose contents are not needed is an option the API provides `[documented]`; the gain is `[hypothesis]`. |
 | 6 | Shader stutter and NRO bloat — compile to DKSH offline within caps, ship `.dksh`, dev on `-ldeko3dd`. |
 
 ## Open questions
@@ -83,6 +86,9 @@ CPU records into `GpuCached|CpuUncached` memory, submitted as one batch at flush
 - Captured words may not survive version changes; invalidation is the app's job.
 
 ## Sources
+
+Repositories at pinned commits (see [source versions](../source-versions.md)): [devkitPro/deko3d](https://github.com/devkitPro/deko3d) `373bfd43d8b2d805fa2eb7d406dbb823032df958`, [devkitPro/uam](https://github.com/devkitPro/uam) `5a5afc2bae8b55409ab36ba45be63fcb73f68993`, [ScanMountGoat/tegra_swizzle](https://github.com/ScanMountGoat/tegra_swizzle) `d7ed318ce233a4d557d4a2f207ed5dc04ed813c0`, [switchbrew/switch-examples](https://github.com/switchbrew/switch-examples) `669786898205b7beb25ff1731e72982e6d0397d3`, [ChanseyIsTheBest/sa2-nx](https://github.com/ChanseyIsTheBest/sa2-nx) `baf523b8e93a1b02d8b73d13aebf86780f8cc0c6`. Files:
+
 
 - deko3d `Primer.md` — objects, queues, fences, barriers, DKSH, uam limits, capture/replay, debug vs release.
 - deko3d `README.md` — goals, NVN relation, mesa comparison, gap list.

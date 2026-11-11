@@ -1,11 +1,15 @@
 # Case study: Eidos on Switch (Ouroboros) — a cautionary tale (reported results)
 
-Ouroboros tried to ship a DS reimplementation as a native Switch title at stock clocks. The first attempt took the expedient path (desktop GL on Maxwell via Nouveau plus driver patches) and stalled on copies, not on the GPU. The second attempt broke cleanly to native libnx plus deko3d with a strict measurement protocol — the right direction — but with no stock-clock full-speed run yet. All figures are `[reported]` with conditions as stated; do not cite as fresh measurement.
+Ouroboros tried to ship a DS reimplementation as a native Switch title at stock clocks. The first attempt took the expedient path (desktop GL on Maxwell via Nouveau plus driver patches) and stalled on copies, not on the GPU. The second attempt broke cleanly to native libnx plus deko3d with a strict measurement protocol — the right direction — but with no stock-clock full-speed run yet. All figures are `[reported]` with conditions as stated; do not cite as fresh measurement. The source is a private engineering guide for the Pokémon Black/White native port in the Coffeepot research folder, so unlike the other case studies the numbers cannot be checked by a reader of this wiki.
+
+## When is this useful?
+
+Read this as a warning about optimising the wrong subsystem (a per-frame readback) and about trusting numbers that nest or ignore clocks. Its private source means you cannot check the figures.
 
 ## Before you start
 
 - Attempt 1 (ouroboros-1): SDL3 plus EGL/Mesa/OpenGL ES on Maxwell via Nouveau, plus 5 local Mesa patches [reported].
-- Mid-course profiling revolt (Nov 3): Mistralton field reference scene, no-wait, outlines off — **61.2 ms per frame (~16 game fps)**: render 39.2 ms with **fullscreen readback 22.5 ms**, main-2D 8.8 ms, UI ~6 ms, game 10.0 ms [reported]. A fence fix changed nothing (61.9 ms, same 22.5 ms readback, 0 late reads) — proving CPU-copy bound, not GPU wait [reported].
+- Mid-course profiling (2026-11-03): Mistralton field reference scene, no-wait, outlines off — **61.2 ms per frame (~16 game fps)**: render 39.2 ms with **fullscreen readback 22.5 ms**, main-2D 8.8 ms, UI ~6 ms, game 10.0 ms [reported]. A fence fix changed nothing (61.9 ms, same 22.5 ms readback, 0 late reads) — proving CPU-copy bound, not GPU wait [reported].
 - Attempt 2 (ouroboros-2, Nov 6): clean break to native libnx plus deko3d with a versioned frame-packet ABI, GPU 2D and 3D paths, persistent residency, 3-slot frame queue, and an acceptance ladder [reported]. Stock-clock full speed explicitly **not yet established**; emulator timings are diagnostic only [reported].
 - Companion pages: [rendering](../rendering.md), [performance and porting](../performance-and-porting.md).
 
@@ -46,6 +50,6 @@ The moral is short: Maxwell was never the bottleneck. The copies, the consumers,
 
 ## Sources
 
-- bw-switch `EIDOS_SWITCH_ENGINEERING_GUIDE.md` and `docs/` — frame-packet ABI, ownership and fence discipline, measurement protocol, acceptance ladder.
-- bw-switch ouroboros-1 tree (platform GL sources, Mesa patches, status and bottleneck notes) — wrong-stack costs, readback numbers, effects-off caveats.
-- bw-switch ouroboros-2 tree (native libnx plus deko3d branch, packet and queue design) — clean-break direction, pending hardware runs.
+- Eidos Switch engineering guide (`EIDOS_SWITCH_ENGINEERING_GUIDE.md`, private research file; section 1 line 24 records the 2026-11-03 Mistralton field profile: ~61.2 ms per game frame, fullscreen readback 22.5 ms; section on frame packets mentions a 400 KiB GPU-to-CPU round trip) — frame-packet ABI, ownership and fence discipline, measurement protocol, acceptance ladder.
+- `OUROBOROS_NATIVE_IMPLEMENTATION_PLAN.md` and `ouroboros_native_switch_bootstrap_plan.md` (private research files) — native branch design; not re-read line by line for this revision.
+- The earlier text also named a "bw-switch" tree for the ouroboros-1 and ouroboros-2 attempts; that tree was not among the saved sources, so the Mesa-patch and Nov 6 branch details are unverified here.

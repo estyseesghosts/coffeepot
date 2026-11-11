@@ -1,6 +1,10 @@
 # Case studies: open-source engine ports on Switch (reported results)
 
-SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch-specific code; demanding 3D engines boot and play but inherit the cost of the abstraction. None of the four ports below uses native deko3d command control — all go through SDL video, audio, and input and Mesa/Nouveau EGL — so none of them touches Maxwell controls (Zcull, tiling, bandwidth) directly. None of the figures were measured by Coffeepot; all are `[reported]` from the vendored trees and their READMEs.
+SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch-specific code; demanding 3D engines boot and play but inherit the cost of the abstraction. None of the four ports below uses native `deko3d` command control; three go through SDL (srb2-switch, taisei, and SuperTuxKart's gamepad layer) and Godot has its own EGL context with no SDL. All draw through OpenGL or OpenGL ES on Mesa/Nouveau EGL, so none touches Maxwell controls (Zcull, tiling, compression) directly. srb2-switch is the exception in how it draws: it uses SDL2's software framebuffer, not GL. None of the figures were measured by Coffeepot; all are `[reported]` from the vendored trees and their READMEs, at the commits on [source versions](../source-versions.md).
+
+## When is this useful?
+
+Read this if you are bringing an existing SDL or OpenGL engine to the Switch with little Switch-specific code and want to know what that route does and does not control.
 
 ## Before you start
 
@@ -14,7 +18,7 @@ SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch
 | ------ | ------------------- | --------------------- |
 | srb2-switch | `make PLATFORM=Switch`; assets via download script; install NRO to SD, launch from hbmenu [reported] | SDL2 software **[framebuffer](../../../glossary.md#framebuffer)**, stretched to display resolution. Default 320×200; ships 800×450 config as perf/visual balance [reported] |
 | taisei | devkitA64 plus switch-dev, meson and ninja with a Switch crossfile [reported] | SDL window plus GL renderer over Mesa/Nouveau EGL. Queries display resolution at boot, sets `MESA_NO_ERROR=1` in release [reported] |
-| stk-code | CMake Switch build with `NO_SHADERC=on`, packaged to NRO plus data zip [reported] | GLES/EGL path through the engine's abstraction; offline shader compile skipped on Switch [reported] |
+| stk-code | CMake Switch build with `NO_SHADERC=on` (`switch/make.sh` line 16), packaged to NRO plus data zip [documented] | GLES2 path through the engine's abstraction (`USE_GLES2`) [reported]. `NO_SHADERC` is the option the top-level `CMakeLists.txt` (lines 273-284) offers to "disable vulkan support" when the Vulkan shader compiler is not installed; it does not by itself say anything about GLES shader compilation [documented] |
 | godot_switch | scons `platform=switch`; editor gains a Switch exporter emitting NRO plus package [reported] | Native Switch EGL context (RGBA8 plus D24S8) driving GLES2/GLES3 rasterizers; no SDL in the loop [reported] |
 
 ## Threading, input, and audio
@@ -24,13 +28,14 @@ SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch
 | srb2 | Engine and SDL threads; keeps simulating while suspended on Home to prevent lag-switch exploits [reported] | SDL gamepad plus USB mouse/keyboard; inline system-keyboard applet hooks [reported] | SDL_mixer stack; Switch output resolves to 48 kHz through the OS mixer [reported] |
 | taisei | SDL-threaded loader and audio; applet exit hook quits cleanly, exit locked at startup [reported] | SDL gamepad layer over HID; no custom Joy-Con driver | SDL audio resampled to the 48 kHz Switch path [reported] |
 | stk | Heavier threaded engine (physics, audio, network); same model on Switch, less headroom | SDL gamepad and window upstream; same mapping in the NRO | OpenAL and ogg-vorbis stack; 48 kHz output [reported] |
-| godot_switch | POSIX threads, visual-server wrapped multithreading | Custom 8-slot gamepad mapping over HID button state | Native audren: 48 kHz, 24 voices, stereo, 2 mix buffers, page-aligned double-buffered pool [reported] |
+| godot_switch | POSIX threads, visual-server wrapped multithreading; audio thread at priority `0x2B` (`audio_driver_switch.cpp` line 117) [documented] | Custom 8-slot gamepad mapping over HID button state | Native audren: 48 kHz, 24 voices, stereo, 2 mix buffers, page-aligned double-buffered pool [reported] |
 
 ## What had to change for Switch
 
 - **Memory mode:** srb2 and taisei both require full-RAM access — hold R on a title (title override), never the Album applet; taisei warns it will crash from the photo applet [reported]. See [title override](../../glossary.md#title-override).
 - **Assets:** download script (srb2), sidecar data zip (stk), package beside the NRO (godot, taisei) [reported]. Simple to ship and update; no cleverness needed.
 - **Resolution:** srb2 800×450 shipped default; taisei reads the display resolution at boot; godot and STK leave it to the EGL surface plus in-game settings [reported].
+- **Not measured:** none of the four trees state frame rates; neither Godot nor STK sets `MESA_NO_ERROR` or touches Zcull, tiling or compression [documented, absence of a call in the files read].
 - **Debug:** NXLINK flag (srb2), stdio over nxlink in debug builds (taisei), trace plus `nxlink -p` console log (godot_switch) [reported].
 
 ## What the SDL and GL port path gets right
@@ -49,10 +54,10 @@ SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch
 4. **Audio plumbing "works", not tuned.** Only godot_switch sizes audren pools directly; the SDL ports inherit latency and buffer defaults [reported].
 5. **Slow media path ignored.** srb2 notes long boot on slow SD cards with no asset-streaming fix [reported]; STK's multi-hundred-MB data zip has the same exposure.
 
-## Lesson: port via SDL, go native for 60 fps 3D
+## Lesson: what this route controls
 
-- If (2D or software renderer or jam/prototype) and 30 fps at sub-native resolve is acceptable: **port via SDL plus GLES**; ship 800×450–960×540 class resolve, title-override only, pre-converted assets.
-- If (open 3D world or 60 fps target or heavy overdraw) and the team will own GPU code: **go deko3d**; budget bandwidth per pass, control Zcull and tiles, manage applet-vs-title memory explicitly.
+- A cheap first step for an existing SDL or GL engine is to keep that path, ship a modest resolution (srb2-switch's 800×450 is the one figure in these trees), require title override and pre-convert assets `[hypothesis]`.
+- Moving to `deko3d` gives control over barriers, Zcull, tiling and CPU draw submission, and costs owning that code. Whether a given engine needs it depends on a measurement: no tree here shows a draw-count or frame-rate threshold, and nothing shows that 60 fps 3D is impossible through OpenGL on this hardware `[hypothesis]`. Decide with the draw-count sweep proposed on [rendering](../rendering.md).
 
 ## Open questions
 
@@ -64,7 +69,7 @@ SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch
 
 ## Sources
 
-- srb2-switch README, packaging script, Switch keyboard hooks — build, 800×450 default, full-RAM warning, keyboard hooks.
-- taisei Switch README, crossfile, build files, Switch arch source — meson cross build, applet hooks, Mesa env, resolution query.
-- stk-code README, Switch build and packaging scripts, Switch CI workflow — CMake Switch build, `NO_SHADERC=on`, NRO plus data packaging.
-- godot_switch README and Switch platform sources — scons build, EGL config, 48 kHz audren, gamepad mapping, exporter output.
+- [srb2-switch](https://github.com/P-AS/srb2-switch) commit `90194061a5da6af7df48be82a097affafbf70fb4` — `README.md`: `make PLATFORM=Switch`, full-RAM warning (line 15), 800x450 default versus 320x200 (lines 26-28), `NXLINK=1` build (line 54).
+- [taisei](https://github.com/taisei-project/taisei) commit `baf029b05b625f5543543b8d96ecf38ae8e7f1b1` — `src/arch_switch.c` line 81 (`NX_SETENV("MESA_NO_ERROR", "1")`), meson cross build files.
+- [stk-code](https://github.com/supertuxkart/stk-code) commit `b2a9f223326422aa2dd4eea28319b0c5115fde03` — `CMakeLists.txt` (`NO_SHADERC` option at line 275), Switch packaging scripts and CI workflow.
+- [godot_switch](https://github.com/redthing1/godot_switch) commit `0918643f62a6b7664a9d9bc6bcfdb280510a1b17` — `platform/switch/audio_driver_switch.cpp` (`AudioRendererOutputRate_48kHz`, `num_voices = 24`, `num_mix_buffers = 2`), scons build and exporter.

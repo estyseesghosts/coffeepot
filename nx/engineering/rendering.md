@@ -1,170 +1,258 @@
 # Rendering on NX with deko3d
 
-The Switch draws plenty fast enough, but every separate draw call costs the main processor that runs program instructions (the **[CPU](../../glossary.md#cpu)**) time. This page is for a homebrew developer whose 3D scene runs slow on Switch while the graphics chip that draws images (the **[GPU](../../glossary.md#gpu)**) looks idle. Short answer: merge draws into a few batches, pack textures into atlases, upload static data once, and pre-record command lists — do not send thousands of small draws per frame.
+This page is for a homebrew developer who is drawing with `deko3d`, the community graphics library for the Switch, and wants the frame loop to be correct first and fast second. The short answer: build the frame the way the upstream `deko_basic` example does, give every in-flight frame its own command memory and a **[fence](../glossary.md#fence)**, wait for that fence on the CPU before reusing the slot, and treat every performance trick below as something to measure on your own scene before you keep it.
+
+Every API call on this page was compiled against the installed headers (see [source versions](source-versions.md)). None of it has been run on a console. Where a recommendation rests on a design opinion instead of a measurement or a header, it is labelled `[hypothesis]` and says what would settle it.
 
 ## Before you start
 
-- Toolchain: devkitA64 via devkitPro pacman `switch-dev`, with libnx and deko3d. Versions checked against latest `switch-dev` at time of writing (exact libnx/deko3d commits not pinned for this draft).
-- Applies to all retail Switch models running homebrew via deko3d on the NVIDIA chip the Switch is built on (**[Tegra X1](../glossary.md#tegra-x1)**).
-- Code below is illustrative only: checked for shape against deko3d examples, **not run on hardware**. Build flags assume `switch-dev` defaults with `-Wall`.
-- Companion page: [NX performance and porting](performance-and-porting.md) for clocks, threading, and measurement.
+- Toolchain: devkitA64 r30-1, `libnx` 4.12.0-1, `deko3d` 0.5.0-1, `uam` 1.1.0-2, built with `-Wall` and no warnings. Source commits read are pinned on [source versions](source-versions.md).
+- Applies to the Nintendo Switch family running homebrew through `deko3d` on the NVIDIA **[Tegra X1](../glossary.md#tegra-x1)**. Model and clock differences are on the [GPU](../hardware/gpu.md) and [models](../hardware/models.md) pages.
+- Read [libnx and deko3d](../homebrew/deko3d-and-libnx.md) first for the object model, and [performance and porting](performance-and-porting.md) for how to measure.
+- All code here is C and uses only the public `deko3d.h` API. The upstream examples use the C++ wrapper (`deko3d.hpp`); both call the same functions.
 
-## Batch draws or stay slow
+## Start from the upstream frame loop
 
-What to do: merge small pieces of the world into a few large draws before touching anything else. A 16×16-tile chunk merge plus grouping by material/atlas is the pattern port reports credit. Add per-chunk visibility testing (skip chunks outside the camera) so merging does not mean drawing the whole level.
+What to do: copy `graphics/deko3d/deko_basic` from `switch-examples` and change it. Do not write the setup from memory. The sequence it uses is the one the rest of this page assumes: create a device, a framebuffer image layout, a memory block holding the swapchain images, a swapchain, a code memory block for shaders, a command memory block and command buffer, then one queue. Each frame it calls `dkQueueAcquireImage`, submits the command lists, and calls `dkQueuePresentImage` `[documented]` (`switch-examples` `graphics/deko3d/deko_basic/source/main.c`, lines 68-188).
+
+The shader files are built by the example's Makefile: each `*.glsl` becomes a `.dksh` file in `romfs/shaders/` through `uam`, and `romfsInit` makes them readable at `romfs:/shaders/` `[documented]` (same file, lines 117-119; `switch-examples` `graphics/deko3d/deko_basic/Makefile`).
+
+- Expected result: a coloured triangle on a cleared background, and `Plus` returns to the homebrew menu.
+- How it fails: a black screen or an abort almost always means a missing `romfs/shaders/*.dksh`, a memory block missing a required flag (`DkMemBlockFlags_Code` for shaders, `DkMemBlockFlags_Image` for swapchain images), or a size that is not a multiple of `DK_MEMBLOCK_ALIGNMENT` (`0x1000`) `[documented]` (`deko3d.h`). Link `-ldeko3dd` while developing so the validation layer reports the bad call.
+
+## Reuse a frame slot only after the GPU is done with it
+
+What to do: keep two (or three) frame slots. Each slot owns one command buffer with its own command memory and one fence. Before recording into a slot, wait on its fence from the CPU with `dkFenceWait`. After submitting, tell the queue to signal the fence with `dkQueueSignalFence`.
 
 ```c
-// Do this: one draw per visible chunk+material, not one per tile.
-// Illustrative — not run on hardware.
-for (each visible chunk) {
-    for (each material in chunk) {
-        bind_atlas(material.atlas);       // one bind per material
-        dkCmdBufDraw(cmdbuf, ...chunkVerts...);
-    }
+#define SLOTS 2
+typedef struct {
+    DkCmdBuf cmdbuf;   // command memory added with dkCmdBufAddMemory, one region per slot
+    DkFence  done;     // signalled by the GPU when this slot's work has finished
+} FrameSlot;
+static FrameSlot g_slots[SLOTS];   // static storage: fences start zeroed
+static unsigned  g_frameNo;
+
+static void frame(DkQueue queue, DkSwapchain swapchain, const DkCmdList bindTarget[])
+{
+    FrameSlot* s = &g_slots[g_frameNo++ % SLOTS];
+
+    dkFenceWait(&s->done, -1);          // CPU blocks until the GPU finished this slot's last frame
+    dkCmdBufClear(s->cmdbuf);           // safe now: the old command list is no longer in use
+    recordScene(s->cmdbuf, g_frameNo);  // your recording code
+    DkCmdList scene = dkCmdBufFinishList(s->cmdbuf);
+
+    int image = dkQueueAcquireImage(queue, swapchain);
+    dkQueueSubmitCommands(queue, bindTarget[image]);
+    dkQueueSubmitCommands(queue, scene);
+    dkQueueSignalFence(queue, &s->done, false);
+    dkQueuePresentImage(queue, swapchain, image);   // also flushes the queue
 }
 ```
 
-- Expected result: draw-call count drops by 10–100× on tile maps; frame time falls while GPU busy time barely moves, because the limiter was CPU submission [reported].
-- How it fails: thousands of `dkCmdBufDraw` calls per frame keeps frame time high even at low resolution. If lowering resolution does not help, you are CPU-bound on submission — merge more.
+Verification: compiles with devkitA64 r30-1 / `deko3d` 0.5.0-1, `-Wall`, no warnings; not run on hardware. The `bindTarget` lists are built once at setup as in `deko_basic` (lines 134-141).
 
-## Pack atlases, keep depth on
+- Expected result: the CPU records frame N+1 while the GPU draws frame N, and the CPU only blocks when the GPU is more than `SLOTS` frames behind.
+- Why this is the right wait: `dkQueueWaitFence` makes the **GPU** wait for a fence; it never blocks the CPU. `dkFenceWait` is the CPU-side wait `[documented]` (`Primer.md` "Fences" and "Queues": "Fences can be waited on by the GPU or CPU (using the `dkFenceWait` function)"; `dkQueueWaitFence`: "The GPU can be instructed to wait on a fence"). A fence that may be waited on before its first signal must be zero-initialised, and it must not move in memory while any command list that references it exists `[documented]` (`Primer.md` "Fences").
+- How it fails: if frame time equals CPU time plus GPU time instead of the larger of the two, something is waiting too early, usually `dkQueueWaitIdle` inside the frame. `dkQueueWaitIdle` is shorthand for signalling a temporary fence, flushing and waiting, and the Primer says to use it sparingly; use it once, before destroying resources `[documented]` (`Primer.md` "Queues"; `deko_basic` `graphicsExit`).
 
-What to do: pack many small sprites/tiles into one large texture (an atlas), group draws by that atlas, and leave depth testing on. Use cutout-by-discarding (pixels whose alpha is below a threshold are skipped) for fences and leaves instead of see-through blending, which is slower and sorts badly.
+> Unknown: whether two or three slots is better for a given scene. It trades latency against how much slack the CPU has before it blocks. A sweep of 1 to 4 frames against measured input-to-display latency would settle it.
+
+## Submission is lazy; flushing is a window to update memory
+
+What to do: remember that `dkQueueSubmitCommands` does not start the GPU. Work reaches the GPU when the queue is flushed (`dkQueueFlush`, which `dkQueuePresentImage` calls), when the internal list fills, or when the flush threshold is reached `[documented]` (`Primer.md` "Queues"). After each flush deko3d inserts a barrier that invalidates the image, shader, descriptor and L2 caches. That makes the point after a flush the supported moment to rewrite vertex, uniform or descriptor memory from the CPU, as long as the GPU is not still reading it `[documented]` (same section).
+
+- Expected result: you can overwrite a buffer in slot A's memory after slot A's fence has been waited on, without an extra manual cache invalidate.
+- How it fails: writing into memory that an unfinished frame still reads gives corrupted geometry for one frame. Per-slot memory regions, not one shared region, are the fix.
+
+## Upload static data once; send small changes per frame
+
+What to do: allocate a `DkMemBlock` for data that never changes, copy into it once at load time through its CPU address, and refer to it by GPU address from then on. Per frame, change only small uniform blocks, either by writing into a per-slot uniform region or by recording `dkCmdBufPushConstants` into the command stream.
 
 ```c
-// Do this in the pixel shader: cutout, not blending, for foliage.
-// Illustrative — not run on hardware.
-if (texColor.a < 0.5) discard;
+// Load time: create a block, copy once.
+DkMemBlockMaker maker;
+uint32_t size = (bytes + DK_MEMBLOCK_ALIGNMENT - 1) & ~(DK_MEMBLOCK_ALIGNMENT - 1);
+dkMemBlockMakerDefaults(&maker, device, size);          // CpuUncached | GpuCached
+DkMemBlock block = dkMemBlockCreate(&maker);
+memcpy(dkMemBlockGetCpuAddr(block), verts, bytes);      // once
+
+// Per frame: bind a uniform buffer, then change its contents inside the command stream.
+dkCmdBufBindUniformBuffer(cmdbuf, DkStage_Vertex, 0,
+    dkMemBlockGetGpuAddr(uniformBlock) + offset, 0x100); // buffer address aligned to DK_UNIFORM_BUF_ALIGNMENT
+dkCmdBufPushConstants(cmdbuf, dkMemBlockGetGpuAddr(uniformBlock), 0x100, 0, 16 * sizeof(float), mvp);
 ```
 
-- Expected result: fewer texture binds and correct hiding of far objects with no sort code [reported].
-- How it fails: one texture per tile, or blending everywhere, restores the many-binds problem and adds sort glitches. If binds per frame exceed draws per frame, repack the atlas.
+Verification: compiles, `-Wall`, no warnings; not run on hardware. `dkMemBlockMakerDefaults` sets `CpuUncached | GpuCached` `[documented]` (`deko3d.h`), the same flags `deko_basic` uses for command memory. `dkCmdBufBindUniformBuffer` takes `(cmdbuf, stage, id, address, size)` and wraps `dkCmdBufBindUniformBuffers` `[documented]` (`deko3d.h`). `dkCmdBufPushConstants` writes into a uniform buffer from within the command stream; all uniform buffers have push-constant semantics and may be up to 64 KiB `[documented]` (`Primer.md` "Inline data updates").
 
-## Upload static data once, send only uniforms per frame
+CPU-cached memory (`DkMemBlockFlags_CpuCached`) needs `dkMemBlockFlushCpuCache` before the GPU reads, and the Primer advises against CPU-cached memory for GPU-to-CPU transfers because the CPU cache cannot be invalidated from userland `[documented]` (`Primer.md` "Memory Blocks").
 
-What to do: put geometry and textures that never change into GPU-visible **[memory](../../glossary.md#memory)** once at load. Per frame, update only small uniform blocks (camera matrices, light values).
+- Expected result: no per-frame copies of geometry; only the small uniform data changes.
+- How it fails: a profile that shows a copy of the same vertex data every frame means the buffer belongs in load-time memory. `[hypothesis]` that this matters on Switch more than on a desktop because the CPU and GPU share one memory bus; confirm by timing a frame with and without the per-frame upload.
+
+## Cut CPU draw cost before you cut GPU cost
+
+What to do: measure first (see [performance and porting](performance-and-porting.md)). If the render thread is the limit and the GPU is not busy, reduce the number of separate draws and state changes. Common shapes are merging static geometry into larger buffers grouped by material, packing many small images into one texture, and recording unchanging state once.
+
+- Evidence, honestly stated: two ports report the same pattern, not a general law. USF4's `deko3d` renderer used 2.8 ms of render-thread time per frame against 18.6 ms for its Vulkan-on-NVK renderer, in one docked Training-fight A/B at CPU 1887 MHz, GPU 844.8 MHz, memory 1862.4 MHz, 720p `[reported]` (`usf4-nx` `docs/deko3d-renderer-usf4.md` section 1, commit `30ffae0`). The expensive part there was the Vulkan driver's per-bind and per-draw work on the A57, which `deko3d` does not have `[reported]` (`sa2-nx` `docs/deko3d-renderer-guide.md`, measured by banjo-nx: about 3 µs per pipeline bind and 2.4-2.9 µs per draw on NVK). Those numbers are not `deko3d` costs; do not use them as a `deko3d` draw budget.
+- `[hypothesis]` Merging small draws helps a `deko3d` scene that is bound by the CPU recording and submitting them. What would settle it: a benchmark that sweeps draw count from 100 to 10,000 at fixed total vertex count, on retail clocks, recording CPU time and GPU time separately. This benchmark has not been written.
+- `[hypothesis]` Specific tricks often recommended for tile maps (16×16-tile chunks, one texture atlas per material, cutout by `discard` instead of blending) come from unreviewed tutorial walkthroughs in the research folder, not from measurements. They are reasonable defaults for a tile game. They are not requirements: a game with a few hundred draws may gain nothing from them, and whether `discard` costs more than blending on this GPU has not been measured here.
+
+Repeated state can be baked once with command capture and replayed, which avoids re-encoding structs on every use:
 
 ```c
-// Load time: create block, upload, done. Per frame: update uniforms only.
-// Illustrative — not run on hardware.
-dkMemBlockCreate(&staticBlock, ...);
-dkMemBlockUpload(staticBlock, vertices, size); // once
-// per frame:
-dkCmdBufBindUniformBuffer(cmdbuf, cameraUbo);  // small update only
+static uint32_t words[256];                          // generous: overrunning it is fatal
+dkCmdBufBeginCaptureCmds(cmdbuf, words, 256);
+/* bind shaders, rasterizer state, colour state, vertex state ... */
+uint32_t n = dkCmdBufEndCaptureCmds(cmdbuf);
+dkCmdBufReplayCmds(cmdbuf, words, n);                // once per use
 ```
 
-- Expected result: no per-frame re-upload spikes; frame pacing steadies [reported].
-- How it fails: re-uploading vertex data every frame shows up as high CPU time plus bus stalls. If a profiler shows copies every frame, move the buffer to load time.
+Verification: compiles, `-Wall`, no warnings; not run on hardware. Capture cannot contain `dkCmdBufAddMemory`, `dkCmdBufFinishList`, `dkCmdBufClear`, compute commands, fence commands, indirect draws, `DkBarrier_Full` or `dkCmdBufCallList`, and running out of capture storage is an unrecoverable error. Replayed words may be incompatible across `deko3d` versions, so capture at run time rather than saving them to disk `[documented]` (`Primer.md` "Command capture and replay").
 
-## Pre-record command lists, use rings and fences
+## Image layout and shaders
 
-What to do: record command lists for things that do not change (static world) once, and keep two or three per-frame lists in a ring (a fixed set of buffers reused in turn) for dynamic objects. Use a fence (a GPU "I finished up to here" marker) per ring slot to know when a slot is safe to reuse. Queue submission is lazy — nothing reaches the GPU until a flush, present, or list-full [documented] (deko3d Primer, Queues). Never stop the whole GPU to wait (`dkQueueWaitIdle` per frame); wait only the slot being reused [documented] (same source).
-
-```c
-// Static list recorded once; dynamic ring of 3 slots guarded by fences.
-// Illustrative — not run on hardware.
-dkCmdBufFinish(staticList);                    // once
-slot = frame % 3;
-dkQueueWaitFence(queue, fence[slot]);          // wait for that slot only
-dkCmdBufClear(dynamic[slot]); /* record */ dkQueueSubmit(queue, dynamic[slot]);
-dkQueueSignalFence(queue, fence[slot]);
-```
-
-- Expected result: CPU can build the next frame while the GPU draws the current one; full-device waits disappear [reported].
-- How it fails: calling full-device wait per frame serialises CPU and GPU and caps the frame rate near 30 fps or worse. If frame time equals CPU time plus GPU time instead of the larger of the two, the pipeline is serialised.
-
-Bake repeated bind-state with command capture and replay (`dkCmdBufBeginCaptureCmds` / `End` / `ReplayCmds`) instead of re-emitting it per draw [documented] (deko3d Primer, Command capture and replay). Capture cannot contain compute dispatches, fences, indirect draws, full barriers, or nested call-lists — overrun is fatal, so size capture buffers generously.
-
-## Use block-linear textures, mips, and precompiled shaders
-
-What to do: store GPU textures in the tiled block layout the GPU's small fast memory next to the processor (its **[cache](../../glossary.md#cache)**) likes. Query it with `DkImageLayoutMaker` + `dkImageLayoutInitialize` as shown in deko3d Example04 (`Example04_TexturedCube`) [documented] — never assume pitch, since block-linear units are 64×8-byte GOBs regardless of format [documented] (tegra_swizzle tiling notes plus the Maxwell unified L1/texture behavior). Start with one atlas per material with mipmaps (pre-shrunk copies) and block compression [hypothesis] (atlas size is a tuning choice, not a documented optimum — see open questions), and ship precompiled shader caches (DKSH files) because deko3d has no runtime GLSL compiler by design [documented] (deko3d README + Primer shader section).
+What to do: ask `deko3d` for an image's size and alignment instead of computing it. The default is **[block-linear](../glossary.md#gob)** layout, which is what the GPU samples efficiently; pitch-linear is an explicit opt-in.
 
 ```c
-// Query the tiled layout instead of assuming row-by-row.
-// Illustrative — see deko3d Example04_TexturedCube, not run on hardware.
-DkImageLayoutMaker maker = { ...imageDesc... };
+DkImageLayoutMaker maker;
+dkImageLayoutMakerDefaults(&maker, device);
+maker.format = DkImageFormat_RGBA8_Unorm;            // flags default to block-linear
+maker.dimensions[0] = w;
+maker.dimensions[1] = h;
 DkImageLayout layout;
-dkImageLayoutInitialize(&layout, &maker); // gives block-linear pitch/offsets
+dkImageLayoutInitialize(&layout, &maker);
+uint64_t bytes = dkImageLayoutGetSize(&layout);
+uint32_t align = dkImageLayoutGetAlignment(&layout);
 ```
 
-- Expected result: tiled images sample from the fast path; mips plus compression cut bandwidth toward the docked shared peak of 25.6 GB/s (handheld lower; CPU+GPU share one bus) [documented]; DKSH avoids first-encounter stutter by construction [documented].
-- How it fails: linear textures or missing mips show as high bandwidth plus shimmering at distance. Missing DKSH shows as one long hitch per new material — the compile has nowhere else to happen.
+Verification: compiles, `-Wall`, no warnings; not run on hardware. This is the sequence in `deko_basic` (lines 76-90) and in the textured-cube example `Example04_TexturedCube.cpp` `[documented]`. Block-linear data is stored in 64-byte by 8-row blocks (GOBs); `tegra_swizzle` implements the byte layout for converting images at build time `[documented]` (`tegra_swizzle` `tiling.md`, commit `d7ed318`).
 
-Per-stage shader limits to design around [documented] (`uam` / dekotools docs): 16 uniform + 16 storage blocks, 32 samplers, 8 images per stage. Exceeding them fails at pipeline creation, not at draw time.
+Shaders are compiled offline. `deko3d` accepts only native Maxwell code in a **[DKSH](../glossary.md#dksh)** file; GLSL and SPIR-V cannot be used at run time, and `uam` is a PC tool that produces DKSH `[documented]` (`deko3d` `README.md` "Can I use the shader compiler inside my program?"; `Primer.md` "Shaders"). This is by design, so a shader that is missing at run time is not compiled on the fly: the load simply fails. Hitches the ports report on first use come from programs that deliberately compile shaders on the console with their own copy of `uam` (SA2, USF4, Wind Waker HD; see the [case studies](case-studies/case-study-sa2.md)). Plain homebrew that ships prebuilt DKSH does not have that problem.
 
-## Order barriers, tiled-cache ops, and compression cheapest-first
+Binding limits per stage: 16 uniform buffers, 16 storage buffers, 32 texture bindings and 8 image bindings `[documented]` (`deko3d.h`: `DK_NUM_UNIFORM_BUFS`, `DK_NUM_STORAGE_BUFS`, `DK_NUM_TEXTURE_BINDINGS`, `DK_NUM_IMAGE_BINDINGS`). `deko3d` has no pipeline objects, so these are binding-slot counts, not limits checked at pipeline creation.
 
-What to do: pick the cheapest barrier that orders each hazard — tile-to-tile within one target (`Tiles`), pass-to-pass (`Fragments`), compute-to-graphics or full drain (`Primitives`/`Full`) [documented] (`deko3d.h` barrier enum; `Full` also disables command-list prefetch). Do not stack a manual full invalidate on top of the one deko3d already inserts after every queue flush — the flush point is the sanctioned CPU-update window for vertex/uniform/descriptor memory [documented] (deko3d Primer, Queues).
+- Expected result: images created from the queried layout sample correctly; shaders load from `romfs`.
+- How it fails: assuming a pitch for a block-linear image gives a scrambled texture. Passing `DkImageFlags_PitchLinear` gives a linear image that you must then fill linearly.
+- Mipmaps and block compression reduce memory traffic in principle; `[hypothesis]` that they matter for your scene before you have measured it. What would settle it: the same scene with and without mipmaps and compressed formats, with the memory-clock profile fixed (handheld versus docked).
 
-What to do: enable the tiled cache around tiled render-target passes and flush before that target is sampled as a texture or presented (`dkCmdBufTiledCacheOp` Enable/Flush) [documented] (`deko3d.h`); set `HwCompression` on render targets and `Z16EnableZbc` for depth clears, and prefer `Clear`/`Discard` when a tile will not be re-read [documented] (same header). Never sample or render to `PitchLinear`, and never present a compressed target without a resolve/decompress path [documented] (`DkImageFlags` in `deko3d.h`).
+## Barriers, the tiled cache, compression and Zcull
 
-What to do: treat hardware depth-culling (Zcull) as opt-in state — enable per queue, invalidate on state changes, and check `ZcullStats` when tuning [documented] (`DkQueueFlags`, `DkInvalidateFlags_Zcull`, `DkCounter_ZcullStats`). Toggling mid-frame without invalidation reads as stale culling, not as a driver bug.
-
-- Expected result: fewer pipeline drains, correct compressed-target display, measurable cull rates on depth-heavy scenes [documented].
-- How it fails: `Full` everywhere drains the pipeline each pass; presenting a compressed target without resolve shows garbage; Zcull toggled without invalidate culls the wrong geometry.
-
-## Never read the frame back to answer a gameplay question
-
-What to do: serve UI and logic questions (is the top dark, did the screen flash white, which tiles changed) from structured facts computed on the GPU or CPU — small summary buffers, per-chunk counters, region-of-interest reads — instead of copying the composed frame to the CPU every frame. One project paid 22.5 ms/frame copying two small screens through uncached memory plus a second copy in a compatibility shim, over a third of its 61 ms frame, and a fence fix proved the cost was CPU copy time with zero late reads [reported] (Switch homebrew postmortem, stock-clock field scene, conditions as stated).
-
-- Expected result: no full-screen readback on the steady path; exceptional captures only on explicit request [reported].
-- How it fails: any per-frame fullscreen copy dominates the frame no matter how fast the renderer gets. If a "GPU slow" profile is really queue-submit or readback time, the buckets are mislabeled — separate CPU-submit vs. GPU-complete with fences/timestamps and keep buckets exclusive, never summed when nested.
-
-## Pick a resolution strategy on purpose
-
-What to do: choose one. Either render the 3D view at a small fixed size (a **[framebuffer](../../glossary.md#framebuffer)** holding one image, e.g. 320×180 logical) and upscale with whole-number scaling, or render at a true low-resolution target texture and upscale once. Do not mix the two by accident.
+What to do: use the weakest barrier that orders the hazard you have. In order of cost: `DkBarrier_Tiles` (like a Vulkan subpass: ordering within a tile), `DkBarrier_Fragments` (like a render pass), `DkBarrier_Primitives` (completes earlier primitives and compute), `DkBarrier_Full` (completes everything and also disables command-list prefetch) `[documented]` (`deko3d.h` `DkBarrier`). The upstream examples show each use: `DkBarrier_Fragments` before discarding a depth buffer (`Example03_Cube.cpp` line 299), `DkBarrier_Tiles` with `DkInvalidateFlags_Image` between tiled passes (`Example08_DeferredShading.cpp` lines 353-398) and a primitives barrier between compute work (`Example09_SimpleCompute.cpp` line 9).
 
 ```c
-// Integer upscale factors: 320x180 -> 1280x720 is 4x, -> 1920x1080 is 6x.
-// Illustrative — not run on hardware.
-const int SCALE = destWidth / renderWidth; // require integer, e.g. 4 or 6
+dkCmdBufBarrier(cmdbuf, DkBarrier_Fragments, 0);
+dkCmdBufBarrier(cmdbuf, DkBarrier_Tiles, DkInvalidateFlags_Image);
+dkCmdBufTiledCacheOp(cmdbuf, DkTiledCacheOp_Enable);
 ```
 
-- Expected result: pixel look with crisp edges and a fixed, predictable fill cost [reported].
-- How it fails: fractional scaling blurs pixels unevenly. If one axis shimmers while the other looks crisp, the scale factor is not an integer.
+Verification: compiles, `-Wall`, no warnings; not run on hardware.
 
-## Validate in debug, time sparingly in release
+Hardware compression for render targets is requested with `DkImageFlags_HwCompression`, as `deko_basic` does for its framebuffers (line 78). `deko3d` handles the decompression needed for presentation `[documented]` (`deko3d` `README.md`: "compressed render targets (decompressed prior to presentation)"). `DkImageFlags_Z16EnableZbc` applies to `DkImageFormat_Z16` images only `[documented]` (`deko3d.h`).
 
-What to do: link the deko3d validation layer (`-ldeko3dd`) in debug builds to catch layout and barrier mistakes, and sample the GPU's own timestamps only around suspect passes in release — leaving them always on perturbs what you measure.
+Zcull (hardware depth culling) is **on** by default: `dkQueueMakerDefaults` sets `DkQueueFlags_EnableZcull`, and `DkQueueFlags_DisableZcull` turns it off. `DkInvalidateFlags_Zcull` invalidates its state, and `DkCounter_ZcullStats` reports how it performed `[documented]` (`deko3d.h` lines 231, 269-270, 288, 349).
 
-```sh
-# Debug link only — illustrative, not run on hardware.
-# link with -ldeko3dd for debug, -ldeko3d for release
+> Unknown: exactly when `dkCmdBufTiledCacheOp(Flush)` must be issued relative to sampling or presenting a tiled target. The header names the operations and the Primer lists them without semantics. Example08 enables the tiled cache around its deferred pass; an experiment that omits the flush and reads the target back would show whether it is required.
+
+- Expected result: fewer pipeline drains than a `Full` barrier everywhere.
+- How it fails: a `Full` barrier between every pass serialises the GPU; too weak a barrier gives one-frame-old or half-written data in the next pass. The debug library (`-ldeko3dd`) adds "parameter and state checking" and warning/error messages `[documented]` (`deko3d` `README.md`); whether it detects a missing barrier is not stated there.
+
+## Do not read the frame back to answer a gameplay question
+
+What to do: answer questions about the picture (is the top dark, did the screen flash) from state your game already has, or from a small summary computed on the GPU, instead of copying the finished frame to the CPU every frame.
+
+- Evidence: the Eidos port's first attempt spent 22.5 ms of a 61.2 ms frame copying two GPU-composed screens (about 400 KiB) to the CPU through uncached mappings; a fence change did not alter that, so the cost was CPU copy time `[reported]` (Eidos Switch engineering guide, scene "Mistralton field", measured 2026-11-03; private document, not independently auditable; see the [Eidos case study](case-studies/case-study-eidos-ouroboros.md)).
+- Expected result: no full-frame CPU copy on the steady path.
+- How it fails: if a "GPU slow" profile is really time spent in submit or readback, the timing buckets are mislabelled. Time CPU recording and GPU completion separately and keep the buckets exclusive.
+
+## Resolution: pick one strategy and keep the scale an integer
+
+What to do: either render at a small fixed size and scale up by a whole number, or render at the real output size. Handheld output is 1280×720 and docked output is up to 1920×1080 `[reported]` (`deko_basic` defines `FB_WIDTH`/`FB_HEIGHT` for 720p with a commented 1080p alternative; `sa2-nx` `README.md` states 1280×720 handheld and 1920×1080 docked from 1.0.3.1).
+
+```c
+int scale = destWidth / renderWidth;   // 320x180 to 1280x720 is 4, to 1920x1080 is 6
 ```
 
-- Expected result: validation prints the bad call at creation time instead of a black screen; sparse timestamps show which pass is long [documented].
-- How it fails: shipping validation to users costs speed; always-on timestamps inflate the pass they measure. If timings change when you add more timers, you are measuring overhead.
+- Expected result: crisp pixels at a predictable fill cost.
+- How it fails: a fractional scale blurs unevenly. If one axis shimmers and the other is crisp, the factor is not an integer on that axis.
+
+## Memory and bandwidth arithmetic
+
+The arithmetic below is exact; the conclusions about speed are not.
+
+| Surface set (RGBA8 colour ×2, 32-bit depth, RGBA8 resolve) | Bytes | Megabytes (10^6) |
+| ---------------------------------------------------------- | ----- | ---------------- |
+| 1280×720: 921,600 pixels × 4 bytes × 4 surfaces | 14,745,600 | 14.7 |
+| 1920×1080: 2,073,600 pixels × 4 bytes × 4 surfaces | 33,177,600 | 33.2 |
+
+These are sizes before alignment and padding (query the real size with `dkImageLayoutGetSize`). They are **memory footprints**, not per-frame traffic. Per-frame traffic is the footprint times how often each surface is read and written, which depends on overdraw, blending, compression and caches, and this wiki has not measured it.
+
+For scale: the theoretical docked memory bandwidth is 25.6 GB/s (1600 MHz memory, 64-bit bus), which is about 427 MB per frame at 60 fps; the stock handheld memory clock of 1331.2 MHz gives about 21.3 GB/s, or about 355 MB per frame `[reported]` clocks (`nfsmw-nx` `README.md` stock-clock table), arithmetic ours. The CPU shares that bus. Any claim that a given resolution "fits" the budget is a `[hypothesis]` until measured with real counters.
+
+## Lessons the ports paid for
+
+Each item names the port that hit it. All are `[reported]` unless a header or Primer line is cited, and none was reproduced by Coffeepot; keep the conditions with the number. Case-study links give the full context.
+
+**A smaller depth target can clip the whole picture.** USF4 left a 320×180 depth target bound while drawing full-screen 1280×736 passes; on the console only the top-left corner drew, because Maxwell discards everything outside the smallest bound target, and the PC emulator never showed it. The fix was not to bind a smaller depth target for draws and clears that neither test nor write depth (`usf4-nx` `docs/deko3d-renderer-usf4.md` section 5). SA2 notes it never bound such a pair in a 10-minute run but other games might (`sa2-nx` docs). Check that every draw's colour and depth targets match in size, or bind none.
+
+**Composite on the GPU; never read the frame back.** melonDS draws both DS screens as textured quads and waits on a per-buffer "ready" fence before drawing and signals a "presented" fence after, with no full-screen CPU read `[documented]` (`melonDS` `src/frontend/switch/main.cpp` lines 702-714, [case study](case-studies/case-study-melonds.md)). Compare the Eidos readback cost above.
+
+**Barrier and invalidate hygiene is worth auditing in traces.** SwitchWakerHD's plan records, from its own traces, `Fragments` barriers falling from 47 to 20 per frame when issued only for real read-after-write and write-after-read hazards, Zcull invalidates from 12 to 5 by keeping Zcull across the same depth target and layer, and a 1280×720 depth blit plus two `Full` barriers avoided by sampling depth in place for a draw that reads but does not write it. The GPU-time gains in that table (0.3-0.8 ms, up to ~1 ms, 0.3-0.6 ms) are the plan's estimates, flagged by its author as uncertain; the same plan leaves the tiled cache and depth compression switched off because they were not verified (`SwitchWakerHD` `docs/deko3d-plan.md` lines 85-92, [case study](case-studies/case-study-wind-waker-hd.md)).
+
+**Shader hitches come from compiling on the console; prebuild the list.** `deko3d` itself never compiles at run time (see above), but SA2, USF4, NFSMW and Wind Waker HD each run `uam` or the driver's compiler on the console. Their remedies match: save the list of shaders or pipelines a play session used, ship that list, build the entries on a background core during menus, and `fsync` the cache file so closing the game does not lose records. USF4 measured the empty-cache first fight at about 90 shaders at 84 ms each, a 7.6 s frame; NFSMW measured 112 pipelines at 59-82 ms each, fixed by a shipped list that readied 113 of 113 in 0.3 s (`usf4-nx` `docs/deko3d-renderer-usf4.md`; `nfsmw-nx` `docs/native-renderer.md`).
+
+**Code and block limits.** Shader code blocks live in a code segment of up to 4 GiB of GPU address space that `deko3d` cannot reuse after a block is freed, and the last `DK_SHADER_CODE_UNUSABLE_SIZE` (0x400) bytes of any code block are unusable because of a hardware bug, so reuse code blocks and leave that tail free. Every memory block uses limited operating-system bookkeeping regardless of size, so allocate big blocks and sub-allocate `[documented]` (`Primer.md` "Memory Blocks"; `deko3d.h` line 154).
+
+**A GPU error is fatal to the queue and to the process.** After a GPU error the queue is in an error state, which `dkQueueIsInErrorState` reports, and the only legal call is `dkQueueDestroy`. The Primer warns that the system appears to kill processes that crash the GPU a few seconds later, so save progress promptly `[documented]` (`Primer.md` "Queues"):
+
+```c
+if (dkQueueIsInErrorState(queue)) { /* save now; then dkQueueDestroy and exit */ }
+```
+
+Verification: compiles in the compile-check program, `-Wall`, no warnings; not run on hardware.
+
+**Prove each side of an A/B actually draws.** USF4's first renderer comparison ran the native renderer without its shader package beside the NRO; it issued 0 draws, presented black screenshots, and "won" at 60 fps. The rule it adopted is a screenshot plus a draw count for every presented frame before any comparison (`usf4-nx` `docs/deko3d-renderer-usf4.md`).
+
+**Make the renderer selectable at run time while you are learning.** nxquake2 ships four renderers behind one cvar so each path can be timed on the console against the same assets `[documented]` (`nxquake2` `doc/990_switch.md`, `Makefile`; [case study](case-studies/case-study-nxquake2.md)). Cheap to build in early, expensive to retrofit.
+
+**If you stay on OpenGL (switch-mesa).** Ports that do so state no frame rates in their trees, so these are inferences, not results `[hypothesis]`: per-light and per-surface draws multiply state changes (dhewm3), stencil shadow volumes cost CPU build time and fill (dhewm3), unsorted translucency and per-surface state switches are the likeliest driver overhead (Serious Engine), and window resolution is the first fill lever; docked 1920×1080 has 2.25 times the pixels of handheld 1280×720 by arithmetic (Max Payne, nxquake2). Taisei sets `MESA_NO_ERROR=1` in release builds to disable GL error checking `[documented]` (`taisei` `src/arch_switch.c` line 81); its effect was not measured. Godot and SuperTuxKart set neither that nor any Zcull, tiling or compression control, because GL does not expose them ([open-engine ports](case-studies/case-studies-open-engines.md)).
 
 ## Technical details
 
-- Submission cost dominates: port reports credit batching before anything else; per-draw setter cost is covered on the performance page [reported].
-- Static/dynamic split: static lists hold world geometry; ring size 2–3 covers one frame being drawn while the next is built; fences scope the wait to one slot; never `dkQueueWaitIdle` per frame [documented] (deko3d Primer, Queues/Fences).
-- Fence structs must not move while in-flight lists reference them; zero-init fences that may be waited before first signal [documented] (`deko3d.h` fence notes). Reuse shader code blocks instead of churning mappings: the code segment has a fixed cap with an unusable tail and freed mappings are never reused [documented] (same header).
-- Image layout: query with `DkImageLayoutMaker` + `dkImageLayoutInitialize` (Example04 usage is the proof); GOB is 64×8 bytes regardless of format [documented] (tegra_swizzle tiling notes). Storing images already tiled at build time avoids runtime converts [documented].
-- Shader cache: DKSH is the only path — deko3d cannot compile GLSL at runtime by design [documented] (deko3d README + Primer). Ship prebuilt DKSH plus the control/code split the header recipe describes.
-- Bandwidth math (RGBA8 + D32): a 2×color + depth + resolve set is ~11 MB at 720p vs ~25 MB at 1080p before overdraw; at 3× overdraw plus texture fetch, 1080p lands near 150–300 MB/frame against a ~427 MB/frame total-system budget at 60 fps on the docked peak — 720p leaves headroom [documented] (arithmetic from the docked 25.6 GB/s shared peak; handheld lower).
-- Small programs that run on the GPU should stay register-lean; Maxwell notes recommend packed half-precision types where verified (the vendor compiler does not reliably auto-pack — write explicit `half2`/`f16vec4` paths and measure [documented] (Maxwell tuning guide + Chips and Cheese notes)), plus compressed mipmapped textures for the shared-bus ceiling — see performance page [documented].
+- Submission: lazy; `dkQueueFlush`, a full internal list or the flush threshold submit work; `dkQueuePresentImage` flushes `[documented]` (`Primer.md` "Queues").
+- Fence rules: a fence struct must stay at the same address while any command list that references it exists; zero-initialise a fence that may be waited on before it is first signalled `[documented]` (`Primer.md` "Fences").
+- `dkQueueSignalFence(queue, fence, flush)`: the `flush` argument writes dirty GPU cache lines to memory so the CPU can see GPU writes to `GpuCached` memory `[documented]` (`Primer.md` "Queues").
+- Code memory: a shader code block is allocated with `DkMemBlockFlags_Code`, shader offsets are aligned to `DK_SHADER_CODE_ALIGNMENT` (`0x100`) `[documented]` (`deko3d.h`; `deko_basic` `loadShader`).
+- Uniform buffers: alignment `DK_UNIFORM_BUF_ALIGNMENT` (`0x100`), up to 64 KiB, push-constant semantics `[documented]` (`deko3d.h`; `Primer.md`).
+- Maxwell compute guidance from NVIDIA's CUDA tuning guide (coalescing, occupancy, 255 registers per thread, 48 KB shared memory per block with at most 32 KB recommended) describes CUDA kernels on desktop Maxwell. It does not describe `uam`-compiled graphics shaders on the Switch, and no measurement here shows it transfers `[hypothesis]` (NVIDIA Maxwell Tuning Guide). The Switch GPU has 64 KB shared memory per multiprocessor and runs at 768 MHz docked `[reported]` (Chips and Cheese, 2023-12-23).
+- FP16: Chips and Cheese found that NVIDIA's own compiler on the Switch did not pack FP16 operations automatically. That says nothing about `uam`, whose FP16 packing behaviour this wiki has not tested `[hypothesis]`. What would settle it: compile the same half-precision shader with and without explicit packed types and compare the SASS and GPU time.
 
 ## Pitfalls
 
-- Thousands of tiny draws: symptom is flat GPU busy time with high frame time; fix by chunk-merging and grouping by material/atlas.
-- Rebinding per draw: symptom is CPU time scaling with draw count even after merging vertices; fix by binding atlas and state once per material.
-- Full-device wait per frame: symptom is frame time near CPU-plus-GPU instead of overlapping; fix with ring plus per-slot fences.
-- Runtime texture converts (PNG/JSON at load): symptom is long loads and linear images; fix by pre-converting to tiled binaries at build time.
-- Always-on GPU timers: symptom is the measured pass shrinking when timers are removed; fix by timing one pass at a time, briefly.
+- **Many tiny draws with the GPU mostly idle.** Symptom: frame time follows draw count while GPU busy time stays low. Fix: measure CPU recording time separately, then merge or cull; see the hypotheses above.
+- **`dkQueueWaitFence` used to wait on the CPU.** Symptom: the CPU overwrites command memory that the GPU is still reading and you see one-frame corruption. Fix: `dkFenceWait`.
+- **`dkQueueWaitIdle` every frame.** Symptom: frame time is CPU plus GPU instead of the larger of the two. Fix: per-slot fences.
+- **Reusing one command memory region for every slot.** Symptom: random corruption under load. Fix: one region per slot, cleared only after that slot's fence.
+- **Always-on GPU timers.** Symptom: the measured pass shrinks when timers are removed. Fix: time one pass at a time, briefly.
+- **Runtime texture conversion (PNG at load).** Symptom: long loads. Fix: convert at build time; see [performance and porting](performance-and-porting.md).
 
 ## Open questions
 
-- What draw-call count per frame tips a typical homebrew scene from GPU-bound to CPU-bound on retail clocks? Needs a tiny benchmark sweeping draws at fixed vertex load, run on hardware.
-- Which atlas size (512 px vs 1024/2048 px) balances binds against cache pressure on handheld clocks? Needs same-scene A/B with bandwidth counters.
-- How much DKSH precompilation covers a full level without gaps? Needs a stutter log over a complete playthrough.
+- At what draw count does a plain `deko3d` scene on retail clocks become CPU-bound? Needs the draw-count sweep benchmark described above.
+- Does atlas size (512, 1024, 2048) change bandwidth or cache behaviour on handheld clocks? Needs a same-scene A/B with the memory profile fixed.
+- Is `dkCmdBufTiledCacheOp(Flush)` required before sampling a tiled target? Needs the readback experiment above.
+- Does `uam` pack FP16 automatically? Needs the SASS comparison above.
+- What is the per-frame memory traffic of a typical 720p and 1080p scene? Needs GPU counters or a bandwidth benchmark.
 
 ## Sources
 
-- [deko3d](https://github.com/switchbrew/deko3d) — command lists, capture/replay, barriers, tiled-cache ops, Zcull, image layout and flags, validation layer [documented].
-- [deko3d headers](https://github.com/switchbrew/deko3d/blob/master/include/deko3d.h) — barrier tiers, `DkImageFlags`, queue flags, fence and code-segment rules [documented].
-- [libnx](https://github.com/switchbrew/libnx) — fences, queues, applet memory modes [documented].
-- [switch-examples](https://github.com/switchbrew/switch-examples) — Example04 image layout, Example08 deferred barriers, Example09 compute fences, ring patterns [documented].
-- [tegra_swizzle](https://github.com/switchbrew/tegra_swizzle) — GOB 64×8-byte block-linear layout and test vectors [documented].
-- [NVIDIA Maxwell tuning guide](https://docs.nvidia.com/cuda/maxwell-tuning-guide/) — coalescing, caching, occupancy, shared-memory sizing, shared-bus bandwidth [documented].
-- [Chips and Cheese Tegra X1 analysis](https://chipsandcheese.com/) — 768 MHz shipping clock, 64 KB shared, L2 rates, FP16 no-auto-pack note [reported] (third-party measurement, conditions as stated).
+- [deko3d](https://github.com/devkitPro/deko3d) at `373bfd43d8b2d805fa2eb7d406dbb823032df958` — `include/deko3d.h` (function signatures, flags, barriers, alignment constants), `Primer.md` (queues, fences, memory blocks, capture and replay, shaders), `README.md` (offline shader compiler, validation layer, compressed render targets).
+- [switch-examples](https://github.com/switchbrew/switch-examples) at `669786898205b7beb25ff1731e72982e6d0397d3` — `graphics/deko3d/deko_basic/source/main.c`, `graphics/deko3d/deko_examples/source/Example03_Cube.cpp`, `Example04_TexturedCube.cpp`, `Example08_DeferredShading.cpp`, `Example09_SimpleCompute.cpp`.
+- [uam](https://github.com/devkitPro/uam) at `5a5afc2bae8b55409ab36ba45be63fcb73f68993` — the offline compiler (derived in part from Mesa/Nouveau code).
+- [tegra_swizzle](https://github.com/ScanMountGoat/tegra_swizzle) at `d7ed318ce233a4d557d4a2f207ed5dc04ed813c0` — `tiling.md`, 64×8-byte GOB tiling.
+- [usf4-nx](https://github.com/Thorhax/usf4-nx) at `30ffae0` and [sa2-nx](https://github.com/ChanseyIsTheBest/sa2-nx) at `baf523b` — reported A/B numbers and NVK per-call costs `[reported]`.
+- [nfsmw-nx](https://github.com/StevensND/nfsmw-nx) at `20f8dc1` — stock-clock table, pipeline-list result `[reported]`.
+- [SwitchWakerHD](https://github.com/centollOS/SwitchWakerHD) at `9aec4e3`, [melonDS](https://github.com/RSDuck/melonDS) at `6c6f1e8`, [nxquake2](https://github.com/fgsfdsfgs/nxquake2) at `a8fdda02`, [taisei](https://github.com/taisei-project/taisei) at `baf029b` — barrier audit, GPU compositing, renderer selection, `MESA_NO_ERROR`; see the linked case studies.
+- [Chips and Cheese: Nintendo Switch's iGPU](https://chipsandcheese.com/) (2023-12-23) — shared memory size, docked clock, FP16 behaviour of NVIDIA's compiler `[reported]`.
+- [NVIDIA Maxwell Tuning Guide](https://docs.nvidia.com/cuda/maxwell-tuning-guide/) (CUDA documentation 13.5) — desktop Maxwell compute guidance; see the caveat above.
+- Eidos Switch engineering guide (private research file `EIDOS_SWITCH_ENGINEERING_GUIDE.md`, section 1) — readback numbers `[reported]`; not publicly checkable.
