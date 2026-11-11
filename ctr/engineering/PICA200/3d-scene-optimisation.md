@@ -95,6 +95,16 @@ A flat character quad can be placed in a projected 3D scene (terrain and buildin
 
 A hybrid used by Mario & Luigi: Dream Team, per a search summary of the Iwata Asks interview that this page did not read in full (3D backgrounds, 2D pixel-art characters), is the same idea; it is `[reported]` second-hand and is not relied on.
 
+### A hybrid scene: coordinate, depth and pass contracts
+
+Choose one world convention and document it: origin, up/forward axes, handedness, world units per tile and the camera transform. Convert source positions once at the boundary, then use the same world-to-view projection for terrain and character anchors. A character's anchor is normally the feet: place the bottom of each animated frame at that anchor, and store per-frame pivot and trimmed-rectangle offsets so varying artwork dimensions do not make the feet jump. A billboard must define whether it faces the camera fully or rotates only around the vertical axis.
+
+A practical starting order is opaque terrain and buildings, depth-tested cut-out geometry, character quads, translucent shadows/effects in a suitable order, required foreground masks or overlays, and finally screen-space UI. This order is a design to validate, not a universal rule: a character that must walk both behind and in front of a building needs suitable geometry/depth or an explicit priority split, and transparent effects can require interleaving. A fully transparent texel must not leave an unwanted depth value; choose and verify alpha-test/depth-write policy for cut-outs separately from blended effects. Stable sort ties explicitly; a depth buffer cannot automatically recreate a DS engine's window, layer and blend rules.
+
+After the 3D scene, hand GPU state to citro2d deliberately: finish pending submissions and configure its target, shader, view, clipping, blend and depth settings through the appropriate library entry points. Conversely, restore all state needed when returning to custom citro3d draws. See the [tile renderer's hand-over](2d-tile-renderer.md#strategies-1-and-2-handing-the-gpu-state-over). Test both eye views independently if stereo is enabled; sharing simulation or visibility does not make the eye images identical. Camera snapping may help orthographic pixel art but can shimmer or distort motion under perspective or stereo; check the result on the intended display rather than rounding every world coordinate. This wiki does not yet supply a complete, hardware-verified hybrid scene.
+
+For a large static town, choose spatial cells, object or chunk bounds and an explicit visibility representation before merging meshes. Per-object culling preserves granularity; chunking reduces submissions but can draw hidden members; precomputed cell visibility uses extra storage and depends on the cell/portal model. These are trade-offs, not a universal chunk-size rule. Define object IDs, cell-to-object lists, bounding volumes, transition behavior and LOD thresholds; keep a conservative visibility margin and test camera movement across cell boundaries. LOD variants must include storage, texture/material changes and a policy for avoiding visible rapid switches [hypothesis until validated in the target scene].
+
 ## Decision table
 
 | Situation | First thing to try | Why | Evidence |

@@ -54,6 +54,12 @@ A more aggressive pipeline can prepare a later command buffer while an earlier f
 
 SM64DS Enhanced's [case study](../case-studies/case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws) describes such a pipeline and a hardware flicker problem absent in its emulator. Its implementation depends on citro3d internals, so it is an example of the ownership problem, not a stable API recipe. [reported: project renderer, revision and test model unspecified]
 
+### Resource ownership across a frame
+
+For the conservative loop above, prepare ordinary CPU-only state while the previous frame executes, wait for the library's synchronization point, then write GPU-visible data, submit and preserve it until the next completion. Cache visibility and lifetime are separate: flushing makes CPU writes visible but does not grant permission to overwrite data still in use. Track display presentation separately from GPU completion when reusing scanout buffers.
+
+For a ring or double-buffered design, assign each slot an owner and a completion condition: CPU-free → CPU-writing → submitted/GPU-reading → GPU-complete → CPU-free. Use a distinct slot when building ahead; wait or skip safely if no slot is free. Record which submission each timing value describes, and ensure a result from the previous frame is not attributed to the current one. An audio or loading worker needs bounded queues and must not hold a lock across blocking I/O; the system core also runs services, so thread placement needs [its own validation](../threading.md#proving-a-worker-improves-frame-time). These ownership rules do not constitute a tested asynchronous implementation; the advanced citro3d-internal approach in the case study is version-sensitive.
+
 ## Locking the frame rate
 
 | Goal | How |

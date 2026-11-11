@@ -155,6 +155,21 @@ All of `effect.c` edits one `C3D_Effect` struct that is written out whenever it 
 - Immediate mode: `C3D_ImmDrawBegin(prim)` writes `PRIMITIVE_CONFIG`, `RESTART_PRIMITIVE`, a dummy `INDEXBUFFER_CONFIG`, `GEOSTAGE_CONFIG2` bit 0 = 1, `START_DRAW_FUNC0` = drawing and `FIXEDATTRIB_INDEX` = `0xF`; each `C3D_ImmSendAttrib(x, y, z, w)` writes the four float24 values as three words; `C3D_ImmDrawEnd` restores configuration mode, clears bit 0 and clears the post-vertex cache. The attribute count is whatever the bound `C3D_AttrInfo` declares (3dbrew: set `VSH_NUM_ATTR`; all vertex-loader registers are ignored in this mode). Use it for a handful of vertices ([GPU rendering](PICA200/gpu-rendering.md#what-a-draw-call-costs)).
 - Combiner buffer: `C3D_TexEnvBufUpdate(mode, mask)` picks which of stages 1-4 read the previous buffer (bits 8-11 RGB, 12-15 alpha of `TEXENV_UPDATE_BUFFER`) and `C3D_TexEnvBufColor` sets `TEXENV_BUFFER_COLOR`. Stages 4 and 5 are at register `0x0F0`/`0x0F8`, not at `0x0C0 + 8*n`: `C3Di_TexEnvBind` adds 2 to the stage index for them.
 
+## Material state contracts
+
+A material is the complete combination of vertex shader inputs/outputs, texture units, texture-environment (**[TEV](../glossary.md#tev)**) stages, lighting/fog, alpha/depth/stencil tests, blending, write masks and culling. It must establish its required state on entry; do not assume the previous material left the correct settings. This checklist describes intended behavior, not copy-ready or hardware-verified recipes:
+
+| Material | State to decide together | Failure to check |
+| -------- | ------------------------ | ---------------- |
+| Opaque textured | Texture and UVs, TEV texture × vertex colour, depth test/write, culling | Wrong winding or stale tint; depth mismatch. |
+| Cut-out sprite or foliage | Texture alpha, alpha comparison before depth write, depth and culling | Invisible texels occlude objects behind them. |
+| Translucent water or glass | Blend factors, depth test, usually disabled depth writes, ordering | Incorrect layering when intersecting other transparent surfaces. |
+| Additive glow | Source/destination factors, depth test/write and alpha policy | Glow leaks through walls or alters later composition. |
+| Vertex-lit or lightmapped | Vertex colour or a second texture/UV set, corresponding TEV stages | Wrong modulation, UV misalignment or state leaking into the next draw. |
+| Fragment-lit and fogged | Lighting environment, LUTs, normals and shader outputs; fog state and lookup table | Missing output attributes, incorrect highlights or fog depth. |
+
+See [GPU rendering](PICA200/gpu-rendering.md#colour-combiners-tev-recipes), [lighting](#lighting) and [fog](#fog) for the API building blocks. Check each material over several backgrounds and after a different material; lightmap UVs, transparency ordering, alpha coverage and depth ties all need image comparisons. The wiki does not yet provide a complete validated material library or evidence that every desktop fragment effect can be represented in one pass.
+
 ## Pitfalls
 
 - **Fractional gas light values** (see above) are probably truncated.

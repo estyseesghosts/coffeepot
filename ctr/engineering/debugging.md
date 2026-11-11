@@ -127,6 +127,12 @@ Send with `monitor <command>` [documented: `sysmodules/rosalina/source/gdb/remot
 
 `-O2` builds can be debugged; values may show as `<optimized out>` and lines may jump. Build a `-O0 -g` variant only to localise a bug, then confirm the fix in the optimised build: optimisation changes timing and can hide or reveal races.
 
+## Bounded renderer diagnostics
+
+A useful capture answers which work was attempted, admitted and actually presented. Record a bounded in-memory ring with frame and pass IDs; command order, material/texture identifiers and vertex ranges; batch-end reasons; target changes; queue high-water marks and dropped submissions; texture-cache hit/miss/invalidation and uploaded bytes; and resource ownership, current/peak usage and allocation failures. Capture CPU phases, GPU timing, waits and frame age as distinct values. Flush the log outside deadline-critical work so synchronous output does not become the hitch being investigated.
+
+For a reproducible visual defect, freeze the scene state, simulation frame, input, camera, random seed, assets, model, build and rendering configuration. Capture the same phase from reference and candidate, including relevant prior buffers and state. Compare dimensions and colour channels, count pixels exceeding an explicitly stated per-channel tolerance, report maximum error and retain a difference image. Exact comparison is appropriate only when capture format and rendering semantics match; screen photographs include capture and display differences. A trace or a green image comparison does not prove an unexecuted branch correct. The wiki does not yet provide a general frame-capture or image-diff tool; use an external one and preserve its version and settings. See [testing on hardware](testing-on-hardware.md#compare-correctness-as-well-as-speed).
+
 ## GPU hangs
 
 A frozen picture with a still-running CPU (logs keep printing, HOME still works) usually means the GPU stopped processing commands. `C3D_FrameBegin` waits for the previous GPU work forever by default, so the program then blocks there. Check, in order:

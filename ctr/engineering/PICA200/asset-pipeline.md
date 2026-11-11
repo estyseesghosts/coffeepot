@@ -90,6 +90,20 @@ Some ports must load assets in their original layout at runtime. The Sonic CD 11
 
 Expand indices through the active palette, then tile the resulting texture for the GPU. Validate the first and last pixel of each 512-row section and compare tile addresses and orientation against the original. Keep the original palette or a way to reconstruct it: when it changes, invalidate all converted pixels that depend on it. Include source, destination and any temporary buffers in the peak load budget.
 
+### Plan a 3D model conversion pipeline
+
+A real model pipeline needs a contract between the authoring tool, the converter and the renderer. Choose an interchange format such as glTF, then document axis directions, handedness, unit scale, triangle winding, transform order, UV origin and texture orientation. Import mesh primitives, indices, materials and node transforms; triangulate or reject unsupported topology; split by material and by the limits of the chosen index type and target buffers. Bake or preserve transforms consistently, including the effect of a negative scale on winding and normals.
+
+Define a versioned output header with counts, byte offsets, lengths and alignment, followed by validated mesh, index, material and texture references. Reject truncated files, out-of-range indices and offsets, integer overflow and unsupported feature versions before allocating. The runtime loads into GPU-addressable memory, binds matching attribute formats and shader inputs, and keeps the buffers alive until the draw completes. Render a known textured mesh with a marked axis and UV checker; verify winding, seams, material assignment, bounds and resource sizes against the authoring view. The wiki does **not** yet provide a model converter, binary loader or a verified Blender-to-console workflow.
+
+A source vertex with three 32-bit position values, three normals and two texture coordinates occupies 32 bytes before alignment. More compact attributes can reduce storage and traffic but require a supported fetch format, explicit scale/offset or shader reconstruction, and a documented error bound. Check large coordinates, small UV details and deformed meshes; do not assume a packed representation is faster without evidence. See [GPU vertex formats](gpu-rendering.md) and [shader programming](pica200-shader-programming.md).
+
+### Plan skeletal animation as a separate asset contract
+
+Store a hierarchy with parent indices and inverse bind transforms, animation channels with time/value interpolation, and per-vertex bone indices and weights. Specify coordinate spaces and matrix multiplication order; check a rest pose against the source. With CPU skinning, evaluate the pose, deform into a writable GPU-visible buffer, flush modified ranges and keep each buffer immutable until the GPU has finished. With GPU skinning, upload the pose to vertex-shader uniforms and provide supported indices/weights as attributes; reserve uniforms for projection and every other shader input before calculating the bone budget.
+
+When a mesh's active bones exceed the available per-draw uniform space, partition triangles by bone set and remap bone indices for each batch; duplicated vertices and extra draws increase memory and work. Define behavior for zero/unnormalized weights, more influences than supported and interpolation across clips. Reuse a pose only where skeleton, animation time and transforms really match; reduced update rates for distant objects are visible approximations. There is no working CPU/GPU skinning example or measured crossover in this wiki yet.
+
 ## Shaders with picasso
 
 Shader source files ending in `.v.pica` in a source directory are assembled one per output file; to put several shaders (for example a vertex and a geometry shader) into one `.shbin`, list them in a `.shlist` file. The generated header declares `<name>_shbin` and `<name>_shbin_size`, which you pass to `DVLB_ParseFile` ([picasso and citro3d](../../homebrew/picasso-and-citro3d.md)).

@@ -678,6 +678,16 @@ For SDL2/SDL3, the upstream Nintendo 3DS README documents **software-only SDL re
 
 See the [rendering trade-off case studies](case-studies/case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
 
+### Choose a bring-up path by source renderer
+
+- **Software-rendered 2D:** capture a reference frame and draw order, identify sprite/tile and palette operations, then introduce GPU layers incrementally with a whole-surface fallback where blending or priority cannot be reproduced. Use the [worked ordering example](PICA200/rendering-2d.md#worked-scene-order-first-batch-second).
+- **DS-style 2D:** model tiles, effective palettes, object state and per-line register effects before caching. Validate invalidation, windows, scanline changes and fallback coverage with matching captured state; see [the invalidation and scanline plan](PICA200/rendering-2d.md#worked-invalidation-and-scanline-plan).
+- **Hybrid 2.5D:** establish coordinate systems and sprite pivots, then add terrain, cut-outs, characters, translucent work and UI while testing occlusion in both directions. See [the hybrid scene contract](PICA200/3d-scene-optimisation.md#a-hybrid-scene-coordinate-depth-and-pass-contracts).
+- **Desktop 3D:** inventory meshes and materials, convert coordinate and vertex formats, replace fragment programs with supported fixed-function combinations or baked assets, and validate each material and visibility boundary. See [model conversion](PICA200/asset-pipeline.md#plan-a-3d-model-conversion-pipeline) and [material state contracts](citro3d-fixed-function-api.md#material-state-contracts).
+- **New game:** begin with a small scene and explicit resource and frame ownership, not a generic abstraction for features you do not yet need. Add audio, storage and lifecycle paths incrementally.
+
+For each route, define pass/fail conditions first: deterministic scene, expected image or accepted difference, no missing objects, bounded memory, correct gameplay time, and successful HOME/sleep/exit and audio checks on the target. This is a bring-up map; the wiki does not yet contain a complete runnable implementation for every route.
+
 ## 13. Release acceptance: what a complete port must prove
 
 Do not call a port “done” merely because the title screen works. Use **feature and hardware gates** with the evidence attached. If your release intentionally supports only New 3DS, label that honestly; never imply Old 3DS support from an emulator or a slow-clock New 3DS run.

@@ -91,6 +91,14 @@ Bits per pixel are the values citro3d uses to size a texture (`fmtSize` in `sour
 
 A full mipmap chain adds about one third (1 + 1/4 + 1/16 + ... approaches 4/3): an RGBA8 512x512 texture with every level is about 1.33 MiB. The trade-off is quality and fit: ETC1 and ETC1A4 are lossy (ETC1A4 stores a 4-bit alpha per pixel next to the colour block) and suit photographic or environment textures, not pixel art; 16-bit formats lose colour depth and alpha precision. `C3D_TexFlush` flushes the whole chain (`C3D_TexCalcTotalSize`, `texture.c` line 239).
 
+### Budget a whole scene transition
+
+A resource moves through unloaded → reading → decoded CPU data → upload staging → resident → no longer referenced → GPU finished → released. Give each state an owner and cancellation rule. A CPU completion event does not establish that an asynchronous transfer or draw has completed; do not overwrite staging data, evict a texture or reuse a vertex buffer until the corresponding consumer has finished. A resource may be logically evicted while its allocation remains alive until that point. See [buffer lifetime](#buffer-lifetime) and [frame pacing](PICA200/frame-pacing.md#overlapping-cpu-and-gpu).
+
+For each scene, account for old resident assets plus compressed incoming bytes, decode scratch, new CPU buffers, GPU targets, texture/geometry allocations, audio queues and allocator overhead. Record startup, steady state and transition peaks separately, including the largest allocatable block; total free space alone does not guarantee a contiguous allocation. If old and new scenes cannot overlap within budget, stage the transition, free only after GPU completion, or use an explicitly bounded loading screen. Define a visible failure path when an allocation or transfer fails.
+
+As **arithmetic**, 400×240 colour at 4 bytes/pixel plus 16-bit depth occupies 576,000 bytes; 320×240 with the same formats occupies 460,800 bytes. Adding an equal-size second-eye top target and a 512×512 RGBA8 colour target plus 16-bit depth gives 3,185,664 bytes (about 3.04 MiB). This assumes separate, unpadded allocations in the same memory pool: real placement, sharing, framebuffer alignment, bank limits and library choices can change the total. It excludes texture assets, scanout buffers, command buffers and overhead; it is not a measured allocation. Produce separate budgets for 2D, hybrid and stereo scenes rather than treating this example as a default.
+
 ## Keeping caches coherent
 
 The ARM11 data cache is write-back ([CPU](../hardware/cpu.md#the-mp11-core-from-arms-manual)): a CPU store may sit in the cache for a long time before it reaches FCRAM. The GPU, DSP and DMA engines read and write memory directly and do not see the CPU's cache. Two rules follow:

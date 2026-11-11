@@ -645,18 +645,35 @@ A tile layer is a grid of quads whose texture coordinates point at tiles in an a
 
 ### Layers and composition
 
-- Draw layers back to front: far backgrounds, tile layers, sprites, foreground, UI. Opaque layers may instead use the depth buffer in any order, since larger z is in front ([section 2](#2-screens-coordinates-and-depth)); translucent and cut-out sprites must still be drawn back to front.
+- Draw layers back to front: far backgrounds, tile layers, sprites, foreground, UI. Opaque layers may instead use the depth buffer in any order, since larger z is in front ([section 2](#2-screens-coordinates-and-depth)); translucent sprites normally need an order compatible with blending. Cut-outs can use depth tests and depth writes, but equal-depth ties and original priority rules still need an explicit policy.
 - Each layer that covers the whole 400×240 screen costs fill rate; stacked full-screen semi-transparent layers multiply it. Keep translucent full-screen overlays to a minimum and prefer small quads [general GPU behaviour; the PICA200's fill rate has not been measured here].
 - The bottom screen is a separate render target. If its content rarely changes (maps, menus), redraw it only when it changes and leave the previous framebuffer on screen — citro3d swaps a screen only if its target was drawn that frame ([GPU rendering](gpu-rendering.md#technical-details)).
 - **Masks and windows**: rectangular clipping with `C3D_SetScissor`; arbitrary shapes with the stencil buffer (`C3D_StencilTest`, `C3D_StencilOp`) — draw the mask shape into stencil, then draw the masked layer with a stencil test. citro2d's own screen targets have no stencil bits (16-bit depth only), so a stencil mask needs targets you create yourself with `GPU_RB_DEPTH24_STENCIL8`.
+
+### Worked scene: order first, batch second
+
+Build a scene description independently of citro2d: each visible operation carries its stable sequence number, priority/layer, geometry and UVs, texture, blend and depth policy, clipping or mask, and animation/palette generation. Derive the correct back-to-front order from the original engine's priority and tie rules before looking at textures. Split objects when they cross an occlusion boundary that a single quad cannot represent.
+
+For example, consider a ground layer with water, a character behind a tree trunk, a translucent mist, branches in front of the character, and a clipped dialogue window:
+
+| Sequence | Operation | Ordering constraint |
+| -------- | --------- | ------------------- |
+| 1–2 | Ground tiles, then water tiles | Water covers the ground; its animation state is sampled for this frame. |
+| 3–4 | Character and tree trunk | Their order must match the character's location and the source's tie rules; switch it when the character moves in front. |
+| 5–6 | Mist, then foreground branches | Mist blends with what is already drawn; branches remain in front. |
+| 7–8 | Window clip and dialogue | Window content is clipped; restore or replace clipping before subsequent unmasked UI. |
+
+Walk this ordered list once, combining **consecutive** operations only when their render target, shader/attributes, texture, blend/depth/stencil state and clipping all agree and their sequence remains correct. An intervening trunk, mask or blend change is a batch boundary even when the character and branches share an atlas. Record capacity failures; an application queue can overflow before citro2d's own object limit. Do not assume this table is a pixel-exact DS priority implementation; it is a worked ordering design, not a hardware-tested renderer.
+
+Retain only data whose dependencies are unchanged: a static tile mesh may survive camera motion with a transform, but palette changes invalidate affected direct-colour atlas content. At a target or material transition, finish outstanding library work before changing shared state and configure the next pass explicitly; see [mixing 2D and 3D](3d-scene-optimisation.md#25d-2d-character-quads-in-a-3d-scene) and [renderer architecture](renderer-architecture.md). Validate the character walking both behind and in front of the trunk, through mist and water, with a window edge crossing the scene. Compare the same captured state with a reference, including equal-priority ties, alpha and clipping; no such end-to-end scene has been run for this wiki.
 
 ### Transparency
 
 | Need | Use | Cost |
 | ---- | --- | ---- |
-| Cut-out edges (pixel art, foliage) | `RGBA5551` or alpha-tested textures; `C3D_AlphaTest(true, GPU_GREATER, 0x80)` | No blending, any draw order; alpha test also stops transparent texels writing depth |
+| Cut-out edges (pixel art, foliage) | `RGBA5551` or alpha-tested textures; `C3D_AlphaTest(true, GPU_GREATER, 0x80)` | Can use depth testing and writing without blending; priority ties still require an ordering policy |
 | Soft edges, glow, shadows | Alpha blending (`C3D_AlphaBlend`, citro2d default) | Back-to-front order required |
-| Additive light, particles | Additive blend (`GPU_BLEND_ADD` with `GPU_SRC_ALPHA`, `GPU_ONE`) | Order-independent |
+| Additive light, particles | Additive blend (`GPU_BLEND_ADD` with `GPU_SRC_ALPHA`, `GPU_ONE`) | May be reordered only when depth, stencil, destination-alpha and intervening blend operations make it safe |
 
 ### Text
 
@@ -720,6 +737,14 @@ Build such a renderer in steps: start with one narrow subset that you can prove 
 Verify such a path by comparing both renderers on the same captured state, then on an Old 3DS and a New 3DS; an emulator pass is not enough ([testing on hardware](../testing-on-hardware.md)).
 
 See the [rendering trade-off case studies](../case-studies/case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
+
+### Worked invalidation and scanline plan
+
+For an indexed source tile, retain its source bytes, effective palette bank and generation, output atlas page and rectangle. Build a reverse dependency from each palette bank or entry to affected tiles. On a palette write, mark every dependent region dirty even when tile bytes are unchanged; on tile writes or remapping, invalidate the affected tile/bank conservatively. Regenerate into a CPU-owned staging region or an inactive texture, flush the written bytes as required, issue any transfer and wait for its completion before drawing the new version. Keep the old texture and staging memory alive until their GPU consumers finish. Atomic publication is an ownership rule, not a promise that the display will never show different frame versions across independently updated layers.
+
+Pre-converted variants trade resident memory for avoiding some runtime conversion; on-demand conversion trades conversion and upload work for fewer resident variants. A per-pixel palette lookup is not a general PICA200 fragment-shader operation. Any multi-pass or texture-combiner approximation needs its own demonstrated design and correctness checks; do not assume arbitrary indexed palette lookup is available. Compare colours, alpha and changes during an active display effect with a reference.
+
+For scanline scroll, record the **effective** scroll, priority, window, blend and palette state at each line, including changes that occur during rendering. Form maximal adjacent spans only where every state needed by that draw is identical; each span uses the matching source offset and a clip rectangle with consistent edge conventions. One scissored strip per span is a possible representation, but state changes can split batches, and filtering or scaling can expose seams. A fixed-height group that ignores differences within it is an approximation, not the same algorithm. If the representation cannot reproduce a mode or exceeds a chosen work budget, render the affected surface with a correct reference path and count the reason. With 192 distinct states the exact approach can require 192 spans; it has no guaranteed performance advantage. Test the first and last line, alternating offsets, windows, palette changes and fractional output scaling on a captured state. These are design requirements; a complete implementation and visual parity are not yet verified here.
 
 ## Pixel-perfect scaling
 

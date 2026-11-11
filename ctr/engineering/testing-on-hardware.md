@@ -73,6 +73,10 @@ A fixture can prove an optimization correct on constructed input without proving
 
 Keep baseline binaries immutable in separate output directories. Record their hashes alongside the save, script, configuration and model for each run; check the runtime banner and feature activation in every log. Confirm flags reached the library that contains the optimized code. Test PROFILE versus OFF with a matched, repeated A/B rather than attributing an unmatched difference to instrumentation.
 
+### Integrated game-system checks
+
+Individual renderer, audio and file tests do not prove the combined program works under load. With a reproducible scene, load a second area while sound plays; request HOME or sleep during loading; resume and check whether application-owned caches or targets need rebuilding; exercise slow and failed writes; and close with producer/consumer queues active. Check input and simulation progression throughout, and verify any worker cancellation and shutdown ordering. The required behavior depends on the application's ownership design; do not assume every target is lost or retained on resume. Record failures and target model separately. These integrated tests have not been run for the wiki's examples.
+
 ## Benchmark record format
 
 A benchmark record has a human part (this table, filled in for a README or page) and a machine part (the lines `common/bench.h` already writes). The human table below is the shape suggested by the review that prompted it; the example values are **illustrative, not measured**.
