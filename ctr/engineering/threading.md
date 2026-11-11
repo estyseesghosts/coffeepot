@@ -35,7 +35,46 @@ For a `.3dsx` under Luma3DS the maximum is 89% [documented: `hbldr.c`]. How the 
 
 > Conflict: how many threads fit on core 1. libctru's `thread.h` says that with `APT_SetAppCpuTimeLimit` set "it is possible to create a single thread on this core". The unpublished HeartGold/SoulSilver port notes (`old-3ds-guide-revised.md`) record a layout with **two** worker threads (display composition and geometry) on Old 3DS core 1, and flag the contradiction themselves, as "to verify on hardware: which `threadCreate` calls return non-NULL". This page follows libctru: plan for **one** application thread on core 1 on an Old 3DS, check `threadCreate` for `NULL`, and put multiple jobs on that one thread's queue. Whether a second core-1 thread can really be created is not established here.
 
-Two well-known ports illustrate a common placement: the Super Mario 64 3DS port runs its audio thread on core 1 on Old 3DS and core 2 on New 3DS [documented: its README]. That is a design choice for that program, not a rule; measure your own.
+Two well-known ports illustrate a common placement: the Super Mario 64 3DS port runs its audio thread on core 1 on Old 3DS and core 2 on New 3DS `[reported]` (its README, quoted [below](#when-borrowing-core-1-can-make-the-game-slower)). That is a design choice for that program, not a rule; measure your own.
+
+### When borrowing core 1 can make the game slower
+
+The share you request is taken from the system modules, and your program depends on some of them (GPU service, DSP, file system, APT). The mechanism is `[reverse-engineered]` from Luma3DS's `pm/source/reslimit.c` comments: in the single scheduling mode applications get, core 1 is cut into 25 ms slices; your thread gets *percent*% of each slice, system modules share (90 - *percent*)%. A bigger *percent* therefore means longer waits for every system request you make. The one number this wiki has is third-party: `DSP_FlushDataCache` rose from ~0.1 ms to 1-5 ms at 80% (libctru issue #556, Old 3DS) `[reported]`. The issue is about `DSP_FlushDataCache` only; do not read it as the cost of every service.
+
+> Unknown: the review that prompted this section says 3dbrew documents this trade-off explicitly, but 3dbrew returned HTTP 403 when fetched for this update, so that wording was not checked and is not relied on. The claims above rest on the Luma3DS and libctru sources and the issue linked in Sources.
+
+The trade-off is therefore: a worker on core 1 removes work from core 0, but starves services that core 0 calls. Only a total-frame-time measurement shows which wins (see [the protocol](#proving-a-worker-improves-frame-time)).
+
+One real port as a data point, `[reported]`: the G-Diffuser F-Zero X port's postmortem lists its Old 3DS layout as core 0 for the game plus **core 1 with a 30% share for audio**, and core 0 plus core 2 on a New 3DS ([source](https://hypnotize.works/gdx-3ds/postmortem/native.html), read directly; entry on scheduling, 2026). It gives no study of other percentages, so 30% is a choice, not a finding. The Super Mario 64 3DS port README (Wyatt-James) says its audio thread "runs on Core 1 on O3DS and Core 2 on N3DS" and needs Luma 10.1.1 or higher; the README does not mention `APT_SetAppCpuTimeLimit` or a percentage `[reported]`.
+
+### Choosing a worker workload and a percentage
+
+Good candidates share three properties: the work is **independent** of the frame being built (audio mixing, decoding ahead, next-frame vertex data), it is **bounded** (a known maximum per job), and its result is needed **a frame or more later**. Poor candidates: anything the main thread waits for in the same frame (the slice delay can be up to 25 ms [reverse-engineered]), and anything that makes many service calls itself.
+
+A starting procedure, all `[hypothesis]` until run:
+
+1. Measure the job's CPU time on core 0 first (ticks around it, worst and median).
+2. Estimate the share needed: job time per frame / frame time. A job of 3 ms in a 16.7 ms frame needs about 18% of core 1 as a floor; add slack because the slices are 25 ms and the thread cannot run while system modules hold theirs.
+3. Start at the smallest share above that (or 30%, the G-Diffuser audio choice above, for audio); never default to the maximum of 89.
+4. Raise it only while the worker misses its deadline *and* the main thread's service calls (GPU flush, file reads, DSP calls) stay at their baseline.
+
+### Avoiding contention with the main thread
+
+- **Share nothing hot.** Pass work by value or through a single-producer queue; keep data written by one core on its own 32-byte lines ([false sharing](cpu-optimization.md#memory-access-patterns)).
+- **Keep lock hold times tiny, and never hold a lock across a service call.** libctru's locks have no priority inheritance, so a low-priority holder blocks higher-priority waiters (see [primitives](#synchronisation-primitives)).
+- **Audio locks.** `[reported]` G-Diffuser's 09-29 entries record a case where the game thread waited on a lock the audio thread held while synthesising: its `aud` metric was 25.8 ms, which the page says was confirmed on Old 3DS hardware as audio-lock wait, and after the lock was narrowed it fell to 0.2 ms; the page's wall-time figures for the two runs were 88 ms (gameplay) and 67.8 ms (race), which differ in scene and other changes, so they are not a controlled before/after of the lock. Takeaway for any port: hold an audio lock only to copy parameters or swap a buffer pointer; synthesise outside it. Other stalls recorded there (a synchronous SD log flush of 26-270 ms on the main thread) are covered in [performance](performance.md#real-hardware-profiling-cookbook).
+
+### Proving a worker improves frame time
+
+A worker that makes the profile look better can still make the game slower. The protocol (record fields as in [testing on hardware](testing-on-hardware.md#running-a-performance-experiment)):
+
+1. **Fix the scene** (a recorded input script or a save state) and the build. Warm up 5 seconds.
+2. **Variants:** A = no worker (the job runs inline on core 0); B = worker on core 1 at percentage P1; C = worker at P2; and D = worker on core 0 at lower priority (a control: shows the benefit of threading itself versus just changing the order). **New 3DS:** add the core 2 variant, separately.
+3. **Metric:** the frame-time distribution (p50, p95, p99, worst) from the [cookbook](performance.md#real-hardware-profiling-cookbook), the count of missed frames, **and** the per-stage times of main-thread service calls (GPU flush, file reads, DSP calls), so a regression hidden by an overall improvement is visible.
+4. **Runs:** at least 5 per variant, alternating A and B, with a fresh boot noted separately.
+5. **Accept** B only if its median and p99 improve by more than the run-to-run spread of A *and* the missed-frame count does not rise *and* the output is identical. Otherwise keep A, or try a different P.
+
+[`membench`](../benchmarks/README.md#membench) already includes a variant with `APT_SetAppCpuTimeLimit(80)` to see the effect on flush cost; a scene-level worker benchmark is a [planned experiment](../benchmarks/README.md#planned-experiments), not written.
 
 ### Core 2 (New 3DS only)
 
@@ -203,3 +242,6 @@ Design notes:
 - [Luma3DS](https://github.com/LumaTeam/Luma3DS) — `sysmodules/loader/source/hbldr.c` (3DSX core access and CPU-time descriptor), `sysmodules/pm/source/reslimit.c` (scheduling and CPU-time notes).
 - [libctru issue #556](https://github.com/devkitPro/libctru/issues/556) — DSP flush latency under a core-1 share.
 - [sm64-port (3DS branch) README](https://github.com/thearst3rd/sm64-port/blob/3ds-port/README.md) — core placement of the audio thread in a real port.
+- [Wyatt-James/sm64-3ds-port](https://github.com/Wyatt-James/sm64-3ds-port) — README fetched for this update: audio thread on core 1 (Old 3DS) / core 2 (New 3DS), Luma 10.1.1+, no mention of `APT_SetAppCpuTimeLimit`.
+- [G-Diffuser: Road to 60, All Over Again](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` Old 3DS core layout (core 1 at 30% for audio), audio-lock wait figures.
+- [3dbrew](https://www.3dbrew.org/) — cited by the review for the CPU-time-limit trade-off; unreachable (HTTP 403) when fetched, so no claim here rests on it.

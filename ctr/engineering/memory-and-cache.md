@@ -75,6 +75,20 @@ Notes:
 
 Add the LCD framebuffers libctru's `gfx` allocates in linear memory (two per screen for double-buffering; the top screen's right-eye buffers too when stereo is on), citro3d's command buffer (`0x40000` bytes by default, linear), and allocator fragmentation.
 
+### Texture formats and sizes for a 512x512 texture
+
+Bits per pixel are the values citro3d uses to size a texture (`fmtSize` in `source/texture.c` at `9f21cf7` `[documented]`); the sizes are arithmetic (512 x 512 = 262,144 pixels, bytes = pixels x bits / 8), without mipmaps and without any file or container overhead. The "relative" column is against RGBA8.
+
+| Format (`GPU_*`) | Bits per pixel | Bytes for 512x512 | Size | Relative |
+| ---------------- | -------------- | ----------------- | ---- | -------- |
+| `RGBA8` | 32 | 262,144 x 4 = 1,048,576 | 1 MiB | 100% |
+| `RGB8` | 24 | 262,144 x 3 = 786,432 | 768 KiB | 75% |
+| `RGBA5551`, `RGB565`, `RGBA4`, `LA8`, `HILO8` | 16 | 262,144 x 2 = 524,288 | 512 KiB | 50% |
+| `L8`, `A8`, `LA4`, `ETC1A4` | 8 | 262,144 x 1 = 262,144 | 256 KiB | 25% |
+| `L4`, `A4`, `ETC1` | 4 | 262,144 / 2 = 131,072 | 128 KiB | 12.5% |
+
+A full mipmap chain adds about one third (1 + 1/4 + 1/16 + ... approaches 4/3): an RGBA8 512x512 texture with every level is about 1.33 MiB. The trade-off is quality and fit: ETC1 and ETC1A4 are lossy (ETC1A4 stores a 4-bit alpha per pixel next to the colour block) and suit photographic or environment textures, not pixel art; 16-bit formats lose colour depth and alpha precision. `C3D_TexFlush` flushes the whole chain (`C3D_TexCalcTotalSize`, `texture.c` line 239).
+
 ## Keeping caches coherent
 
 The ARM11 data cache is write-back ([CPU](../hardware/cpu.md#the-mp11-core-from-arms-manual)): a CPU store may sit in the cache for a long time before it reaches FCRAM. The GPU, DSP and DMA engines read and write memory directly and do not see the CPU's cache. Two rules follow:
@@ -112,11 +126,75 @@ To switch to targeted flushing:
 
 Shader uniforms are not affected: citro3d writes them into the command list itself. A forgotten range shows up as geometry or texels from a previous frame, often only intermittently — keep the default path behind a debug switch to compare against.
 
+### Flush-range tracking
+
+The default `C3D_FrameEnd(0)` flushes the whole linear heap; the alternative is to flush only what the CPU wrote. The exact behaviour of each flag is in the table on [renderer architecture](renderer-architecture.md#flush-range-tracking-the-c3d_frameend-flush-and-gx_cmdlist_flush); this section is the design.
+
+1. **Record every write.** At each place the CPU writes memory the GPU will read in this frame (dynamic vertices, indices, texture tiles), call a function that records the address range. Round the range out to 32-byte cache lines first, since flushing operates on whole lines ([the functions](#the-functions)).
+2. **Merge.** Keep a small table and merge overlapping or touching ranges; if it overflows, give up for this frame and use the default flush.
+3. **Flush before `C3D_FrameEnd`.** Flush each range (`svcFlushProcessDataCache`, virtual addresses), then call `C3D_FrameEnd(GX_CMDLIST_FLUSH)`.
+4. **Do not forget the command list.** The command buffer is flushed by the GSP because of `GX_CMDLIST_FLUSH`; your own hand-built command lists are not.
+
+Verification status: builds (devkitARM r68, libctru 2.7.1, citro3d 1.7.1, `-Wall -Wextra -O2 -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft`, linked with `-specs=3dsx.specs -lcitro3d -lctru` inside a stub `main`); Old 3DS: not run; New 3DS: not run. Not exercised on a console, so whether it is faster is `[hypothesis]` and whether it is correct for your engine depends on recording every write.
+
+```c
+#include <3ds.h>
+#include <citro3d.h>
+
+#define MAX_DIRTY 64
+typedef struct { u32 begin, end; } DirtyRange;   /* [begin, end) virtual addresses */
+static DirtyRange dirty[MAX_DIRTY];
+static int dirtyCount;
+
+/* Call after every CPU write to memory the GPU will read this frame. */
+static void dirtyAdd(const void *p, size_t size)
+{
+	if (dirtyCount > MAX_DIRTY) return;           /* already overflowed: full flush this frame */
+	u32 b = (u32)p & ~31u;                        /* round out to 32-byte cache lines */
+	u32 e = ((u32)p + size + 31u) & ~31u;
+	for (int i = 0; i < dirtyCount; i++) {        /* merge with any overlapping or touching range */
+		if (b <= dirty[i].end && e >= dirty[i].begin) {
+			if (b < dirty[i].begin) dirty[i].begin = b;
+			if (e > dirty[i].end)   dirty[i].end = e;
+			return;
+		}
+	}
+	if (dirtyCount < MAX_DIRTY) {
+		dirty[dirtyCount].begin = b;
+		dirty[dirtyCount].end = e;
+		dirtyCount++;
+	} else {                                      /* table full: fall back to the safe path */
+		dirtyCount = MAX_DIRTY + 1;
+	}
+}
+
+/* Replaces C3D_FrameEnd(0). Returns false if it had to use the full flush. */
+static bool frameEndTracked(void)
+{
+	bool tracked = dirtyCount <= MAX_DIRTY;
+	if (tracked) {
+		for (int i = 0; i < dirtyCount; i++)
+			svcFlushProcessDataCache(CUR_PROCESS_HANDLE, dirty[i].begin, dirty[i].end - dirty[i].begin);
+		C3D_FrameEnd(GX_CMDLIST_FLUSH);
+	} else {
+		C3D_FrameEnd(0);                          /* citro3d flushes the whole linear heap */
+	}
+	dirtyCount = 0;
+	return tracked;
+}
+```
+
+Rules: call `dirtyAdd` for every CPU write to GPU-visible linear memory (including texture uploads that `memcpy` into a linear texture; a VRAM texture upload is a `GX_TextureCopy` from a source buffer that must itself be flushed); keep the default `C3D_FrameEnd(0)` path available behind a debug switch and compare frames. The saving is unmeasured: [`flushbench`](../benchmarks/README.md#flushbench) is the planned measurement of the full-heap flush, and a tracked-versus-full comparison is experiment G6 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks). `[reported]` G-Diffuser's `onesubmit_narrow` setting flushes only dirty ranges recorded by its own module at frame end instead of the whole heap; its repository document states about 0.3 ms saved on Old 3DS and 0.4 ms of GX CPU on New 3DS for that game, not a wiki measurement ([`docs/NATIVE-RENDERER.md`](https://github.com/cruxxxxxx/gdx-3ds/blob/main/docs/NATIVE-RENDERER.md), downloaded 11 November 2026).
+
 ### Texture uploads
 
 - `C3D_TexLoadImage` / `C3D_TexUpload` expect data already in the GPU's tiled layout (what `tex3ds` produces — see [asset pipeline](asset-pipeline.md)). For a texture in linear memory they simply `memcpy`; you must then flush the texture before the GPU samples it. For a VRAM texture they issue a `GX_TextureCopy` from your source buffer, which therefore must itself be in linear memory and flushed [documented: citro3d `texture.c`].
 - For dynamically changing textures, update only the 8×8 tiles that changed (16-bit formats: 128 bytes per tile; RGBA8: 256 bytes) and flush only those ranges.
 - Converting a row-major image to tiled layout on the CPU is avoidable: the transfer engine can do it (`GX_DisplayTransfer` with `GX_TRANSFER_OUT_TILED(1)`) from a linear-memory source, subject to its size and alignment rules ([display](../hardware/display.md)).
+
+### Upload cost versus VRAM placement
+
+Putting a texture in VRAM costs something first: the CPU cannot write VRAM in homebrew, so the data goes into a flushed linear buffer and a GPU copy (`GX_TextureCopy`, via `C3D_TexUpload`/`C3D_TexLoadImage` on a VRAM texture) moves it ([texture uploads](#texture-uploads)). The possible gain is GPU texture reads from GPU-local memory. Whether sampling from VRAM is measurably faster than from linear memory is not established by any source used here `[hypothesis]`, and the benefit depends on how often the texture is sampled, how often it changes, and how much of the 6 MiB is left after render targets (a stereo top target alone takes about 1.5 MB with 24-bit depth, [GPU rendering](gpu-rendering.md#render-target-memory-budget)). Treat "VRAM is faster" as something to test per texture, not a rule; a texture that is re-uploaded every few frames pays the copy every time. The planned measurement is G4 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks).
 
 ### Reading GPU output on the CPU
 
@@ -154,6 +232,8 @@ With citro3d's standard frame loop, "GPU finished" for everything drawn in frame
 
 ## Open questions
 
+- Whether tracked flush ranges beat the full-heap flush, by how much, and at what number of ranges the bookkeeping outweighs the saving; Old 3DS first, then New 3DS. No result exists.
+- Whether VRAM-resident textures sample measurably faster than linear-memory textures, and the break-even number of samples per upload.
 - Measured cost of the full linear-heap flush in `C3D_FrameEnd` at 16 and 32 MiB, Old 3DS first, then New 3DS — [`flushbench`](../benchmarks/README.md#flushbench) measures it; no results yet.
 - Whether the kernel switches to a whole-cache clean above some range size (which would bound the cost of large flushes) is not documented in the sources used.
 - CPU write and read bandwidth to the application heap versus linear heap on Old 3DS first, then New 3DS.
@@ -164,4 +244,6 @@ With citro3d's standard frame loop, "GPU finished" for everything drawn in frame
 - [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (render target allocation, `C3D_FrameEnd` flush), `source/texture.c` (upload and flush), `source/base.c` (command buffer).
 - [Luma3DS](https://github.com/LumaTeam/Luma3DS) — `sysmodules/loader/source/hbldr.c` (3DSX system mode and memory mappings), `sysmodules/rosalina/source/menus/miscellaneous.c` (hb title switch), `Makefile` (`HBLDR_DEFAULT_3DSX_TID`).
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — `audio/streaming` (wave buffer flush and queueing), `network/sockets` (socket buffer).
+- [G-Diffuser postmortem](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` narrow-flush setting; fetched November 2026.
+- [Renderer architecture](renderer-architecture.md) — what each flush flag does, decision table.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) and [Memory Management](https://www.3dbrew.org/wiki/Memory_Management) — regions and APPMEMTYPE.

@@ -96,6 +96,17 @@ while (aptMainLoop()) {
 - `gspWaitForVBlank()` (top screen) blocks until the next V-blank; useful for loops that do not use citro3d.
 - Keep a histogram of frame intervals (ticks between successive `C3D_FrameBegin` returns), not only an average: 59 good frames and one 100 ms hitch average out to "fine".
 
+## Loading hitches
+
+A load inside the frame loop is a missed-frame generator: file reads, decompression, texture uploads and allocation can each take many frames. Guidance, `[hypothesis]` unless labelled:
+
+- **Convert offline, load raw.** Do format conversion, decompression-friendly packing and texture swizzling in the build ([asset pipeline](asset-pipeline.md)); at run time read large chunks into their final layout.
+- **Move loads off the frame thread** and pass results through a bounded queue; the frame thread only checks "ready". A load worker on the Old 3DS's shared core 1 competes with system services ([threading](threading.md#when-borrowing-core-1-can-make-the-game-slower)).
+- **Budget per frame.** If a load must run on the frame thread, split it into slices that fit a time budget (for example 2 ms per frame, measured with ticks) and resume next frame.
+- **Never log synchronously from the frame thread.** `[reported]` the G-Diffuser postmortem records main-thread log flushes of 26-270 ms on an Old 3DS build and "no hitches" after moving to an asynchronous log ([source](https://hypnotize.works/gdx-3ds/postmortem/native.html); its game only). Details in the [profiling cookbook](performance.md#synchronous-sd-logging-causes-hitches).
+- **Keep audio and input alive during loads** ([audio](audio.md#choosing-buffer-sizes)); a loading screen still calls `aptMainLoop()`.
+- **Measure the load, not the average.** Log the longest frame during a load with the stage that caused it, using the [frame-time helper](performance.md#frame-time-distribution-and-missed-frames).
+
 ## Latency
 
 Input read at the top of the loop is shown, at best, after the current frame's GPU work, the transfer and the next V-blank — roughly one to two display periods with `C3D_FRAME_SYNCDRAW` [hypothesis from the pipeline above; not measured]. Read input as late as practical before recording the frame if latency matters (rhythm games, fast action), and avoid adding extra queued frames.
@@ -123,4 +134,5 @@ Input read at the top of the loop is shown, at best, after the current frame's G
 
 - [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (`C3D_FrameBegin`, `C3D_FrameSync`, `C3D_FrameRate`, `C3D_FrameCounter`, queue callback), `include/c3d/renderqueue.h`.
 - [libctru](https://github.com/devkitPro/libctru) — `services/gspgpu.h` (events, `gspWaitForVBlank`), `os.h` (tick rate), `source/ndsp/ndsp.c` (sound frame length).
+- [G-Diffuser: Road to 60, All Over Again](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` synchronous-logging hitches and the effect of an asynchronous log (its game only).
 - [GBATEK](https://problemkaputt.de/gbatek.htm) — DS display timing (59.8261 Hz) for ports.

@@ -1,6 +1,6 @@
 # CTR benchmark suite
 
-Small, self-contained 3DS programs that measure costs the wiki's engineering pages depend on: memory and cache behaviour, cache-flush cost, and citro3d draw-call overhead. Each one builds from source with the standard devkitPro toolchain and prints its results on the console's screen and writes them to a file on the SD card. They exist so that performance claims on this wiki can become `[measured]` instead of `[hypothesis]` ([evidence labels](../../AGENTS.md#evidence-labels)).
+Small, self-contained 3DS programs that measure costs the wiki's engineering pages depend on: memory and cache behaviour, cache-flush cost, instruction-cache pressure, and citro3d draw-call overhead. Each one builds from source with the standard devkitPro toolchain and prints its results on the console's screen and writes them to a file on the SD card. They exist so that performance claims on this wiki can become `[measured]` instead of `[hypothesis]` ([evidence labels](../../AGENTS.md#evidence-labels)).
 
 **Status: the programs build; none has been run on hardware yet. No results are recorded.** The tables under each benchmark show what to record.
 
@@ -17,18 +17,19 @@ Small, self-contained 3DS programs that measure costs the wiki's engineering pag
 | [`membench`](#membench) | yes (r68) | not run | not run | not run |
 | [`flushbench`](#flushbench) | yes (r68) | not run | not run | not run |
 | [`drawbench`](#drawbench) | yes (r68) | not run | not run | not run |
+| [`icachebench`](#icachebench) | yes (r68; also compiled directly with `-Wall -Wextra`) | not run | not run | not run |
 
 Emulator runs only show that a program works; never record emulator timings as results.
 
 ## Building
 
 ```sh
-cd ctr/benchmarks/membench && make          # or flushbench, drawbench
+cd ctr/benchmarks/membench && make          # or flushbench, drawbench, icachebench
 # or, from the repository root, build all and fail on warnings:
 bash tools/build_benchmarks.sh
 ```
 
-Each project is a copy of the `3ds-examples` application template Makefile (public domain), with `-lcitro3d` added where needed; `common/bench.h` is shared by all three.
+Each project is a copy of the `3ds-examples` application template Makefile (public domain), with `-lcitro3d` added where needed; `common/bench.h` is shared by all four.
 
 ## Output format and metadata
 
@@ -39,6 +40,8 @@ meta,<key>,<value>
 result,<program>,<test>,<variant>,<bytes>,<runs>,<min_us>,<med_us>,<max_us>     (membench, flushbench)
 columns,...  then  result,drawbench,<variant>,<quads>,<frames>,<record_ms>,<frameend_ms>,<begin_ms>,<gpu_ms>,<cmdbuf_pct>
 note,<text>
+note,perf,<variant>,<bytes>,<insns>,<ccnt>,<icache_miss>,<fetch_stall>      (icachebench; medians per run)
+note,pct,<program>,<variant>,<frames>,<p50_us>,<p95_us>,<p99_us>,<worst_us>,<missed_slots>   (frame-time helper, see the profiling cookbook)
 error,<where>,<detail>
 ```
 
@@ -127,6 +130,39 @@ The shader (`source/vshader.v.pica`) transforms position by a projection matrix 
 | Console | Quads | Variant | record_ms | frameend_ms | begin_ms | gpu_ms | cmdbuf_pct |
 | ------- | ----- | ------- | --------- | ----------- | -------- | ------ | ---------- |
 | | | | | | | | |
+
+## icachebench
+
+**Question:** how does the cost per instruction change as the amount of distinct code executed per pass grows past the Old 3DS's 16 KB instruction cache? (An independent test of the figures G-Diffuser reports, `[reported]` on [CPU optimisation](../engineering/cpu-optimization.md#the-g-diffuser-i-cache-probe); not a replication of its probe.)
+
+**Method:** straight-line ARM-mode functions of 4, 8, 12, 16, 20, 24, 32, 48 and 64 KiB, each made only of `add rN, rN, #1` on four registers (no loads, no branches except the final `bx lr`, so the work is the same kind per instruction). Each run calls one function 64 times and times the loop with `svcGetSystemTick`; 15 runs per variant after one untimed warm-up call. The `loop_256b` control executes the same 16,384 instructions as `straight_64k` from a 256-byte loop body, so any time difference between the two is a footprint effect, not an instruction-count effect. If `svcControlPerformanceCounter` accepts `ENABLE` for the process, it also reads the cycle counter, `INST_CACHE_MISS` and `STALL_BY_LACK_OF_INST` around each run and prints `note,perf,...` lines; otherwise it prints `note,perf_unavailable` and only times. Footprint is controlled at build time; the program does not read the cache size from the hardware.
+
+| Variant | Distinct code per pass | Instructions per pass |
+| ------- | ---------------------- | --------------------- |
+| `straight_4k` ... `straight_16k` | 4-16 KiB (fits in 16 KiB if that is the cache size) | 1,024-4,096 |
+| `straight_20k`, `_24k`, `_32k`, `_48k`, `_64k` | 20-64 KiB | 5,120-16,384 |
+| `loop_256b` | 256 bytes | 16,384 |
+
+**Reading the output:** compare µs per instruction (`med_us` / (insns per pass x 64)) across footprints; the counters, if available, give cycles per instruction and I-cache misses per instruction directly. Expect, if the 16 KB figure is right, a step between 16 and 24 KiB `[hypothesis]`; the `loop_256b` row is the no-miss reference. **New 3DS:** run it separately (and with `-DBENCH_SPEEDUP=0` and `=1`); the L2 cache may change the shape, and no New 3DS statement is made here. The straight-line code is not typical of game code (no data accesses, perfectly predicted), so this is a probe of fetch cost only, not a prediction for any program.
+
+**Verification status:** builds (devkitARM r68, no warnings with `-Wall -Wextra`; the `make` build was run with `DEVKITPRO=C:/devkitPro`); not run on hardware or an emulator.
+
+**Results:** not run on hardware.
+
+| Console | Variant | Footprint | Min | Med | Max | CPI (counters) | I-cache misses |
+| ------- | ------- | --------- | --- | --- | --- | -------------- | -------------- |
+| | | | | | | | |
+
+## Planned experiments
+
+Not written, not run; listed so that the question is recorded, not because any result exists. Each would need its own project, README section and `bench.h` output.
+
+| Family | Question | Notes |
+| ------ | -------- | ----- |
+| GPU workload | Draw overhead, vertex rate, fill rate, texture bandwidth, render-target changes and synchronisation, separately | Would use the GSP performance log ([performance](../engineering/performance.md#per-operation-gpu-times-the-gsp-performance-log)) to separate P3D, PPF and PSC time |
+| Scheduling | Frame time with a worker on core 1 at several `APT_SetAppCpuTimeLimit` percentages, versus no worker | Protocol in [threading](../engineering/threading.md#proving-a-worker-improves-frame-time) |
+| Real scene | A fixed 2D tilemap scene (for example the [2D tile renderer](../engineering/2d-tile-renderer.md) variants) with frame-time percentiles and missed frames | Needs the frame-time helper from the [profiling cookbook](../engineering/performance.md#frame-time-distribution-and-missed-frames) |
+| Indirect dispatch | Per-element function-pointer dispatch versus grouping by operation type | Companion to `icachebench`; would use the same counters |
 
 ## Recording results
 

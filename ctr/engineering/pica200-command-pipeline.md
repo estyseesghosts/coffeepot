@@ -6,7 +6,7 @@ When a homebrew program calls `C3D_DrawArrays` or `C3D_DrawElements`, nothing is
 
 - Source read: citro3d `9f21cf7` (v1.7.1) and libctru `62b7c42` (v2.7.1), the commits pinned on [source versions](source-versions.md). Register names come from libctru `include/3ds/gpu/registers.h` and [3dbrew GPU/Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers).
 - Describes the Old 3DS GPU. **New 3DS:** the sources do not mention a difference ([glossary](../glossary.md#old-new-3ds)); nothing here was run on hardware or an emulator.
-- Hardware background is on [CTR GPU](../hardware/gpu.md); the library workflow on [picasso and citro3d](../homebrew/picasso-and-citro3d.md) and [GPU rendering](gpu-rendering.md).
+- Hardware background is on [CTR GPU](../hardware/gpu.md); the library workflow on [picasso and citro3d](../homebrew/picasso-and-citro3d.md) and [GPU rendering](gpu-rendering.md); choosing between rendering strategies is on [renderer architecture](renderer-architecture.md).
 
 ## The path in one picture
 
@@ -95,6 +95,51 @@ Illustrative words (derived by hand from the rules above, not captured from a co
 
 What the GSP module then does with the command is not in the sources read for this page. The wiki's [GPU register page](../hardware/gpu.md#registers) lists the P3D command-list processor at external register `0x18E0` (size >> 3, address >> 3, bit 0 start); that the GSP programs exactly this for a ProcessCommandList command is `[hypothesis]` here, confirmable from 3dbrew's GSP/GX pages or a GSP disassembly.
 
+## Advanced: right-eye command replay within one GPU submission (reported)
+
+> **Status: `[reported]`, not reproduced.** Everything in this section is the G-Diffuser project's own account of its Old 3DS renderer (a 3DS port of F-Zero X). The wiki has not built, run or measured it, the mechanism is not in citro3d, and it is not a recommendation. Sources: the postmortem *Road to 60, All Over Again* at <https://hypnotize.works/gdx-3ds/postmortem/native.html> (entries dated 2026-09-07 to 2026-10-26; this part is the v1.1.0 "card 6" entry of 10-26) and the repository document `docs/NATIVE-RENDERER.md` (<https://github.com/cruxxxxxx/gdx-3ds/blob/main/docs/NATIVE-RENDERER.md>); both fetched in November 2026. For why stereo needs two views see [stereo engineering](stereo-engineering.md); for where this fits among renderer strategies see [renderer architecture](renderer-architecture.md).
+
+**The problem it addresses (as stated).** G-Diffuser's native renderer replays the same recorded command chunks for the right eye. Done the ordinary way, each replayed list is its own GX queue entry, with its own GSP submit, completion interrupt and event-thread wake on core 0 (the path described under [frame end, GX and the GSP](#frame-end-gx-and-the-gsp)).
+
+**The mechanism (as stated).** Each stereo chunk is built to "end by jumping to a short right-eye prologue, which jumps back into the same chunk, then to the finalize words", using "the PICA200's second command-buffer channel". The GSP then gets one queue entry; the GPU "runs the body twice and raises one interrupt". The repository calls the setting `onesubmit` (code default `1`, on in both its presets) and says both eyes of a 3D body chunk go in one GX entry, giving one GSP submit and one completion interrupt per chunk instead of two. A related setting, `onesubmit_narrow`, makes the frame end flush only the `[overlap]` module's noted dirty ranges rather than the whole linear heap, stated as "another ~0.3 ms on the Old 3DS, -0.4 ms GX CPU on the New 3DS" (the [flush rules](memory-and-cache.md#flush-range-tracking) apply).
+
+**The register (as stated).** `docs/NATIVE-RENDERER.md` says the body "ends in `CMDBUF_JUMP1` to a right-eye prologue that jumps back into it". That settles which register: the second command-buffer slot, `CMDBUF_JUMP1`, one of the `CMDBUF_SIZE0/1`, `CMDBUF_ADDR0/1`, `CMDBUF_JUMP0/1` registers (`0x238`-`0x23D`; write non-zero to `CMDBUF_JUMPn` to execute buffer n) in [GPU internal registers](../hardware/gpu-internal-registers.md). How the jump back is encoded, and what the prologue contains, is still not described in either source.
+
+**Reported results** (Old 3DS; raw page and repository document downloaded and matched 11 November 2026; one build cycling four arms automatically, v1.1 card 6, build `ba0692e`, as the page states). Per frame, Old 3DS, 1P 3D race:
+
+| Arm | Change | GX entries | Completion interrupts |
+| --- | ------ | ---------- | --------------------- |
+| 0 | baseline | 990 | 550 |
+| 1 | one submit | 771 | 331 |
+| 2 | one submit plus no mid-frame kick | 662 | 222 |
+| 3 | one submit plus narrow flush | 773 | 333 |
+
+- 3D menu, static screen: 40.2 fps baseline, 44.6 fps for arms 1 to 3; the page calls it "the clean result (6 against 9 blocks, ±0.2 fps)".
+- 1P 3D race: 56.4 / 59.3 fps baseline, 59.7 to 59.8 fps for arms 1 to 3. The page calls this "suggestive" because it used "two blocks per arm". Headroom estimates: arm 1 about 1.5 ms, arm 2 about 0, arm 3 about 1.8 ms.
+- Supporting probe: "0.4–0.5 ms of GPU dead time per backlogged queue entry" on Old 3DS, about 40 µs on New 3DS.
+- New 3DS result: described as "neutral". Arm 3 ships as the default on both consoles.
+- Failed arm: dropping the mid-frame kick "saved CPU but lost CPU/GPU overlap, so it netted zero".
+- Remaining limits: Old 3DS 3D "remains CPU-bound"; 3D multiplayer is locked to 30 fps.
+- Emulator check, not a performance result: "every frame hash, game-state hash and screenshot matched the old path".
+
+Do not extend these figures to other workloads: they are one racing game, one set of scenes, a handful of blocks, and the 10-26 build.
+
+> Note: the review that prompted this section describes the replay as an advanced technique that improved a menu comparison from 40.2 to 44.6 FPS, with smaller improvements and cases with insufficient headroom. The postmortem agrees for the menu ("the clean result"). For the race (56.4 / 59.3 to 59.7-59.8 fps) it says "suggestive", and its headroom estimates are about 1.5 ms (arm 1), about 0 (arm 2) and about 1.8 ms (arm 3). The repository document gives "~1.5 ms onesubmit alone, ~1.8 ms with `onesubmit_narrow`, the shipped pair; New 3DS neutral".
+
+### Warnings if you try this
+
+The postmortem lists no GPU-state warnings of its own. The points below come from what it does not say and from the mechanics earlier on this page; they are `[hypothesis]` unless marked.
+
+- **Synchronisation.** One list that runs the same body twice means one completion event for two eyes' work. Treat the list as finished only at that interrupt, and queue the transfers that read the right-eye target behind it ([frame end](#frame-end-gx-and-the-gsp)). The repository warns that skipping the GPU wait in one probe is unsafe because its command buffer and vertex pool both restart at offset 0 every frame `[reported]`, the same hazard in general form.
+- **State between the two passes.** The second pass starts with whatever the first left in the GPU's registers. Anything the left-eye pass changed (framebuffer, viewport, uniforms, depth state, early-depth state) must be restored by the prologue or be identical for both eyes, and the eye difference must reach the shader in a way the replay does not overwrite. The project describes an exact integer eye offset added on the GPU for its track geometry `[reported]`; how the offset and the right-eye framebuffer are switched in the prologue is not described, and that is the part you cannot copy from the text.
+- **Framebuffer and early-depth state.** citro3d adds framebuffer flush, invalidate and early-depth clear at a target change or frame split (`C3Di_SplitFrame`, above). A hand-built jump must do the equivalent between the eyes or risk stale depth or colour data.
+- **Command-list rules apply to both buffers.** Each needs `FINALIZE` where the GPU should stop, 16-byte alignment and no overrun ([encoding rules](#how-a-write-is-encoded)); a missing or misplaced `FINALIZE` hangs the GPU, and 3dbrew warns that a `FINALIZE` in the last 8 bytes of an unaligned buffer is never executed.
+- **Cache coherence.** A flush covers only ranges you recorded. A prologue buffer you write once must still be flushed once.
+- **Debugging.** A hang inside a replayed list is harder to bisect than one in a normal frame. Keep the ordinary two-entry path behind a switch and compare frames (the project used frame hashes in an emulator and hardware replays).
+- **Where it applies.** The New 3DS result was neutral, so the technique is worth considering only where queue-entry overhead matters, which the project found on Old 3DS.
+
+> Unknown: whether the technique works across hardware revisions and system versions other than the project's test console, and whether GPU state beyond the registers named above must be restored. The sources do not say.
+
 ## Diagnosis checklist
 
 Start from the symptom. "Check" columns are things to read or compute, not claims about a particular failure.
@@ -165,4 +210,5 @@ The decoder is [`tools/pica_cmdlist_decode.py`](../../tools/pica_cmdlist_decode.
 
 - citro3d `source/base.c`, `attribs.c`, `buffers.c`, `drawArrays.c`, `drawElements.c`, `renderqueue.c` at `9f21cf7` — state binding, draw sequences, frame end.
 - libctru `source/gpu/gpu.c`, `gx.c`, `gxqueue.c`, `source/services/gspgpu.c`, `include/3ds/gpu/gpu.h`, `registers.h` at `62b7c42` — encoding, split, GX queue, register names.
+- [G-Diffuser: Road to 60, All Over Again](https://hypnotize.works/gdx-3ds/postmortem/native.html) and [`docs/NATIVE-RENDERER.md`](https://github.com/cruxxxxxx/gdx-3ds/blob/main/docs/NATIVE-RENDERER.md) — `[reported]` one-submission right-eye replay (fetched November 2026).
 - [3dbrew: GPU/Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers) (field tables: [GPU internal registers](../hardware/gpu-internal-registers.md)), [GPU/Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide), [GPU/Pitfalls](https://www.3dbrew.org/wiki/GPU/Pitfalls) — header layout, register meanings, pitfalls.

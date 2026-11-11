@@ -104,8 +104,13 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Local wireless](engineering/local-wireless.md) — UDS host, join, send and receive.
 - [libctru service groups](engineering/service-groups.md) — init/exit pattern, every remaining service group, utilities, and a probe for which services your build can open.
 - [citro3d fixed-function API](engineering/citro3d-fixed-function-api.md) — which citro3d call sets lighting, fog, procedural textures, gas and render state.
+- [Renderer architecture](engineering/renderer-architecture.md) — decision guide for retained vs immediate rendering, batching, state caching, flush ranges and effect reformulation, with planned (not yet run) GPU benchmarks.
+- [Stereo engineering](engineering/stereo-engineering.md) — cost of the second eye, camera separation and convergence, the 3D slider, depth plane, HUD depth and comfort testing on an Old 3DS.
+- [3D scene optimisation](engineering/3d-scene-optimisation.md) — visibility culling, draw ordering and the early-depth evidence, LOD, baked lighting and 2D quads in 3D scenes.
+- [Case studies: commercial 3DS games](engineering/case-studies-commercial.md) — developer-stated techniques from five shipped games, labelled as reported, with what hardware tests would verify them.
+- [Case studies: large 3DS ports](engineering/case-studies-ports.md) — reported techniques and results from three N64 ports (F-Zero X, Super Mario 64, Ocarina of Time), with model and conditions.
 - [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
-- [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush and draw-call costs (not yet run on hardware).
+- [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush, instruction-cache and draw-call costs (`membench`, `flushbench`, `icachebench`, `drawbench`) and the result-recording format (not yet run on hardware).
 
 ## Notes and open questions
 

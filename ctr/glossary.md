@@ -386,3 +386,31 @@ The interleaved-bits pixel order inside each 8x8 block of a 3DS texture (x bits 
 ### Wide mode {#wide-mode}
 
 A top-screen mode (`gfxSetWide`) that shows 800x240 non-square pixels; exclusive with stereoscopic 3D and not available on every model. See [2D rendering](engineering/rendering-2d.md).
+
+### CPI (cycles per instruction) {#cpi}
+
+Average CPU cycles spent per executed instruction; lower is better. A rise at larger code footprints is a sign of instruction-cache misses. See [case studies: large ports](engineering/case-studies-ports.md).
+
+### Instruction cache (I-cache) {#i-cache}
+
+The small, fast memory on each ARM11 core that holds recently executed instructions. On an Old 3DS it is reported as 16 KB per core with no L2 behind it, so code that runs more than that between reuses is fetched from main memory again. See [CPU optimisation](engineering/cpu-optimization.md#instruction-cache-pressure).
+
+### Display list {#display-list}
+
+The N64's stream of drawing commands, which ports translate into PICA200 work. See [case studies: large ports](engineering/case-studies-ports.md).
+
+### Reference plane (zero-parallax plane) {#reference-plane}
+
+The depth at which an object has no horizontal shift between the left-eye and right-eye images, so it appears at the screen surface. See [stereo engineering](engineering/stereo-engineering.md).
+
+### Parallax {#parallax}
+
+The horizontal shift of an object between the two eye images; larger shifts look nearer or farther from the screen plane. See [stereo engineering](engineering/stereo-engineering.md).
+
+### Retained rendering {#retained-rendering}
+
+Drawing from geometry buffers built once and kept, changing only small data (matrices, camera) each frame, instead of rebuilding vertices every frame. Contrast immediate rendering. See [renderer architecture](engineering/renderer-architecture.md).
+
+### Flush-range tracking {#flush-range-tracking}
+
+Recording which memory ranges the CPU wrote for the GPU, and flushing only those from the CPU cache instead of the whole linear heap. See [memory and cache](engineering/memory-and-cache.md#flush-range-tracking).

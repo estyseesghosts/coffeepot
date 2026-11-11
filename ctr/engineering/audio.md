@@ -111,6 +111,25 @@ Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libm
 
 `ndspGetFrameCount()` (sound frames processed) and `ndspGetDroppedFrames()` (sound frames ndsp reports as dropped) are useful counters to log.
 
+## Mixing deadlines and where the audio thread runs
+
+If you mix on the CPU (a software mixer, an emulated sound chip, synthesis) the deadline is the next refill, not the frame: a buffer must be finished before the DSP has played what is already queued. Practical rules, `[hypothesis]` unless labelled:
+
+- **Budget the mixer in milliseconds of CPU per millisecond of audio.** A mixer that needs 6 ms to produce 33 ms of audio (one buffer at 1/30 s) uses 18% of a core; measure it with ticks around the mix call and log the worst case, not the average.
+- **Keep the queue deeper than your worst mixer run plus your worst main-thread stall**, then shrink only after logging ([buffer sizes](#choosing-buffer-sizes)).
+- **Never block the audio thread on anything the game thread holds** and never block the game thread on the mixer: share only a parameter snapshot or a pointer swap under a lock held for microseconds ([threading](threading.md#avoiding-contention-with-the-main-thread)).
+- **Allocate once.** Mix buffers, decoder state and scratch space are allocated at start-up; no `malloc` in the refill path.
+- **Measure synchronisation, not only mixing.** Log the time from "refill needed" to "buffer queued"; a fast mixer that waits for a lock still misses the deadline.
+- An audio worker that regularly blocks the game thread defeats the point of threading it; if the mixer's lock shows up in the main thread's frame breakdown, narrow the lock.
+
+### What two ports report
+
+`[reported]` Super Mario 64 3DS port (Wyatt-James), README read directly for this page: the audio thread "runs on Core 1 on O3DS and Core 2 on N3DS" and needs Luma 10.1.1 or higher; the README lists "enhanced RSP audio emulation performance", says the default build uses "some inaccurate math to increase performance with no perceptible loss in quality" (`AUDIO_USE_ACCURATE_MATH=1` turns it off), and offers a naive frame skip when a frame takes longer than 33.3 ms (`ENABLE_N3DS_FRAMESKIP=1`, described as no longer very useful). It gives no measurements and does not mention `APT_SetAppCpuTimeLimit`; it says nothing about the percentage a core-1 audio thread should use. These are one port's choices on its own workload (emulated N64 audio), with no model-specific timing stated beyond the core assignment.
+
+`[reported]` G-Diffuser F-Zero X port ([postmortem](https://hypnotize.works/gdx-3ds/postmortem/native.html), read directly): Old 3DS runs audio on core 1 with a 30% share, New 3DS on core 2; a lock held by the audio thread produced a 25.8 ms wait in its `aud` metric on Old 3DS hardware, which fell to 0.2 ms after the lock was narrowed; ARMv6 SIMD made its synthesis 2.2x cheaper; and a theory that crackle came from the vblank rate was "measured and refuted" (no figures given). See [threading](threading.md#avoiding-contention-with-the-main-thread) for the context and limits.
+
+> Unknown: both sources describe their own engines. Neither states how a different mixer should split work between cores, and neither separates Old 3DS from New 3DS timings for audio.
+
 ## What ndsp does not cover
 
 - **AAC.** Some DSP firmware builds contain an AAC decoder reached through the DSP binary pipe 3 (3dbrew *DSP AAC Decoder*: modes 0 none, 1 decode, 2 encode; the page says parts still need testing). The 0x20-byte message format, decode request fields and sample-rate enum are on [DSP firmware interface](../hardware/dsp.md#aac-decoder). libctru 2.7.1 has no AAC API (no match in its headers), so homebrew decodes AAC, MP3 or Vorbis on the CPU. Whether a given dumped `dspfirm.cdc` includes the AAC component varies with the game it was dumped from per 3dbrew `[reverse-engineered]`.
@@ -143,3 +162,5 @@ Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libm
 - [Luma3DS](https://github.com/LumaTeam/Luma3DS) — `sysmodules/rosalina/source/menus/miscellaneous.c` (*Dump DSP firmware*).
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — `audio/streaming`, `audio/filters`, `audio/ogg-vorbis-decoding`, `audio/opus-decoding`, `audio/modplug-decoding`, `audio/mic`.
 - [libctru issue #556](https://github.com/devkitPro/libctru/issues/556) — DSP flush latency under a core-1 share.
+- [Wyatt-James/sm64-3ds-port](https://github.com/Wyatt-James/sm64-3ds-port) — `[reported]` README: audio thread core assignment, audio build flags, frame skip.
+- [G-Diffuser: Road to 60, All Over Again](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` audio-lock wait, SIMD synthesis, core layout.

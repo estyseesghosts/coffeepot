@@ -65,7 +65,7 @@ All `graphics/gpu` examples use citro3d (`C3D_*`) except those marked citro2d (`
 | `geoshader` | A geometry shader with stride 6 (a triangle at a time) | [PICA200 shader programming](../engineering/pica200-shader-programming.md) |
 | `loop_subdivision` | Loop subdivision of a model in a geometry shader, indexed drawing (`C3D_DrawElements`) | [PICA200 shader programming](../engineering/pica200-shader-programming.md) (geometry shaders) |
 | `particles` | A geometry-shader particle system with alpha blending, depth test and a noise smooth-step in the shader | [PICA200 shader programming](../engineering/pica200-shader-programming.md), [gpu rendering](../engineering/gpu-rendering.md) |
-| `physics/box2d` (C++) | Box2D physics driven by touch and buttons (a library port, not a GPU example) | [porting](../engineering/porting.md#libraries-that-shorten-a-port) |
+| `physics/box2d` (C++) | Box2D physics driven by touch and buttons (a library port, not a GPU example) | [porting](../engineering/porting.md#example-c-sdl-software-rendered-2d-game) |
 
 ### Input
 

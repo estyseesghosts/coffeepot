@@ -2,7 +2,7 @@
 
 This page is a cookbook for drawing with the 3DS's **[PICA200](../glossary.md#pica200)** GPU through **citro3d**, the standard homebrew GPU library: how a frame is put together, what each draw call really costs, how to batch, how to set up textures and the colour combiners, how to handle the stereoscopic and wide screen modes, and what the hardware simply cannot do. It assumes you have built one of the `3ds-examples` GPU samples.
 
-Per-call details for lighting, fog, procedural textures, gas and render state are on [citro3d fixed-function API](citro3d-fixed-function-api.md). Background lives elsewhere: the pipeline and registers on [GPU](../hardware/gpu.md), lighting/procedural textures on [GPU shading features](../hardware/gpu-shading-features.md), the shader assembler and library overview on [picasso and citro3d](../homebrew/picasso-and-citro3d.md), and buffer placement and flushing on [memory and cache](memory-and-cache.md).
+Per-call details for lighting, fog, procedural textures, gas and render state are on [citro3d fixed-function API](citro3d-fixed-function-api.md); the choice between rendering strategies (retained or immediate, batching, specialised commands, effect reformulation) is on [renderer architecture](renderer-architecture.md). Background lives elsewhere: the pipeline and registers on [GPU](../hardware/gpu.md), lighting/procedural textures on [GPU shading features](../hardware/gpu-shading-features.md), the shader assembler and library overview on [picasso and citro3d](../homebrew/picasso-and-citro3d.md), and buffer placement and flushing on [memory and cache](memory-and-cache.md).
 
 ## Before you start
 
@@ -149,9 +149,36 @@ Work out the VRAM bill before choosing resolutions. The numbers below are plain 
 
 VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.15 MB) leaves room for textures, while a supersampled top plus bottom (about 3.7 MB) leaves much less, and both eyes supersampled do not fit with a bottom target. A 16-bit colour format (`GPU_RB_RGB565`, `GPU_RB_RGBA5551`, `GPU_RB_RGBA4`) halves the colour column. Whether 6 MiB is split in two banks that constrain placement is covered on [memory](../hardware/memory.md); how `C3D_RenderTargetCreate` places the buffers is in Technical details below.
 
+### 16-bit or 24-bit depth
+
+The table above assumes the examples' `GPU_RB_DEPTH24_STENCIL8`. citro2d's `C2D_CreateScreenTarget` instead creates a 16-bit depth buffer with no stencil ([2D rendering](rendering-2d.md#2-screens-coordinates-and-depth)), and the [2D tile renderer](2d-tile-renderer.md) passes `GPU_RB_DEPTH16`. The difference by arithmetic (2 bytes versus 4 bytes per pixel, formats from libctru `gpu/enums.h` and `framebuffer.c`; not a measurement):
+
+| Depth format | Bytes per pixel | 400x240 | 320x240 | Distinct depth values |
+| ------------ | --------------- | ------- | ------- | --------------------- |
+| `GPU_RB_DEPTH16` | 2 | 192,000 B | 153,600 B | 65,536 (2^16) |
+| `GPU_RB_DEPTH24` | 3 | 288,000 B | 230,400 B | 16,777,216 (2^24) |
+| `GPU_RB_DEPTH24_STENCIL8` | 4 | 384,000 B | 307,200 B | 16,777,216 plus an 8-bit stencil |
+
+So a top-screen RGBA8 target with 16-bit depth is 576,000 B instead of 768,000 B (192,000 B saved per eye), and depth clears and reads move half as many bytes. Choose 16-bit depth for 2D layers and shallow scenes where depth only orders layers and ties are acceptable; choose 24-bit for 3D scenes with a deep range, where fewer than 65,536 levels across the range may make nearby surfaces tie (z-fighting). Whether the memory saving or the cheaper depth traffic changes frame time is not measured `[hypothesis]`. Shadow maps need the 24-bit-plus-8 layout described on [shading features](../hardware/gpu-shading-features.md#shadows).
+
 ## Render to texture
 
 `C3D_RenderTargetCreateFromTex(&tex, GPU_TEXFACE_2D, 0, depthFmt)` makes a texture a render target, for shadows, reflections, post-processing or a 2D layer you redraw only when it changes. A static background or UI that is redrawn into a texture once and then drawn as one quad per frame saves both CPU and GPU time [documented API; benefit depends on the scene]. Do not sample a texture in the same pass that renders into it.
+
+## Comparing rendering strategies
+
+The same scene can be built several ways. Each row is a strategy; the cost columns say where the CPU or GPU pays. Nothing in the table is measured; the mechanisms are read from citro3d `9f21cf7` and the open question is the size of each difference. [Renderer architecture](renderer-architecture.md) is the decision guide, with evidence labels and the planned measurements.
+
+| Strategy | CPU work per frame | GPU / memory cost | Fails when |
+| -------- | ------------------ | ----------------- | ---------- |
+| Immediate (`C3D_Imm*`) | One command word per attribute written into the command buffer | Command buffer grows with vertex count | Anything beyond debug shapes |
+| Dynamic buffer, one draw per object | Vertex writes plus a draw and any dirty state per object | Buffer ring or double buffer | Many small objects |
+| Batched dynamic buffer, one draw per material | Vertex writes, sort by material | One draw per material | Translucent sorting conflicts with batching |
+| Retained geometry, uniform-driven | Uniform updates, one draw per material | Persistent linear/VRAM buffers | Geometry changes often |
+| citro2d sprites | Quads collected into a buffer, one draw per run | Atlas textures | Many texture or blend changes break runs |
+| Specialised compact commands | Fixed loops writing precomputed register words | Same as retained | You must own state and correctness ([warnings](renderer-architecture.md#warnings-for-bypassing-citro3d)) |
+
+To compare two strategies on the same scene, record for each: draw calls per frame, command-buffer use (`C3D_GetCmdBufUsage`), CPU recording time (`C3D_GetProcessingTime`), `C3D_FrameEnd` time, GPU time (`C3D_GetDrawingTime`) and time blocked in `C3D_FrameBegin`, on an Old 3DS first. The planned experiments are G1 to G6 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks); [`drawbench`](../benchmarks/README.md#drawbench) already covers part of G1.
 
 ## Technical details
 
@@ -184,4 +211,5 @@ VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.1
 - [citro2d](https://github.com/devkitPro/citro2d) — `include/c2d/base.h` (init, scene API), `source/base.c` (batch flushing, buffer-full behaviour).
 - [libctru](https://github.com/devkitPro/libctru) — `gfx.h` (stereo, wide mode restrictions), `gpu/enums.h` (attribute formats, combiner sources and functions).
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — `graphics/gpu/simple_tri`, `textured_cube`, `composite_scene` (stereo, slider, citro2d mixing), `wide_mode_3d`, `gpusprites`, `geoshader`, `particles`.
+- [Renderer architecture](renderer-architecture.md) — decision guide built on the mechanisms above.
 - [3dbrew: GPU](https://www.3dbrew.org/wiki/GPU) — hardware limits referenced from the GPU page.

@@ -123,6 +123,94 @@ The DSP plays whatever is queued and stops when the queue runs dry. Keep enough 
 
 The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate double-precision multiplies and 16 KB L1 caches (no L2 on Old 3DS). Use `float`, avoid division and random memory access in hot loops, check the generated code, and use the hardware performance counters to find cache misses and mispredicted branches: [CPU optimisation](cpu-optimization.md).
 
+## Real-hardware profiling cookbook
+
+A checklist for getting numbers from an Old 3DS that someone else can trust. Every recipe here is a method; none has been run for this wiki, and no figure in it is `[measured]`. Record the results in the format on [testing on hardware](testing-on-hardware.md#benchmark-record-format).
+
+### Reliable CPU timing
+
+- Time with `svcGetSystemTick()` around *blocks* of work, never around a few instructions (the call is a system call). Keep raw `u64` ticks; convert once at the end.
+- Repeat a measured block enough that it lasts at least ~1 ms (about 270,000 ticks), and take the **median** of 15 or more repeats, plus the maximum. The first repeat is cold (caches, page tables); keep it as its own number.
+- Make the compiler unable to delete the work (consume results through a `volatile` or a checksum).
+- For cycle-level questions (cache misses, mispredicted branches) use the CPU's performance counters ([CPU optimisation](cpu-optimization.md#hardware-performance-counters)); whether they work from a `.3dsx` is an open question, so have a ticks-only fallback. The counters are per core and also count kernel and interrupt time.
+- Pin the thing you measure: one core, one thread, no other homebrew running, debugger detached, game plugins off.
+
+### Reliable GPU timing
+
+- `C3D_GetDrawingTime()` and the GSP performance log give GPU-side durations ([above](#per-operation-gpu-times-the-gsp-performance-log)). Neither separates GPU execution from the latency of the completion interrupt reaching your process; treat small differences as noise until a baseline run shows the spread.
+- GPU work is asynchronous: timing the CPU call that *submits* a draw tells you about recording, not rendering. To time the GPU, measure frame interval with the CPU deliberately idle (an empty logic loop) so the GPU is the bottleneck, then vary only the GPU workload.
+- Isolate by elimination: render at a smaller target, skip the draw, or draw the same geometry twice, and see which change moves the frame interval ([finding the bottleneck](#finding-the-bottleneck)).
+
+### Work time versus waiting for V-blank
+
+A frame that "takes 16.7 ms" because it waited 12 ms for V-blank has 12 ms of headroom. Log both: **work** = logic + record + `C3D_FrameEnd` ticks; **wait** = ticks inside `C3D_FrameBegin` (or `gspWaitForVBlank`). Report work time and the frame interval separately; the ratio tells you the headroom. Never conclude anything from a vsynced frame rate alone: 60 fps is the ceiling, so an optimisation shows only in work time until the frame goes over budget ([frame pacing](frame-pacing.md#detecting-missed-frames)).
+
+### Frame-time distribution and missed frames
+
+Record the interval between successive frame starts for a fixed scene (1,800 frames is 30 s at 60 fps), sort once at the end, and report p50, p95, p99, worst and the count of missed refresh slots. This helper compiles with the wiki's `bench.h` (it uses the same `CPU_TICKS_PER_USEC` and `bench_line`):
+
+```c
+#include <3ds.h>
+#include <stdlib.h>
+#include "bench.h"
+
+#define NFRAMES 1800                 /* 30 s at 60 fps; no allocation in the loop */
+static u64 interval[NFRAMES];        /* ticks between successive frame starts */
+
+static int cmp_u64(const void *a, const void *b)
+{
+    u64 x = *(const u64 *)a, y = *(const u64 *)b;
+    return (x > y) - (x < y);
+}
+
+static unsigned frames_seen;
+static u64 last_start;
+
+/* Call once per frame at the same point (e.g. right after C3D_FrameBegin returns). */
+static void frame_mark(void)
+{
+    u64 now = svcGetSystemTick();
+    if (frames_seen > 0 && frames_seen <= NFRAMES) interval[frames_seen - 1] = now - last_start;
+    last_start = now;
+    frames_seen++;
+}
+
+/* After the run: one machine-readable line. A slot is one nominal refresh period;
+   an interval of k slots counts k-1 missed. */
+static void frame_report(const char *program, const char *variant, u64 nominal_ticks)
+{
+    unsigned n = frames_seen > NFRAMES ? NFRAMES : (frames_seen ? frames_seen - 1 : 0);
+    if (n == 0) return;
+    unsigned long missed = 0;
+    u64 worst = 0;
+    for (unsigned i = 0; i < n; i++) {
+        u64 slots = (interval[i] + nominal_ticks / 2) / nominal_ticks;
+        if (slots > 1) missed += (unsigned long)(slots - 1);
+        if (interval[i] > worst) worst = interval[i];
+    }
+    qsort(interval, n, sizeof(u64), cmp_u64);
+    bench_line("note,pct,%s,%s,%u,%.2f,%.2f,%.2f,%.2f,%lu", program, variant, n,
+               interval[n / 2] / CPU_TICKS_PER_USEC,
+               interval[(n * 95) / 100] / CPU_TICKS_PER_USEC,
+               interval[(n * 99) / 100] / CPU_TICKS_PER_USEC,
+               worst / CPU_TICKS_PER_USEC, missed);
+}
+/* nominal_ticks for 60 fps: (u64)(SYSCLOCK_ARM11 / 60) = 4,468,530. */
+```
+
+Output line: `note,pct,<program>,<variant>,<frames>,<p50_us>,<p95_us>,<p99_us>,<worst_us>,<missed_slots>`. Verification: builds with devkitARM r68 and libctru 2.7.1 (`-Wall -Wextra -O2`, inside a stub `main`); not run on hardware. The nominal period is an assumption: the LCD refresh rate is often quoted as about 59.83 Hz and has not been confirmed here ([frame pacing: open questions](frame-pacing.md#open-questions)), so check how many "missed" slots an idle loop reports before trusting the count.
+
+### Synchronous SD logging causes hitches
+
+Writing a log to the SD card from the frame thread blocks it for as long as the file system service takes. `[reported]` The G-Diffuser postmortem records synchronous log flushes of 26-270 ms on the main thread of an Old 3DS build (09-30 entries), "lots of awkward hitching", and no hitches after moving to an asynchronous log; a later never-blocking log gave a race median of 16.5 ms with 0 race hitches (10-02) ([source](https://hypnotize.works/gdx-3ds/postmortem/native.html), read directly; its game and conditions only). Rules that follow regardless of the figures: accumulate samples in memory during the run and write after it (as `bench.h` does), or hand lines to a low-priority writer thread through a bounded queue that drops rather than blocks, and never `printf` per frame.
+
+### Counters, command capture and regression tests
+
+- **Counters:** CPU events per core via `svcControlPerformanceCounter` ([CPU optimisation](cpu-optimization.md#hardware-performance-counters)); GPU durations via the GSP performance log (above). Count events per unit of work, not totals.
+- **Command capture:** to see what a frame sent to the GPU, dump the command list and compare counts between variants. The command-list format, a capture hook and a decoder are on [PICA200 command pipeline](pica200-command-pipeline.md); this page does not duplicate them. G-Diffuser reports reducing GX entries per frame from 990 to 771 and completion interrupts from 550 to 331 by submitting both eyes together (1P 3D race, Old 3DS, 10-26 entries) `[reported]`; the same page calls some of its other results "suggestive" (two blocks per arm), which is why this wiki records the counts, not a speed-up, from it.
+- **Regression tests:** keep one fixed scene (input script, camera, seed) and run it on every performance-relevant change. A regression test is a stored `note,pct` line plus a stored checksum of the final framebuffer (or a screenshot); fail the change if p99 worsens by more than the run-to-run spread of the stored baseline, or if the checksum differs without an accepted reason.
+- **Reporting:** attach the raw `coffeepot-<program>.csv`, not a screenshot of averages; label the claim `[measured]` only with console model, firmware and build ([record format](testing-on-hardware.md#benchmark-record-format)).
+
 ## Technical details
 
 - `SYSCLOCK_ARM11` = 268,111,856 Hz; `CPU_TICKS_PER_MSEC` = `SYSCLOCK_ARM11 / 1000.0`; **New 3DS:** its clocks are 2× and 3× that ([libctru](../homebrew/libctru.md#clocks-and-the-new-3ds-speed-up)). The system tick does not change rate with the New 3DS clock (libctru defines it from `SYSCLOCK_ARM11`; the claim is read from the headers, not measured on a New 3DS in 804 MHz mode).
@@ -143,6 +231,7 @@ The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate 
 ## Open questions
 
 - No wiki-run measurements yet of: CPU write bandwidth to heap vs linear memory vs VRAM on Old 3DS and New 3DS; cost of `C3D_FrameEnd`'s full linear-heap flush as a function of heap size; `GSPGPU_FlushDataCache` latency versus core-1 time limit; benefit of LTO. The [benchmark suite](../benchmarks/README.md) contains programs for these; none has been run on hardware yet.
+- The cookbook's helpers (frame-time percentiles, missed-slot count) compile but have not run on any console; the nominal refresh period used for the missed-slot count is an assumption until the LCD refresh rate is measured. The `[reported]` G-Diffuser figures quoted here are for its own game on an Old 3DS and are not reproduced.
 - Whether the CP15 cycle counter and the system tick advance 1:1 on an Old 3DS (and 3:1 in New 3DS 804 MHz mode) (see [CPU optimisation](cpu-optimization.md#counters-versus-the-system-tick)); the tick is the only one this page relies on.
 - The 25 ms slice model of core-1 scheduling comes from untested notes; a hardware measurement (a core-1 thread recording `svcGetSystemTick` gaps at several percentages) would settle it.
 
@@ -154,3 +243,4 @@ The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate 
 - [libctru issue #556: Document performance issues of DSP_FlushDataCache](https://github.com/devkitPro/libctru/issues/556) — third-party flush-time measurements versus core-1 time limit.
 - [ARM11 MPCore Processor Technical Reference Manual, DDI 0360E](https://developer.arm.com/documentation/ddi0360/e) — VFP11 throughput and latency (table 19-16, section 16.4), cache organisation.
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — template Makefile flags.
+- [G-Diffuser: Road to 60, All Over Again](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` SD-logging hitches, GX entry counts, scheduling results (read directly; third-party).

@@ -34,6 +34,14 @@ The first playable scene is not the first success criterion. Earlier successes a
 
 A native citro3d/citro2d path is usually the target for a performance-sensitive Old 3DS game. A software path can be useful as a **correctness oracle** or for a small exceptional effect; its existence is not proof that it can sustain the intended frame rate. See [rendering strategies](gpu-rendering.md) and [2D rendering](rendering-2d.md).
 
+### Lessons reported by one large port
+
+Three public N64 ports report their techniques and results in [case studies: large 3DS ports](case-studies-ports.md). They are `[reported]` evidence only, taken on mixed models (Old 3DS hardware, New 3DS, simulated Old 3DS speed, emulator), and not reproduced here. Choose a port strategy from them with these cautions:
+
+- The one source with Old 3DS hardware numbers (G-Diffuser's F-Zero X native renderer) reports its largest gains from replacing a generic display-list interpreter with specialised draw paths, not from GPU tuning.
+- A port that has only emulator or simulated-speed numbers (the Ocarina of Time research) has not shown an Old 3DS result; do not choose a design from it alone.
+- Techniques that need core 2 (for example a render thread) are New 3DS techniques; audio on core 1 is available on Old 3DS; see the case-study techniques table for which are which.
+
 ## 2. Audit the source before porting it
 
 Do this on a **desktop copy of the original project**. Do not begin by trying to make its entire build system target `arm-none-eabi`.
@@ -743,6 +751,10 @@ Start with a task, then follow the page that has the actual API and source evide
 | Instrumentation, counters and bottleneck analysis | [Performance](performance.md), [benchmark suite](../benchmarks/README.md) |
 | Test environments, real-console methodology | [Testing on hardware](testing-on-hardware.md), [model differences](../hardware/models.md) |
 | Versioned source citations and verification status | [Source versions](source-versions.md) |
+
+## Retail developer accounts
+
+What shipped 3DS games' developers have said about renderer rewrites, VRAM-driven art, 60 FPS targets and stereo cost is collected, with the claim-by-claim evidence, on [commercial case studies](case-studies-commercial.md). All of it is `[reported]` press material, not measurement.
 
 ## Open questions and limitations
 

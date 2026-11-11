@@ -122,6 +122,34 @@ A game can be fine in steady play and still stutter when it loads: opening a fil
 
 No measured SD throughput, decompression speed or prefetch gain exists on this wiki; the experiments are listed under Open questions.
 
+## Asset production for constrained hardware
+
+Run-time optimisation is limited by what the art asks the hardware to do, so many savings are decided in asset production, before any engine code. This section collects the rules this wiki can support; none of the budgets below is measured, so they are things to set and test, not known-good numbers. Scene-side counterparts are in [3D scene optimisation](3d-scene-optimisation.md) and [stereo engineering](stereo-engineering.md).
+
+**Convert offline, always.** Do swizzling (tiling), format conversion, atlas packing, mipmap generation, shader assembly and compression in the build (`tex3ds`, `picasso`, `mkbcfnt`, above). On the console they cost CPU time on the same core as the game and need memory for the source and result [documented: this page, above]. Models follow the same rule: convert vertex data offline to the exact attribute formats and orders the shader and draw call expect (packed 8-bit or 16-bit attributes where the art tolerates them), so loading is a copy into linear memory. The vertex-format options are in [GPU rendering](gpu-rendering.md); no 3DS model-conversion tool is covered by this wiki, so a model converter is code you write (the file format is yours) [hypothesis on the saving; measure load time].
+
+**Set budgets before production.** Choose, per scene, the VRAM and linear memory you will spend on textures, meshes and render targets, and the triangle and draw counts you can submit per frame, and give them to artists as numbers. How to compute the memory side, and the per-format sizes, is in [memory and cache](memory-and-cache.md#size-arithmetic); this page does not repeat the table. Budget triangles and draws from a measurement on your own scene at your target frame rate [hypothesis: no wiki measurement exists]. Remember render targets and depth buffers share the 6 MiB of VRAM with textures ([GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode)).
+
+**Bake effects instead of computing them.** Lighting, ambient occlusion and shadows for static geometry go into vertex colours or a lightmap texture; reflections and highlights can be painted; painted flat backdrops can replace distant geometry. The options and costs are in [3D scene optimisation](3d-scene-optimisation.md#baked-lighting-shadows-and-vertex-colours). Baked results cost build time and storage, and cannot react to run-time changes.
+
+**Stage loading and evict by lifetime.** Group assets by how long they live: permanent (UI font, common atlas), per-level, per-room, per-frame. Allocate each group from its own region or pool, load a group during a transition on a worker thread, and free the whole group at once instead of tracking assets one by one. This keeps fragmentation down, and makes the memory use of each scene a known number [hypothesis on fragmentation benefit; see [memory and cache](memory-and-cache.md#buffer-lifetime) for lifetimes of GPU-visible buffers]. The loading rules (large sequential reads, no file work in the frame, timing the stages) are in Streaming and load hitches above. The review that prompted this section (coffeepot4.md section 9) asserts that offline conversion, staged loading and lifetime-based eviction should be part of the architecture from the start; that is advice, not a measured result.
+
+### Pixel art against 3D textures: choosing the format
+
+The size and format table is under Choosing a format above and in [memory and cache](memory-and-cache.md#size-arithmetic). The quality trade is the part to decide in art production:
+
+| Asset | Format to try first | Why | Check |
+| ----- | ------------------- | --- | ----- |
+| Pixel-art sprites and tiles, hard edges | `rgba5551` (1-bit alpha) or `rgba4` (soft alpha); `rgb565` if opaque | ETC1 works on 4x4 blocks with a shared base colour and blurs hard single-pixel edges | Zoom to the actual output scale and compare against the source image `[hypothesis]` |
+| Pixel art with more than 16 colours per tile and gradients | `rgba8888` if it fits the budget | 16-bit formats band | Look at gradients and anti-aliased outlines |
+| 3D environment textures, painted or photographic | `etc1` / `etc1a4` (`auto-etc1`), with mipmaps | Quarter or eighth of the memory of 16-bit formats; block artefacts are less visible in noisy art | Check on the console screen at distance, and with the texture magnified |
+| Textures with sharp text or fine lines | `rgba4` or `rgba8888`, not ETC1 | Block compression smears thin lines | Render at the largest size shown |
+| Alpha cut-outs (foliage, fences) | `etc1a4` (4-bit alpha) or `rgba5551` | Alpha precision differs; edge quality differs | Look at the edge against a bright and a dark background |
+| Light maps, masks | `l8`, `a8`, `l4`, `a4` | One channel is enough | Banding on gradients in `l4` |
+| UI and HUD in stereo | Format that keeps text sharp | Parallax offsets expose edge errors | Test on a 3D screen ([stereo engineering](stereo-engineering.md)) |
+
+The ETC1 claim (lossy 4x4 block compression, blurs hard edges) comes from the format's design and this page's earlier guidance; the quality verdict for your art is a visual judgement, not a measurement. Use `-q high` for final ETC1 builds (build time only) and compare against `-q low`. Quality is subjective and screen-dependent; the 3DS LCD is small and low-resolution, so artefacts that show on a PC monitor may not show on the console, and the reverse `[hypothesis]`.
+
 ## Technical details
 
 - `.t3x` files start with a header describing sub-textures (count, coordinates) followed by the texture data, optionally compressed; the format is defined by `tex3ds` and parsed by citro3d's `tex3ds.c`. Imported textures are allocated in linear memory unless the `vram` argument is true.
@@ -149,4 +177,5 @@ No measured SD throughput, decompression speed or prefetch gain exists on this w
 - [libctru](https://github.com/devkitPro/libctru) — `util/decompress.h`, `romfs.h`.
 - [citro2d](https://github.com/devkitPro/citro2d) — font and sprite-sheet loading.
 - [picasso](https://github.com/devkitPro/picasso) — shader assembly.
+- coffeepot4.md (external review, private), section 9 — the offline-conversion and eviction advice, treated as a secondary source.
 - Unpublished author notes `old-3ds-guide-revised.md` (section 10, file I/O and asset streaming) — the streaming rules above; labelled `[hypothesis]` here.

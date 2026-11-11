@@ -246,9 +246,10 @@ Engineering pages, and any performance or behaviour claim elsewhere, must say wh
 | `[documented]` | Stated in official documentation or readable in the source code of the library/firmware involved (name the file) |
 | `[reverse-engineered]` | Established through reverse engineering or hardware experiments published by others (name who) |
 | `[measured]` | A benchmark result; give console model, firmware/CFW version, build, and conditions |
+| `[reported]` | A measurement or claim published by a third party that this wiki has not reproduced (developer postmortem, port README, interview, talk). Name the source and its date, the console model, and the conditions as stated; say when the source does not state them. Never present a `[reported]` figure as `[measured]`, and never extend it to other workloads or models |
 | `[hypothesis]` | Plausible but unverified; say what would confirm or refute it |
 
-Never let a `[hypothesis]` lose its label when it is copied to another page. Advice like "X is faster" without a `[measured]` result or a `[documented]` mechanism behind it does not belong in the wiki.
+Never let a `[hypothesis]` or `[reported]` lose its label when it is copied to another page. Advice like "X is faster" without a `[measured]` result or a `[documented]` mechanism behind it does not belong in the wiki.
 
 Code examples must state what they were checked against: at minimum, that they compile with a named toolchain/library version. Say explicitly when an example has not been run on hardware.
 

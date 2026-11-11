@@ -63,6 +63,36 @@ Rules that keep results honest:
 - **Report distributions.** Medians hide hitches; worst-case frames are what players feel.
 - **Label the result** with the wiki's [evidence labels](../../AGENTS.md#evidence-labels) when adding it to a page: `[measured]` plus the console and conditions.
 
+## Benchmark record format
+
+A benchmark record has a human part (this table, filled in for a README or page) and a machine part (the lines `common/bench.h` already writes). The human table below is the shape suggested by the review that prompted it; the example values are **illustrative, not measured**.
+
+| Field | Meaning | Where it comes from in `bench.h` output |
+| ----- | ------- | --------------------------------------- |
+| Hardware | Model, firmware, CFW | `meta,model`, `meta,new3ds`, `meta,firm_version`, `meta,kernel_version` |
+| Build | Compiler, library versions, date | `meta,compiler`, `meta,build_date`; libctru/citro3d versions are `not-readable` at run time, so copy them from [source versions](source-versions.md) |
+| Clock mode | **New 3DS:** speed-up requested | `meta,speedup_requested` (the actual L2/804 MHz state is `not-readable`) |
+| Target | e.g. 60 fps / 16.67 ms budget | written by hand |
+| Scene | e.g. scrolling 2D tilemap, 40 sprites | `result` columns `test` and `bytes_or_n` (size or count), plus a hand-written description |
+| Variants | e.g. citro2d / manual batch / cached chunks | `result` column `variant` |
+| CPU metrics | update, build, submission, cache flush, wait | `result,<program>,<test>,<variant>,<n>,<runs>,<min_us>,<med_us>,<max_us>`; drawbench's `columns,...` row for per-stage milliseconds |
+| GPU metrics | command processing, transfer, clear | drawbench `gpu_ms`; GSP performance log deltas if you add them |
+| Frame-time results | median, p95, p99, worst, missed frames | `note,pct,<program>,<variant>,<frames>,<p50_us>,<p95_us>,<p99_us>,<worst_us>,<missed_slots>` (helper in the [profiling cookbook](performance.md#frame-time-distribution-and-missed-frames)); `note,perf,...` lines in `icachebench` for counters |
+| Verification | screenshot, framebuffer checksum, crash test | by hand; `error,` lines invalidate a run (`note,done errors=N`) |
+
+Illustrative only (not measured):
+
+```text
+Hardware:     Old 3DS XL, system 11.17.0-50U, Luma3DS v13.5      (model is not a measured fact here)
+Target:       60 fps / 16.67 ms
+Scene:        scrolling 2D tilemap, 40 sprites (input script X)
+Variants:     citro2d | manual batch | cached chunks
+Frame time:   p50 / p95 / p99 / worst / missed slots  -> from the note,pct line
+Verification: framebuffer checksum identical across variants
+```
+
+Rules: one record per console and variant; keep the raw `coffeepot-<program>.csv`; never fill a field with a value you did not read from a run; a record with an `error,` line is not a result. The suite README ([recording results](../benchmarks/README.md#recording-results)) holds the same fields for the programs it ships.
+
 ## Microbenchmarks worth running
 
 The wiki has no measured numbers yet for the costs below; they are the questions that come up most often when optimising ([performance: open questions](performance.md#open-questions)):
@@ -70,12 +100,13 @@ The wiki has no measured numbers yet for the costs below; they are the questions
 - CPU write bandwidth to the application heap versus the linear heap, at sizes inside and outside the 16 KB L1 data cache.
 - The cost of flushing a range with the kernel call versus the GSP service, as a function of size.
 - The cost of `C3D_FrameEnd(0)`'s whole-linear-heap flush.
-- Whether the ARM11 performance counters work from a `.3dsx` under Luma3DS, and how the cycle counter relates to the system tick ([CPU optimisation: open questions](cpu-optimization.md#open-questions)); no benchmark program for this exists yet.
+- Whether the ARM11 performance counters work from a `.3dsx` under Luma3DS, and how the cycle counter relates to the system tick ([CPU optimisation: open questions](cpu-optimization.md#open-questions)); `icachebench` tries the counters and reports `perf_unavailable` if the kernel refuses, so a first run answers the first half.
+- How code footprint beyond 16 KB affects cycles per instruction (`icachebench`).
 - How these change with an `APT_SetAppCpuTimeLimit` share active on an Old 3DS, and **New 3DS:** with and without `osSetSpeedupEnable(true)`.
 
 ### The benchmark suite
 
-Three ready-to-build programs live in [`ctr/benchmarks/`](../benchmarks/README.md):
+Four ready-to-build programs live in [`ctr/benchmarks/`](../benchmarks/README.md); a fourth, [`icachebench`](../benchmarks/README.md#icachebench), probes instruction-cache pressure by executing code of growing footprint and reporting time and (if the kernel allows) cycles and I-cache misses. The three below came first:
 
 - **`membench`** — CPU write and copy speed for the heap and the linear heap at sizes inside and outside the L1 cache, kernel versus GSP flushes of a dirty range, and the whole-linear-heap flush. Prints min / median / max microseconds over 31 runs.
 - **`flushbench`** — flush cost at 1–32 MiB, dirty versus clean ranges, GSP flush versus kernel flush versus clean-only, and `C3D_FrameEnd(0)` versus `C3D_FrameEnd(GX_CMDLIST_FLUSH)`.
