@@ -11,10 +11,12 @@ On Switch the main processor (the **[CPU](../../glossary.md#cpu)**) usually runs
 
 ## Lock clocks before measuring anything
 
-What to do: fix CPU/GPU/memory clocks for the test session so numbers repeat. The stock scheduler moves clocks with load and heat, which hides real gains.
+What to do: fix CPU/GPU/memory clocks for the test session so numbers repeat. The stock scheduler moves clocks with load and heat, which hides real gains. Profile with retail content mods off: disable LayeredFS interception, cheats, and overclock sysmodules, and note the exact NRO, scene, launch mode (applet vs. title override), and clocks with every number [reported] (community Switch port practice).
 
 - Expected result: repeated runs of the same scene agree within noise; a later speedup is real [reported].
-- How it fails: unlocked clocks make every profile a weather report. If the same build reports 15 ms then 19 ms with no change, clocks moved.
+- How it fails: unlocked clocks make every profile a weather report. If the same build reports 15 ms then 19 ms with no change, clocks moved. If a "gain" disappears with LayeredFS/cheats off or on a second console, the setup changed, not the code.
+
+Why this matters here: one port report shows game logic taking 19→15 ms and render submission 17→11 ms while the GPU took only 7–9 ms at 307 MHz — the CPU was the limiter [reported] (community Switch port notes, conditions as stated in report). A second report reaches 60 fps only with a CPU/GPU overclock around 1785/768 MHz [reported] (community Switch port notes, overclock, conditions as stated). Label overclock numbers as non-retail; never bake them into asset budgets.
 
 Why this matters here: one port report shows game logic taking 19→15 ms and render submission 17→11 ms while the GPU took only 7–9 ms at 307 MHz — the CPU was the limiter [reported] (community Switch port notes, conditions as stated in report). A second report reaches 60 fps only with a CPU/GPU overclock around 1785/768 MHz [reported] (community Switch port notes, overclock, conditions as stated).
 
@@ -41,7 +43,23 @@ bool use_lockfree_queue = getFlag("use_lockfree_queue");
 
 ## Split sim, render, and audio across three cores
 
-What to do: the app sees three CPU cores (four ARM cores minus one reserved for the system). Give simulation, render-submission, and audio their own threads, pass frames through the lock-free queue, latch input once per tick, and step simulation at fixed 60 Hz with an accumulator capped at 5 steps.
+What to do: the app sees three CPU cores (four ARM cores minus one reserved for the system). Give simulation, render-submission, and audio their own threads, pass frames through the lock-free queue, latch input once per tick, and step simulation at fixed 60 Hz with an accumulator capped at 5 steps. Pin guest threads explicitly — time-slicing at the same priority is ~10 ms, so unpinned threads alias — and make sure every thread is registered in the runtime's thread table or only the main thread actually moves [reported] (community Switch port notes, conditions as stated).
+
+```c
+// Fixed-step accumulator, max 5 catch-up steps; render interpolates.
+// Illustrative — not run on hardware.
+double acc = 0; const double DT = 1.0/60.0;
+acc += frameTime; int steps = 0;
+while (acc >= DT && steps < 5) { latchInput(); stepSim(DT); acc -= DT; steps++; }
+if (steps == 5) acc = 0; // drop backlog, don't spiral
+submitRender(interpolationAlpha);
+```
+
+- Expected result: steady 60 Hz logic with at most 5 catch-up steps; render and audio never block simulation [reported].
+- How it fails: uncapped catch-up spirals after one hitch. If a single slow frame causes seconds of slow motion, the cap is missing.
+- Collisions stay simple: axis-separated box overlap tests plus short grace timers for jumps and buffered presses (coyote time and input buffering) as used in the reports [reported].
+
+What to do: drive audio from its own thread keyed on the audio release event (`audrvUpdate` per pump), never synthesized in the sim loop, with assets authored at 48 kHz, short effects resident in the pool, and music streamed [documented] (libnx `audren` / `audout` examples). Poll battery/power state at ~1 Hz on a worker or on state-change events, not per frame.
 
 ```c
 // Fixed-step accumulator, max 5 catch-up steps; render interpolates.
@@ -70,7 +88,16 @@ beginGpuTimestamp(passA); drawPassA(); endGpuTimestamp(passA);
 - Expected result: you can name the longest pass and whether CPU or GPU owns it [documented] (timestamp mechanism) plus [reported] (figures above).
 - How it fails: always-on timers inflate results. If removing timers speeds up the pass, the timers were the cost.
 
-Maxwell notes that shape shader and memory choices on this GPU generation (**[Maxwell](../glossary.md#maxwell)**): merge memory accesses, prefer cached loads, aim for high occupancy (up to 64 warps per multiprocessor, 255 registers per thread, 32 blocks per multiprocessor as limits), shared memory 64/96 KB per unit with 48 KB per block and ≤32 KB recommended, keep shaders register-lean, use packed half-precision where verified, and compress plus mipmap for the bandwidth ceiling near 25.6 GB/s [documented] (NVIDIA Maxwell tuning guide).
+Maxwell notes that shape shader and memory choices on this GPU generation (**[Maxwell](../glossary.md#maxwell)**): merge memory accesses, prefer cached loads, aim for high occupancy (up to 64 warps per multiprocessor, 255 registers per thread, 32 blocks per multiprocessor as limits), shared memory 64 KB per unit on this chip with 48 KB per block and ≤32 KB recommended, keep shaders register-lean, use packed half-precision where verified (explicit `half2` paths — the vendor compiler does not reliably auto-pack [documented]), and compress plus mipmap for the shared bus whose docked peak is 25.6 GB/s with the CPU (handheld lower) [documented] (NVIDIA Maxwell tuning guide; Tegra X1 shipping-clock analysis).
+
+## Compare honestly, one hypothesis at a time
+
+What to do: keep a PC-first frame-exact reference, change one thing behind one flag, and re-measure both sides on the same scene, same NRO, same clocks, with screenshots plus draw counts — key-only changes still count as changes [reported] (community Switch port practice). After two failed runs on the same hypothesis, close the hypothesis instead of adding a third fix on top.
+
+What to do: follow the acceptance ladder — device clear, then textured draw, then synthetic packet, then recorded real 2D/3D packet, then live title and field, then saves and transitions, then repeated hardware frame-times. Emulator, overclock, no-wait, or effects-off numbers never pass a rung [reported] (Switch homebrew postmortem: emulator field timings in the seconds-per-frame range were diagnostic only).
+
+- Expected result: each flag shows its own p50/p95/p99 plus hitch counts against the reference; "faster but wrong" is caught by the frame-exact check [reported].
+- How it fails: stacked changes with nested overlapping buckets summed as if exclusive, or `-O0` debug modules mixed into "optimized" builds. If the flag-off build does not match the reference frame for frame, the reference drifted — fix that before profiling.
 
 ## Port like a Switch title from day one
 
@@ -81,6 +108,8 @@ What to do: run through this checklist before optimising further.
 3. Mix audio at 48 kHz; keep short effects in memory and stream music [reported].
 4. Write versioned saves via temp-file plus backup so a crash never wipes progress [reported].
 5. Choose the sync-to-screen (the short pause between screen refreshes, or **[V-blank](../../glossary.md#vblank)**) tradeoff on purpose: relaxed sync tears visibly but keeps input fresh; strict sync drops whole frames but stays clean [reported].
+6. Handle lifecycle from day one: gate the loop on the applet status call, pause audio and stop submission on focus loss/suspend, and re-pick resolution and budgets on handheld/docked transitions instead of polling per frame [documented] (libnx applet behavior; every switch-example gates on it).
+7. Keep the network off gameplay: init sockets once, use non-blocking calls or a dedicated net thread with timeouts, and check link status before traffic [documented] (libnx `bsd`/`nifm` behavior). Debug logging goes over a non-blocking socket — one project froze at ~37 s because a blocked send stalled the game [reported].
 
 ```c
 // Versioned save shape — write temp, rename, keep backup.
@@ -97,8 +126,9 @@ renameFile("save.dat", "save.bak"); renameFile("save.tmp", "save.dat");
 - Clock evidence: game 19→15 ms, render 17→11 ms, GPU 7–9 ms at 307 MHz [reported]; 60 fps only at ~1785 MHz CPU / ~768 MHz GPU overclock [reported]. Both state CPU as limiter on their scenes; do not extend to other scenes.
 - Payoff figures: PGO ~15%, large 2 MB pages ~4.3% in one hot spot at +47 MB, lock-free render queue, per-draw setter cuts — all [reported] from port notes, conditions as stated.
 - Threading: app-visible cores are three of four ARM cores (one reserved); sim/render/audio split with latched input and accumulator cap 5 is the reported stable pattern [reported]; fixed step DT 1/60 s.
-- Audio/save/ROM data rules (full memory via title override, pre-converted data, 48 kHz, temp-plus-backup saves, sync tradeoff) are [reported] port practice, consistent with libnx applet and filesystem behaviour [documented] (libnx sources).
-- Maxwell limits above are [documented] (tuning guide).
+- Audio/save/ROM data rules (full memory via title override, pre-converted data, 48 kHz on its own thread, temp-plus-backup saves off the frame path, sync tradeoff) are [reported] port practice, consistent with libnx applet and filesystem behaviour [documented] (libnx sources).
+- Maxwell limits above are [documented] (tuning guide); the 25.6 GB/s figure is the docked shared CPU+GPU peak, handheld lower.
+- Port extensions worth stealing: snapshot deltas with verify keys instead of whole-device copies; content-hash store-cards (or sampled plus staggered full-hash fallback with a staleness caveat for glyph atlases); depth-target clipping (skip binding a depth target smaller than color when depth test is off — emulators will not catch it); compile-queue priority plus pipeline prewarm with fsync'd DKSH records; wake/lock batching counts — all [reported] (community Switch port notes, conditions as stated).
 
 ## Pitfalls
 
