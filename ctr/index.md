@@ -25,6 +25,7 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [Displays](hardware/display.md) — the parallax-barrier 3D screen, framebuffers and the display controller.
 - [Audio](hardware/audio.md) — the DSP and the DS-style CSND block.
 - [Input/output and peripherals](hardware/io-and-peripherals.md) — buttons, sensors, cameras, the MCU, buses and the I/O register map.
+- [Peripheral control registers](hardware/peripheral-registers.md) — HID, GPIO, I²C, sleep/wake and legacy-input fields for low-level work.
 - [Game cards](hardware/gamecard.md) — the cartridge interface and protocol.
 - [GPU shading features](hardware/gpu-shading-features.md) — lighting, shadows, procedural textures and the hardware's quirks.
 - [Security hardware](hardware/security-hardware.md) — AES/RSA/SHA engines, OTP and boot ROM key storage.

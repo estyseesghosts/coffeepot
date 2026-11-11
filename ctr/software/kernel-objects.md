@@ -59,6 +59,18 @@ Details that do not fit a table:
 - **`KMemoryBlock` state byte.** Luma3DS names the types (`MemState`): 0 free, 1 reserved, 2 I/O, 3 static, 4 code, 5 private, 6 shared, 7 continuous, 8 aliased, 9 alias, 0xA alias code, 0xB locked. This is the same `MemoryState` that `QueryMemory` reports [documented: Luma3DS `kernel.h`]. Luma uses state `0xBB05` for private and `0x5806` for shared mappings and `0x3907` for linear allocations.
 - **`KThreadLocalPage`.** The usage map has one char per thread-local region: `0x200` bytes per region times 8 regions is one `0x1000` page. A char of **1 means unused** and **0 means in use** (the reverse of what one might guess). A process with more than 8 threads has several `KThreadLocalPage` objects chained with `KLinkedListNode`s.
 
+### Kernel physical-page allocation
+
+3dbrew describes one `KPageHeap` per APPLICATION, SYSTEM and BASE FCRAM region, owned by `KMemoryManager`. A free physical run carries a `KPageHeapBlock` header in FCRAM; allocating the run removes its header from the free list and clears the allocated memory. Ordinary and linear heaps draw from the region from opposite ends: the ordinary heap grows downward and need not be physically contiguous; the linear heap grows upward and uses contiguous physical runs. This describes the kernel's physical allocator, not the order in which a user-space `malloc` or `linearAlloc` implementation returns addresses. [reverse-engineered: 3dbrew Memory Management, revision 22529]
+
+| Object | Before 11.0.0-X | 11.0.0-X and later | Details |
+| ------ | ---------------- | ------------------ | ------- |
+| `KPageHeapBlock` | `0xC` bytes, marked uncertain by 3dbrew | `0x18` bytes | Size in pages and next/previous pointers at `+0x0`, `+0x4`, `+0x8`; later fields include a nonce and a message-authentication code. The source marks the `+0xC` current-chunk pointer and its introduction as uncertain. |
+| `KPageHeap` | `0x10` bytes | `0x20` bytes | First and last free-block pointers, region start and size; 11.0 adds a 16-byte key used by the heap MAC. |
+| `KMemoryManager` | `0x50` bytes | `0x80` bytes | Three page heaps followed by region and per-page reference-tracking metadata. |
+
+> Unknown: 3dbrew does not say which model and build each allocator detail was checked on; the pre-11.0 block size and one later field remain explicitly uncertain.
+
 ### Process structures
 
 `KProcess` is a `KSynchronizationObject` (waiting on a process wakes when it exits) followed by an interrupt-event part and the `KProcessHwInfo` block. Its fields in memory order, as declared by Luma3DS [documented: Luma3DS `kernel.h`]:
@@ -229,6 +241,8 @@ Luma3DS's `svcControlProcess` and `svcTranslateHandle` expose parts of this worl
 - Whether the `KBlockInfo` page reference-count table grows on the New 3DS is not stated.
 
 ## Sources
+
+- [3dbrew: Memory Management](https://www.3dbrew.org/wiki/Memory_Management) — physical-page heaps and version-dependent structures; saved revision 22529.
 
 - [3dbrew: Kernel](https://www.3dbrew.org/wiki/Kernel) and the kernel object pages [KBlockInfo](https://www.3dbrew.org/wiki/KBlockInfo), [KClassToken](https://www.3dbrew.org/wiki/KClassToken), [KCoreContext](https://www.3dbrew.org/wiki/KCoreContext), [KDebugThread](https://www.3dbrew.org/wiki/KDebugThread), [KEventInfo](https://www.3dbrew.org/wiki/KEventInfo), [KInterruptEventMailbox](https://www.3dbrew.org/wiki/KInterruptEventMailbox), [KLinkedList](https://www.3dbrew.org/wiki/KLinkedList), [KLinkedListNode](https://www.3dbrew.org/wiki/KLinkedListNode), [KMemoryBlock](https://www.3dbrew.org/wiki/KMemoryBlock), [KObjectLink](https://www.3dbrew.org/wiki/KObjectLink), [KObjectList](https://www.3dbrew.org/wiki/KObjectList), [KObjectMutex](https://www.3dbrew.org/wiki/KObjectMutex), [KObjectName](https://www.3dbrew.org/wiki/KObjectName), [KProcessHwInfo](https://www.3dbrew.org/wiki/KProcessHwInfo), [KRecursiveLock](https://www.3dbrew.org/wiki/KRecursiveLock), [KSchedulableInterruptEventLinkedList](https://www.3dbrew.org/wiki/KSchedulableInterruptEventLinkedList), [KThreadContext](https://www.3dbrew.org/wiki/KThreadContext), [KThreadLocalPage](https://www.3dbrew.org/wiki/KThreadLocalPage) — all field tables unless a row cites Luma3DS.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — thread-context pages, per-core pointers.

@@ -46,6 +46,8 @@ u32 __ctru_linear_heap_size = 16 * 1024 * 1024;  // linear heap
 
 If the two together exceed what is available, the program stops at start-up with `svcBreak(USERBREAK_PANIC)`. Size them from measured peaks, with margin, and recheck on the smallest memory mode you support.
 
+The virtual address of linear memory is not a universal physical address. Old and newer processes can use different linear windows; let libctru and the relevant service perform address translation, and avoid hard-coding the older window's offset. See [memory-mapping constraints](../software/svc-reference.md#memory-mapping-constraints) and the [memory map](../hardware/memory.md) [reverse-engineered: 3dbrew Memory Management, revision 22529].
+
 ## Which pool for which buffer
 
 | Buffer | Pool | Why |

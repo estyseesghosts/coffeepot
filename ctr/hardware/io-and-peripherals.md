@@ -39,6 +39,8 @@ Some peripherals are wired twice: once the DS/DSi way (for backward compatibilit
 
 ### I/O register blocks
 
+For register fields within the HID, GPIO, I²C and power-management blocks, see [peripheral control registers](peripheral-registers.md).
+
 Physical ranges from 3dbrew's *IO Registers* page. The "Old 3DS" column is the page's own availability column (header `Old3DS`): `No` is read here as "not present on an Old 3DS", i.e. New 3DS only. "A9/A11" says which processor's bus reaches the block (`A9` = ARM9 only, `A11` = ARM11 only, `A9/A11` = both).
 
 ARM11 user mapping: `physical = virtual - 0x1EC00000 + 0x10100000` (kernel mappings vary per build). Registers from `0x10200000` up, including the GPU and LCD, are not visible to the ARM9; registers below `0x10100000` are not visible to the ARM11 bus.

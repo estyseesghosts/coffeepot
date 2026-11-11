@@ -158,6 +158,16 @@ When setting the CPSR through `SetDebugThreadContext` the kernel stores `ctx->cp
 
 Timer and event reset types: a `STICKY` object stays signalled and wakes waiters until a thread explicitly resets it; a `ONESHOT` object wakes exactly one thread and then resets itself; a `PULSE` timer resets after waking one thread and is started again immediately. It is unknown whether `PULSE` is valid for events.
 
+### Memory mapping constraints
+
+`ControlMemory` and `MapMemoryBlock` map execute-never memory; 3dbrew describes their mapping permissions as at most `3` (read/write), with zero used for unmapping. The underlying ARM11 permissions do not support write-only memory: 3dbrew says a write-without-read request is handled as though neither read nor write were set. This describes these memory operations, not a promise that every permission combination is valid for every SVC. [reverse-engineered: 3dbrew Memory Management, revision 22529]
+
+For `ControlMemory`'s `MAP` operation, 3dbrew reports that the source mapping becomes inaccessible while its alias exists, that a source already used in another `MAP` cannot be mapped again, and that the underlying memory cannot be freed while an alias remains. It says only regular heap pages *appear* mirrorable; TLS, stack and program sections are not confirmed to work. Unmap before freeing and do not treat a mirror as two independent allocations. [reverse-engineered: 3dbrew Memory Management, revision 22529]
+
+The linear mapping base depends on the process and kernel release: 3dbrew reports that firmware 8.0.0-18 introduced the new mapping and that BASE-region processes or those with kernel-release version at least `0x022C` use it. Do not apply the old mapping's `virtual + 0x0C000000` physical-address formula to the newer mapping; see [the memory map](../hardware/memory.md#arm11-userland-virtual-map-native_firm) and `GetProcessInfo` type 20 below. [reverse-engineered: 3dbrew Memory Management, revision 22529]
+
+> Unknown: the article does not identify the console model or firmware used for each mapping experiment. Confirm a particular permission or alias behavior on the target firmware before relying on it.
+
 ### Interrupts and DMA
 
 `svcBindInterrupt` registers an event or semaphore in the global interrupt table for an interrupt ID. Interrupts 0-14 and 16-31 can never be bound, whatever the process's exheader interrupt flags say, and the flags are not checked when binding interrupt 15. The "level-high active / manual clear" argument must be false when binding a semaphore (otherwise `0xD8E007EE`, invalid combination). Binding an ID that already has an object returns `0xD8E007F0`. Applications wait for the interrupt with `WaitSynchronization` on the handle. The CTR SDK calls `svcBreak` when `svcStartInterProcessDma` returns an error (except a few values), so on retail a system module whose DMA request fails terminates [documented: 3dbrew SVC].
@@ -326,6 +336,7 @@ Homebrew normally uses the wrappers in [libctru](../homebrew/libctru.md). Anythi
 
 ## Sources
 
+- [3dbrew: Memory Management](https://www.3dbrew.org/wiki/Memory_Management) — permissions, linear mappings and alias restrictions; saved revision 22529.
 - [3dbrew: SVC](https://www.3dbrew.org/wiki/SVC) — call table, types, debug events, `KernelSetState`, `GetSystemInfo`/`GetProcessInfo`/`GetHandleInfo`, `svc 0x59`/`0x5A`, `Backdoor`, kernel error codes.
 - [3dbrew: Multi-threading](https://www.3dbrew.org/wiki/Multi-threading) — `ArbitrationType`, `StartupInfo`, thread calls.
 - [3dbrew: KEventInfo](https://www.3dbrew.org/wiki/KEventInfo) — kernel-side debug event layout.

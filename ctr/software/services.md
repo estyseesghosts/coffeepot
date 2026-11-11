@@ -8,7 +8,7 @@ The set of services forms the official API that retail developers see. A few, su
 
 A program first connects to the **service manager** port `srv:` and asks for a service by name; it gets back a handle to a *session* with that service. It then sends commands with the [`SendSyncRequest`](kernel.md) system call and blocks until the reply arrives. Services are an abstraction over kernel *ports*: they behave the same way except that service handles are fetched through `srv:` instead of being retrieved directly.
 
-Each command is identified by a 32-bit **command header** (3dbrew lists them such as `0x00010040` for `dsp::DSP` `RecvData`). When a request passes a buffer, the kernel maps that memory into the receiving process (see [kernel](kernel.md)). The exact message layout (header word, normal and translate parameters, buffer descriptors) is explained with a worked example on [the IPC engineering page](../engineering/ipc-and-services.md).
+Each command is identified by a 32-bit **command header** (3dbrew lists them such as `0x00010040` for `dsp::DSP` `RecvData`). Buffer handling depends on the descriptor: the kernel copies static-buffer data into a receiver-provided buffer, while mapped-buffer descriptors create a temporary mapping, with partial pages copied as needed [reverse-engineered: 3dbrew IPC]. The exact message layout (header word, normal and translate parameters, buffer descriptors) is explained with a worked example on [the IPC engineering page](../engineering/ipc-and-services.md).
 
 For a hands-on guide to writing a correct client (command buffer, translate descriptors, result codes, session lifetime) see [Writing a correct service client](../engineering/ipc-and-services.md); this page is the reference catalogue. The session handle is per process, and the service name is at most 8 characters [documented: 3dbrew Services API].
 
@@ -36,7 +36,17 @@ Services grouped by the process that provides them, following 3dbrew's *Services
 | Other groups from 3dbrew | `ac:i/u` (Wi-Fi connection), `act:a/u` (Nintendo Network accounts), `frd:a/n/u` (friends), `news:s/u` (notifications), `pdn:s/d/i/g/c`, `SPI::NOR/CD2/CS2/CS3/DEF`, `Loader`, `mcu::CAM/GPU/HID/RTC/SND/NWM/HWC/PLS/CDC`, `mic:u`, `mp:u`, `nfc:dev/m/p/r/s/u`, `mvd:STD` and `qtm:*` (New 3DS only) | `nfc:m` is the amiibo-capable path used by libctru's `nfc`; `qtm` is head tracking |
 | Misc | `boss:U/P/M` (SpotPass), `cecd:u/s/ndm` (StreetPass; see [StreetPass (CEC)](streetpass-cec.md)), `ir:u/USER/rst`, `dlp:CLNT/FKCL/SRVR` (Download Play), `ptm:*` (power/play history), `hid:USER/SPVR/NFC/QTM`, `i2c::MCU/CAM/LCD/DEB/HID/IR/EEP/NFC/QTM`, `gpio:*` | |
 
-Suffix meanings in 3dbrew's notes: `am` — `app` for applications, `net` network installation (`nim`), `u` local installation, `sys` system titles; `nim` — `aoc` DLC, `ndm`, `s` eShop, `u` updater; `ns:s` system, `ns:p` power (shutdown/reboot), `APT:A/S/U` application/system/user; `cdc:` — HID, MIC, CSN, DSP, LGY (legacy, some backward-compatibility role), CHK; `dlp:` — CLNT client, FKCL fake client, SRVR server; `boss:` U user, P privileged, M for `ndm`; `ptm:` — gets (get system time), play (play history), s, sets (set system time), sysm (Home Menu/Test Menu), u; `nwm::` — CEC (StreetPass), INF infrastructure, SOC socket, UDS local WLAN; `act:`/`frd:` — a admin; `hid:` — NFC, QTM, SPVR (system privileged?). The PXI service groups are filesystem, process, application manager, process manager, development, gamecard and the legacy FIRM (`TWL_FIRM`/`AGB_FIRM`) interfaces. The only named port is `ErrDisp`.
+Suffix meanings in 3dbrew's notes: `am` — `app` for applications, `net` network installation (`nim`), `u` local installation, `sys` system titles; `nim` — `aoc` DLC, `ndm`, `s` eShop, `u` updater; `ns:s` system, `ns:p` power (shutdown/reboot), `APT:A/S/U` application/system/user; `cdc:` — HID, MIC, CSN, DSP, LGY (legacy, some backward-compatibility role), CHK; `dlp:` — CLNT client, FKCL fake client, SRVR server; `boss:` U user, P privileged, M for `ndm`; `ptm:` — gets (get system time), play (play history), s, sets (set system time), sysm (Home Menu/Test Menu), u; `nwm::` — CEC (StreetPass), INF infrastructure, SOC socket, UDS local WLAN; `act:`/`frd:` — a admin; `hid:` — NFC, QTM, SPVR (system privileged?). The PXI service groups are filesystem, process, application manager, process manager, development, gamecard and the legacy FIRM (`TWL_FIRM`/`AGB_FIRM`) interfaces. The IPC reference identifies `srv:` and `err:f` (ErrDisp) as the two global named ports normally present on retail systems [reverse-engineered: 3dbrew IPC].
+
+### Service manager and notifications
+
+Services are private kernel ports registered by name with the `srv:` service manager. The server registers a service and receives the server-port handle; the service manager creates a client session on request, subject to the caller's service access list. This is distinct from connecting directly to a global named port with `svcConnectToPort`. File objects can instead be represented by raw sessions returned by `fs:USER` [reverse-engineered: 3dbrew IPC].
+
+The saved 3dbrew Services page describes `srv:pm` as a port before system version 7.0.0-13 and a service from that version onward; its management command IDs changed with the transition. It says access to the service became limited to built-in NATIVE_FIRM modules, whereas the older port was accessible to any process. These are service-manager internals, not application-facing setup instructions [reverse-engineered: 3dbrew Services].
+
+The service manager also distributes notifications to subscribers. Examples in 3dbrew's table include `0x103` and `0x104` during sleep entry, `0x105` on sleep exit, and `0x204`/`0x205` for HOME button press/release [reverse-engineered: 3dbrew Services]. The table does not establish a universal application callback ordering; homebrew should use the [application lifecycle](../engineering/application-lifecycle.md) interfaces rather than infer one from notification IDs.
+
+> Unknown: 3dbrew does not identify the console model and firmware used to verify each service-manager and notification detail. **New 3DS:** no separate verification is documented here.
 
 ### Services and the ARM9
 
@@ -94,6 +104,8 @@ Homebrew calls the same services through `libctru` wrappers. Some [exploits](../
 
 ## Sources
 
+- [3dbrew: Services](https://www.3dbrew.org/wiki/Services) — service manager, `srv:pm` and notifications.
+- [3dbrew: IPC](https://www.3dbrew.org/wiki/IPC) — private ports, sessions and buffer translation.
 - [3dbrew: Services API](https://www.3dbrew.org/wiki/Services_API) — the full service list.
 - [Writing a correct service client](../engineering/ipc-and-services.md) — IPC format and client examples (this wiki).
 - [3dbrew: DSP Services](https://www.3dbrew.org/wiki/DSP_Services) — example command headers.

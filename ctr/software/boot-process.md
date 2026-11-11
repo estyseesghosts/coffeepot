@@ -32,6 +32,20 @@ Only `NATIVE_FIRM` boots usefully from power-off: the boot ROM can launch `TWL_F
 - DS-cartridge boot (**NTR boot**): with the shell closed and Start + Select + X held, Boot9 tries an inserted NTR card before NAND. NCSD/FIRM backup is not used for non-NAND boots. On the Old 3DS and 2DS the console normally will not turn on at all with the shell closed (the sleep switch can be faked with a magnet); 3dbrew says that with the key combination held the power button starts it (the page text is cut off at that point, so the exact condition is not stated).
 - `crt0` (at `0xFFFF8000`, reached from the reset vector `0xFFFF0000`) also calls `mpu_init()`: it clears bits `0x000F9005` in the CP15 control register, invalidates the instruction and data caches and drains the write buffer, programs the eight protection regions (ITCM region register `0x24`: base `0`, 128 MB; DTCM region register `0xFFF0000A`: base `0xFFF00000`, 16 KB), sets cacheable/bufferable bits and permissions, and finally ORs `0x0005707D` into the control register. It then installs exception handler addresses at `0x08000000`, clears `0x08000030` (`0x10` bytes) and the DTCM, copies the initial DTCM image from the Boot9 data, and clears `0xFFF00230`-`0xFFF01AC0` before jumping to `main`.
 
+### Boot protection and environment registers
+
+The ARM9 system-configuration block includes these registers. They are privileged boot/system interfaces, not ordinary homebrew APIs. The following is 3dbrew's reverse-engineered description; the article does not specify the console and firmware used for each observation.
+
+| Register | Physical address, width | Boot-related behavior |
+| -------- | ----------------------- | --------------------- |
+| `CFG9_SYSPROT9` | `0x10000000`, 8-bit | Bit 0 hides the protected half of Boot9 and enables FCRAM access; bit 1 hides the OTP area. Once set, each bit cannot be cleared until a hard reset. |
+| `CFG9_SYSPROT11` | `0x10000001`, 8-bit | Bit 0 hides the protected half of Boot11 and enables FCRAM access; it cannot be cleared until a hard reset. |
+| `CFG9_RST11` | `0x10000002`, 8-bit | Bit 0 is presumed to release ARM11 reset; after clearing, it cannot be set again. The release interpretation is tentative. |
+| `CFG9_BOOTENV` | `0x10010000`, 32-bit | Persists across an MCU reboot and starts at 0 on cold boot. NATIVE_FIRM writes 1 on shutdown/FIRM launch; legacy firmware writes 3 for TWL and 7 for AGB title launch. |
+| `CFG9_UNITINFO` | `0x10010010`, 8-bit | 0 for retail, nonzero for development/debug units. |
+
+On Old 3DS, NATIVE_FIRM checks whether the OTP protection bit is already set before initializing TWL console-unique keys; it sets the bit afterward. **New 3DS:** the Kernel9 loader performs that work and uses OTP data to derive the NATIVE_FIRM decryption key, preserving the final keyslot for a later FIRM launch before hard reset. [reverse-engineered: 3dbrew CONFIG9 Registers, revision 22213]
+
 ### NAND reads during a successful boot (firmware 6.x)
 
 Sector order: `00000000` (NCSD partition table), `0B130000` and `0B530000` (FIRM headers), then the FIRM header, section 1 (`0B130200`), section 2 (`0B163E00`), section 3 (`0B193E00`), followed by reads at `00013000…00017000` and `09011A00…` (the system booting).
@@ -131,6 +145,7 @@ The boot ROM is the root of the whole [security architecture](security-architect
 
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — reported boot times by SD-card configuration.
 
+- [3dbrew: CONFIG9 Registers](https://www.3dbrew.org/wiki/CONFIG9_Registers) — boot protection, reset and environment register fields; saved revision 22213.
 - [3dbrew: Bootloader](https://www.3dbrew.org/wiki/Bootloader) — Boot9/Boot11 flow, memory images, error codes, NAND reads.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Operating System](https://www.copetti.org/writings/consoles/nintendo-3ds/) — boot sequence, multi-core start-up, New 3DS overlay register.
 - [3dbrew: Flash Filesystem](https://www.3dbrew.org/wiki/Flash_Filesystem) — NCSD and partition layout read by Boot9.

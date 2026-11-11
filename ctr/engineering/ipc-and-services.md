@@ -257,7 +257,7 @@ A session handle is a kernel object that you own until you close it with `svcClo
 
 - **One owner, one close.** Close each session exactly once, from a thread that is not mid-call on it, then set your variable to 0. Never reuse a closed handle number: handle values can be handed out again.
 - **Reference-count shared sessions.** libctru's `cfguInit`/`cfguExit` use an atomic counter so that only the first init opens the session and only the last exit closes it [documented: `cfgu.c`]. Copy that pattern if two parts of your program need the same service.
-- **Sessions are a finite resource.** A service accepts a limited number of simultaneous sessions. With the default blocking policy, `GetServiceHandle` waits for a free slot [reverse-engineered: 3dbrew `SRV:GetServiceHandle` flag; documented: libctru policy default], so a leak shows up as a program that hangs on its Nth open, not as an error. `httpcOpenContext` opens a **new** session per context (and `httpcCloseContext` closes it), so an HTTP loop that forgets to close contexts leaks sessions [documented: libctru `httpc.c`].
+- **Sessions are a finite resource.** A service accepts a limited number of simultaneous sessions. With the default blocking policy, `GetServiceHandle` can wait for a free slot [reverse-engineered: 3dbrew `SRV:GetServiceHandle` flag; documented: libctru policy default], so a leak can show up as a program that hangs on a later open instead of returning an error. The saved 3dbrew Services page separately says that requesting an allowed service that has not been registered blocks until registration; a hang therefore does not by itself prove a session leak [reverse-engineered: 3dbrew Services]. `httpcOpenContext` opens a **new** session per context (and `httpcCloseContext` closes it), so an HTTP loop that forgets to close contexts leaks sessions [documented: libctru `httpc.c`].
 - **What the other side sees.** When the last client handle closes, the server's next `svcReplyAndReceive` returns the error `0xC920181A` ("session closed by remote") [reverse-engineered: 3dbrew IPC server example]. You do not have to tell the service you are leaving; some services nevertheless have their own finalize command (`http:C` Finalize `0x00390000`, `soc:U` Shutdown `0x00190000`) that libctru's `*Exit` functions send *before* closing.
 - **Shared memory handed to a service stays tied to the session.** For `soc:U`, the buffer given to `socInit` is unusable by your process until `socExit` ([networking](networking.md#socu-initialisation)).
 
@@ -412,7 +412,7 @@ Treat the printed result codes as data to record in [source versions](source-ver
 | Symptom | Likely cause | Check |
 | ------- | ------------ | ----- |
 | `srvGetServiceHandle` fails | Name wrong or longer than 8 characters, service not permitted for your title, or service absent on this firmware | Print the raw `Result`; try from a title with broader access; see Open questions |
-| Program hangs inside `srvGetServiceHandle` | Session slots of that service exhausted by leaked handles | Count opens and closes; reference-count sessions |
+| Program hangs inside `srvGetServiceHandle` | Service not registered yet, or session slots exhausted | Check service registration and access; count opens and closes and check the blocking policy |
 | Transport succeeds but outputs are zero or garbage | You read outputs without checking `cmdbuf[1]` | Check the service result first |
 | Reply words belong to another command | Another IPC call ran between your send and your read | Read outputs immediately; avoid `printf` over sockets in between |
 | Console reboots when the call is made | Fatal descriptor (rights 0, static buffer too big, move with process ID bit) | Build descriptors with the `IPC_Desc_*` helpers only |
@@ -465,6 +465,7 @@ This page covers the client side only. Writing a *server* (a `svcReplyAndReceive
 
 ## Sources
 
+- [3dbrew: Services](https://www.3dbrew.org/wiki/Services) — service registration and waiting for an allowed service.
 - [3dbrew: IPC](https://www.3dbrew.org/wiki/IPC) — message structure, translate descriptors, ports and services, server loop (fetched as raw wikitext in November 2026; `IPC_Command_Structure` redirects here).
 - [3dbrew: Config Services](https://www.3dbrew.org/wiki/Config_Services) and [Cfg:GetSystemModel](https://www.3dbrew.org/wiki/Cfg:GetSystemModel) — command list, model values.
 - [3dbrew: SRV:GetServiceHandle](https://www.3dbrew.org/wiki/SRV:GetServiceHandle) — request/response layout and flags.
