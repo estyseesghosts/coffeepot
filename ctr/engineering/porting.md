@@ -672,6 +672,8 @@ These are *design walkthroughs*, not claims that a particular engine has already
 
 For SDL2/SDL3, the upstream Nintendo 3DS README documents **software-only SDL rendering** and cooperative scheduling caveats. Confirm the current README for your exact SDL release, rather than assuming an SDL2 desktop GL backend translates to the PICA200. References: [SDL2 3DS README](https://wiki.libsdl.org/SDL2/README-n3ds), [SDL3 3DS README](https://wiki.libsdl.org/SDL3/README-n3ds), [Coffeepot development workflow](../homebrew/development-workflow.md).
 
+See the [rendering trade-off case studies](case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
+
 ## 13. Release acceptance: what a complete port must prove
 
 Do not call a port “done” merely because the title screen works. Use **feature and hardware gates** with the evidence attached. If your release intentionally supports only New 3DS, label that honestly; never imply Old 3DS support from an emulator or a slow-clock New 3DS run.

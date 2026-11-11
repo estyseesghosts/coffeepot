@@ -111,6 +111,8 @@ A load inside the frame loop is a missed-frame generator: file reads, decompress
 
 Input read at the top of the loop is shown, at best, after the current frame's GPU work, the transfer and the next V-blank — roughly one to two display periods with `C3D_FRAME_SYNCDRAW` [hypothesis from the pipeline above; not measured]. Read input as late as practical before recording the frame if latency matters (rhythm games, fast action), and avoid adding extra queued frames.
 
+See the [rendering trade-off case studies](case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
+
 ## Technical details
 
 - `C3D_FrameBegin(u8 flags)`: `C3D_FRAME_SYNCDRAW` = bit 0, `C3D_FRAME_NONBLOCK` = bit 1; returns `false` if already inside a frame or (non-blocking) if the GPU queue has not finished.

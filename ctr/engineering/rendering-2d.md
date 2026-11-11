@@ -715,6 +715,8 @@ Build such a renderer in steps: start with one narrow subset that you can prove 
 
 Verify such a path by comparing both renderers on the same captured state, then on an Old 3DS and a New 3DS; an emulator pass is not enough ([testing on hardware](testing-on-hardware.md)).
 
+See the [rendering trade-off case studies](case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
+
 ## Pixel-perfect scaling
 
 - The top screen is 400×240, the bottom 320×240. Original art designed for 256×192 (DS) or 320×240 can be shown 1:1, centred, or scaled by the GPU with filtering.
