@@ -1,0 +1,70 @@
+# Case studies: open-source engine ports on Switch (reported results)
+
+SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch-specific code; demanding 3D engines boot and play but inherit the cost of the abstraction. None of the four ports below uses native deko3d command control — all go through SDL video, audio, and input and Mesa/Nouveau EGL — so none of them touches Maxwell controls (Zcull, tiling, bandwidth) directly. None of the figures were measured by Coffeepot; all are `[reported]` from the vendored trees and their READMEs.
+
+## Before you start
+
+- Projects: srb2-switch (Sonic fangame on Doom Legacy), taisei (bullet-hell shooter), stk-code (SuperTuxKart), godot_switch (Godot 3.x export target).
+- Companion pages: [rendering](../rendering.md) and [performance and porting](../performance-and-porting.md) for the deko3d path these ports do not take; [toolchain](../../homebrew/toolchain-and-workflow.md) for title override and nxlink.
+- Decision rule up front: if the game is 2D, software-rendered, or a jam prototype and 30 fps at sub-native resolve is acceptable, port via SDL plus GLES. If the goal is 60 fps 3D on **[Maxwell](../../glossary.md#maxwell)**, go deko3d and own the GPU code.
+
+## Per-engine snapshot
+
+| Engine | Build (as vendored) | Renders how on Switch |
+| ------ | ------------------- | --------------------- |
+| srb2-switch | `make PLATFORM=Switch`; assets via download script; install NRO to SD, launch from hbmenu [reported] | SDL2 software **[framebuffer](../../../glossary.md#framebuffer)**, stretched to display resolution. Default 320×200; ships 800×450 config as perf/visual balance [reported] |
+| taisei | devkitA64 plus switch-dev, meson and ninja with a Switch crossfile [reported] | SDL window plus GL renderer over Mesa/Nouveau EGL. Queries display resolution at boot, sets `MESA_NO_ERROR=1` in release [reported] |
+| stk-code | CMake Switch build with `NO_SHADERC=on`, packaged to NRO plus data zip [reported] | GLES/EGL path through the engine's abstraction; offline shader compile skipped on Switch [reported] |
+| godot_switch | scons `platform=switch`; editor gains a Switch exporter emitting NRO plus package [reported] | Native Switch EGL context (RGBA8 plus D24S8) driving GLES2/GLES3 rasterizers; no SDL in the loop [reported] |
+
+## Threading, input, and audio
+
+| Engine | Threading | Input | Audio |
+| ------ | --------- | ----- | ----- |
+| srb2 | Engine and SDL threads; keeps simulating while suspended on Home to prevent lag-switch exploits [reported] | SDL gamepad plus USB mouse/keyboard; inline system-keyboard applet hooks [reported] | SDL_mixer stack; Switch output resolves to 48 kHz through the OS mixer [reported] |
+| taisei | SDL-threaded loader and audio; applet exit hook quits cleanly, exit locked at startup [reported] | SDL gamepad layer over HID; no custom Joy-Con driver | SDL audio resampled to the 48 kHz Switch path [reported] |
+| stk | Heavier threaded engine (physics, audio, network); same model on Switch, less headroom | SDL gamepad and window upstream; same mapping in the NRO | OpenAL and ogg-vorbis stack; 48 kHz output [reported] |
+| godot_switch | POSIX threads, visual-server wrapped multithreading | Custom 8-slot gamepad mapping over HID button state | Native audren: 48 kHz, 24 voices, stereo, 2 mix buffers, page-aligned double-buffered pool [reported] |
+
+## What had to change for Switch
+
+- **Memory mode:** srb2 and taisei both require full-RAM access — hold R on a title (title override), never the Album applet; taisei warns it will crash from the photo applet [reported]. See [title override](../../glossary.md#title-override).
+- **Assets:** download script (srb2), sidecar data zip (stk), package beside the NRO (godot, taisei) [reported]. Simple to ship and update; no cleverness needed.
+- **Resolution:** srb2 800×450 shipped default; taisei reads the display resolution at boot; godot and STK leave it to the EGL surface plus in-game settings [reported].
+- **Debug:** NXLINK flag (srb2), stdio over nxlink in debug builds (taisei), trace plus `nxlink -p` console log (godot_switch) [reported].
+
+## What the SDL and GL port path gets right
+
+1. **SDL video, audio, and input is the fast path to "it runs."** srb2 and taisei reuse the desktop frame loop nearly unchanged; the Switch delta is a Makefile or crossfile, an applet hook, and key mapping [reported].
+2. **Software rasterizers map cleanly to small framebuffers plus upscale.** srb2 at 800×450 is the canonical trick: **[CPU](../../../glossary.md#cpu)** fill cost scales with pixels, SDL stretches the rest [reported].
+3. **Fixed-timestep simulation survives downscaling.** Shooter and Doom-tick logic stays correct while only the present resolution drops — reuse, do not redesign [reported].
+4. **Pre-converted assets plus sidecar data beat clever packaging** for ports: zip-with-NRO layouts are simple to ship and update [reported].
+5. **One env-var perf win is real:** taisei's `MESA_NO_ERROR=1` in release disables GL error checking to save CPU [reported].
+
+## What it gets wrong (limits of the abstraction)
+
+1. **OpenGL hides Maxwell.** All four go through Mesa/Nouveau EGL or SDL; none sets Zcull, tile modes, or cache policy explicitly. Per-draw overhead and bandwidth waste that deko3d code would attack stay invisible [reported].
+2. **No tiled-cache or bandwidth discipline.** Software upscale and full-res GLES both pay full bandwidth; there is no MSAA or compression tradeoff pass in any port tree examined.
+3. **Desktop RAM and CPU assumptions break in applet mode.** The single most common failure is launching from Album and running out of memory — hence the repeated title-override warnings [reported].
+4. **Audio plumbing "works", not tuned.** Only godot_switch sizes audren pools directly; the SDL ports inherit latency and buffer defaults [reported].
+5. **Slow media path ignored.** srb2 notes long boot on slow SD cards with no asset-streaming fix [reported]; STK's multi-hundred-MB data zip has the same exposure.
+
+## Lesson: port via SDL, go native for 60 fps 3D
+
+- If (2D or software renderer or jam/prototype) and 30 fps at sub-native resolve is acceptable: **port via SDL plus GLES**; ship 800×450–960×540 class resolve, title-override only, pre-converted assets.
+- If (open 3D world or 60 fps target or heavy overdraw) and the team will own GPU code: **go deko3d**; budget bandwidth per pass, control Zcull and tiles, manage applet-vs-title memory explicitly.
+
+## Open questions
+
+- Measured fps and frame-time for each port at shipped resolve on stock vs overclocked clocks? None stated in-tree.
+- STK playable resolve and fps on the Switch GLES path? Build CI proves it builds, not how it plays.
+- godot_switch GLES3 vs GLES2 exporter performance and package load times from SD?
+- Audio latency and buffer sizes for the SDL ports at 48 kHz output?
+- Any Zcull or tile wins if one scene per engine were re-implemented in deko3d? Experiment proposed, not done.
+
+## Sources
+
+- srb2-switch README, packaging script, Switch keyboard hooks — build, 800×450 default, full-RAM warning, keyboard hooks.
+- taisei Switch README, crossfile, build files, Switch arch source — meson cross build, applet hooks, Mesa env, resolution query.
+- stk-code README, Switch build and packaging scripts, Switch CI workflow — CMake Switch build, `NO_SHADERC=on`, NRO plus data packaging.
+- godot_switch README and Switch platform sources — scons build, EGL config, 48 kHz audren, gamepad mapping, exporter output.

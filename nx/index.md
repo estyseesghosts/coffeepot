@@ -45,6 +45,11 @@ Practical guides for writing working, fast homebrew. They build on the reference
 
 - [Rendering](engineering/rendering.md) — batching, atlases, static upload, command-list rings, tiled textures, resolution choice.
 - [Performance and porting](engineering/performance-and-porting.md) — clock locking, payoff order, three-core split, porting checklist.
+- [Case study: SA2 port](engineering/case-studies/case-study-sa2.md) — Renut on deko3d, snapshot deltas, store-cards, shader cache.
+- [Case studies: demanding ports](engineering/case-studies/case-studies-demanding-ports.md) — USF4's deko3d switch vs NFSMW staying on NVK.
+- [Case studies: open-engine ports](engineering/case-studies/case-studies-open-engines.md) — SDL/GLES path vs native deko3d decision rule.
+- [Case study: Wind Waker HD port](engineering/case-studies/case-study-wind-waker-hd.md) — sealed shader templates, barrier hygiene, operate-like-a-port discipline.
+- [Case study: Eidos on Switch](engineering/case-studies/case-study-eidos-ouroboros.md) — cautionary tale: readback-bound GL attempt, measurement protocol that came out of it.
 
 ## Notes and open questions
 
