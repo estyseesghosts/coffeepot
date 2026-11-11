@@ -1,6 +1,6 @@
 # CTR GPU
 
-The 3DS draws its graphics with a chip licensed from a small company, Digital Media Professionals (DMP): the **[PICA200](../glossary.md#pica200)**. It is a mid-point between the old fixed-function style (fixed circuits for lighting and texture blending) and modern programmable graphics (shaders for geometry). Games feed it lists of commands; it draws three images per frame — a left-eye and right-eye view for the top screen, and one for the bottom screen.
+The 3DS draws its graphics with a chip licensed from a small company, Digital Media Professionals (DMP): the **[PICA200](../glossary.md#pica200)**. It is a mid-point between the old fixed-function style (fixed circuits for lighting and texture blending) and modern programmable graphics (shaders for geometry). Games feed it lists of commands; it draws up to three images per frame: with the 3D slider off, one top-screen image and one bottom-screen image (two); with 3D on, a left-eye and a right-eye top image plus the bottom image (three). A screen whose contents have not changed does not need to be redrawn.
 
 The effects it can do in hardware — lighting, shadows, procedural textures, subdivision — are described on [GPU shading features](gpu-shading-features.md). The PICA200 only works with [framebuffers](../../glossary.md#framebuffer): there are no hardware sprites or background layers as on the DS. For DS and GBA games, a separate legacy path produces the picture instead (see [displays](display.md)).
 

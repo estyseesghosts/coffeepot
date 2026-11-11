@@ -75,6 +75,8 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Audio](engineering/audio.md) — ndsp setup and the DSP firmware file, formats, buffer sizing, streaming, diagnosing crackles.
 - [2D rendering](engineering/rendering-2d.md) — sprites, tilemaps, layers, transparency, text and palette effects on a 3D GPU.
 - [Porting](engineering/porting.md) — planning a port, desktop-to-PICA200 concept mapping, SDL and portlibs, what published ports chose.
+- [Application lifecycle](engineering/application-lifecycle.md) — how a program handles HOME, sleep, resume, the software keyboard and exit, with a complete logging example.
+- [Files and saves](engineering/filesystem-and-saves.md) — SD card, RomFS, save data and extdata, commit rules, write errors, and a two-copy checksummed save manager.
 - [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
 - [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush and draw-call costs (not yet run on hardware).
 

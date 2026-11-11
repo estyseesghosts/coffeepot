@@ -1,17 +1,19 @@
 # CTR firmware
 
-Firmware is the software that brings a 3DS to life and decides what mode it is in. The 3DS carries not one but **four** firmware images, because the same hardware can act as a 3DS, a Nintendo DSi / DS, a Game Boy Advance, or a bare-bones updater. Each image is a signed bundle with programs for each processor, and the console only starts one that passes the [boot ROM](../../glossary.md#boot-rom)'s checks.
+Firmware is the software that brings a 3DS to life and decides what mode it is in. The 3DS has four firmware images, because the same hardware can act as a 3DS, a Nintendo DSi / DS, a Game Boy Advance, or a bare-bones updater. Each image is a signed bundle with programs for each processor, and the console only starts one that passes the [boot ROM](../../glossary.md#boot-rom)'s checks.
 
-Nintendo stores the firmware in the console's internal flash ([NAND](../../glossary.md#nand)) as `FIRM` partitions. Two copies of the main one are kept so a corrupted copy can fall back to the other.
+Only one of the four lives in a raw NAND partition. The two `FIRM` partitions of the [NAND](../../glossary.md#nand), `firm0` and `firm1`, hold the bootable `NATIVE_FIRM` (two copies, so a corrupted one can fall back to the other). `TWL_FIRM`, `AGB_FIRM` and `SAFE_MODE_FIRM` are not stored in those partitions: they are firmware system titles in the NAND filesystem (title ID high word `00040138`, see [titles](titles.md)), which `NATIVE_FIRM` loads and boots into when the console needs another mode.
+
+> Unknown: the exact title IDs and loading path come from the title list cited in Sources and were not re-checked against 3dbrew for this wording.
 
 ## Behavior
 
 | Image | Mode | Main processor | Notes |
 | ----- | ---- | -------------- | ----- |
-| `NATIVE_FIRM` | Normal 3DS | [ARM11](../hardware/cpu.md) | Runs [Horizon](os.md); the only image the boot ROM can start from a power cycle. Two copies: `firm0` and `firm1` |
-| `TWL_FIRM` | DS / DSi | ARM9 + ARM7 | Disables 3DS-only features; ARM11 emulates relocated DS hardware. "TWL" is the DSi's codename |
-| `AGB_FIRM` | Game Boy Advance | ARM7 | ARM11 and ARM9 keep working in the background. "AGB" is the GBA's codename |
-| `SAFE_MODE_FIRM` | Maintenance | ARM11 | An early revision of `NATIVE_FIRM` (no newer than 3.0 on Old 3DS or 8.1 on New 3DS); mainly runs the System Updater |
+| `NATIVE_FIRM` | Normal 3DS | [ARM11](../hardware/cpu.md) | Runs [Horizon](os.md); the only image the boot ROM can start from a power cycle. Stored in the `firm0` and `firm1` NAND partitions |
+| `TWL_FIRM` | DS / DSi | ARM9 + ARM7 | Firmware title (not a `firm` partition). Disables 3DS-only features; ARM11 emulates relocated DS hardware. "TWL" is the DSi's codename |
+| `AGB_FIRM` | Game Boy Advance | ARM7 | Firmware title. ARM11 and ARM9 keep working in the background. "AGB" is the GBA's codename |
+| `SAFE_MODE_FIRM` | Maintenance | ARM11 | Firmware title. An early revision of `NATIVE_FIRM` (no newer than 3.0 on Old 3DS or 8.1 on New 3DS); mainly runs the System Updater |
 
 After a cold boot into `NATIVE_FIRM`, the OS can choose to reboot into another image — for example when a DS game is launched or when the user starts a system update. Leaving TWL or AGB mode runs a routine that reboots back into `NATIVE_FIRM`.
 

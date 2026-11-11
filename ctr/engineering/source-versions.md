@@ -49,7 +49,9 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | `membench`, `flushbench`, `drawbench` | [benchmarks](../benchmarks/README.md) | yes | not run | not run | not run |
 | 3dslink logging setup | [debugging](debugging.md#logging-over-the-network-3dslink) | yes | not run | not run | not run |
 | Hardware performance counter helper | [CPU optimisation](cpu-optimization.md#hardware-performance-counters) | yes | not run | not run | not run |
-| Job queue / worker thread | [threading](threading.md#a-worker-thread-pattern) | yes | not run | not run | not run |
+| Job queue / worker thread (bounded shutdown rewrite) | [threading](threading.md#a-worker-thread-pattern) | yes (stub `main`, `-Wall -Wextra`) | not run | not run | not run |
+| APT hook logger, worker pause, software keyboard | [application lifecycle](application-lifecycle.md#a-complete-example) | yes (direct `arm-none-eabi-gcc` link to ELF, `-Wall -Wextra`) | not run | not run | not run |
+| Two-generation checksummed save manager (+ fault-injection build) | [filesystem and saves](filesystem-and-saves.md#a-two-generation-save-manager) | yes (same method) | not run | not run | not run |
 | Fixed-step main loop | [frame pacing](frame-pacing.md#separating-simulation-from-rendering) | yes | not run | not run | not run |
 | ndsp streaming setup | [audio](audio.md#setting-up-a-channel) | yes | not run | not run | not run |
 | citro2d sprite and text fragments | [2D rendering](rendering-2d.md) | yes (inside a minimal program) | not run | not run | not run |

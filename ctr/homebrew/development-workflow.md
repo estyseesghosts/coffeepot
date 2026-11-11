@@ -361,3 +361,10 @@ If a project still fails, first build **the untouched `templates/application` ex
 - [GPU rendering](../engineering/gpu-rendering.md) · [asset pipeline](../engineering/asset-pipeline.md) · [debugging](../engineering/debugging.md) · [performance](../engineering/performance.md) · [testing on hardware](../engineering/testing-on-hardware.md).
 
 *Install and package instructions verified against the upstream devkitPro repositories and project examples in November 2026. Package versions and release links can change; avoid copying stale version numbers into new projects.*
+
+## Sources
+
+- [devkitPro getting started](https://devkitpro.org/wiki/Getting_Started) — installer and pacman setup
+- [devkitPro/3ds-examples](https://github.com/devkitPro/3ds-examples) — template project and examples
+- [libctru](https://github.com/devkitPro/libctru) — library and `3dslink` tooling
+- [Luma3DS homebrew loader](https://github.com/LumaTeam/Luma3DS/blob/master/sysmodules/loader/source/hbldr.c) — extended header generated for 3DSX

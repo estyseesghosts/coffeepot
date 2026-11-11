@@ -30,7 +30,7 @@ How quaternions are interpolated (plain linear, slerp, nlerp) is unknown.
 
 ### The `GPU_LUTINPUT_CP` quirk (anisotropic reflection)
 
-`CP` means cos(φ) and drives anisotropic reflection after Schlick's model, where the input should be T·H′ (tangent vector dotted with the half-angle vector projected onto the tangent plane). Findings from emulating real games:
+`CP` means cos(φ) and drives anisotropic reflection after Schlick's model, where the input should be T·H′ (tangent vector dotted with the half-angle vector projected onto the tangent plane). `[reverse-engineered]` by wwylele, in ["GPU_LUTINPUT_CP"](https://gist.github.com/wwylele/f61d6653620bb763ab9dc7a60a9831ce) (gist, last active 2022-09-19); the basis is replicating 3DS output in the Citra emulator, with no other hardware testing described. Findings:
 
 - It is only available under lighting configuration 7.
 - H′ is **not normalised**; normalising it gives different (wrong) output. So φ is not the angle between T and H′.
@@ -110,7 +110,7 @@ Use `citro3d`'s `C3D_LightLut`, `C3D_ProcTex` and `C3D_FogLut` APIs rather than 
 ## Sources
 
 - [fincs, "Random PICA200 RE Notes" (gist `notes.md`)](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) — procedural-texture noise, shifting, clipping, combiner and mapper formulas; shadow mapping; random quirks; and the list of sources used for PICA200 reverse engineering (DMP papers, the CEDEC 2012 talk, *Steel Diver: Sub Wars* symbols, *Brunswick Pro Bowling* DWARF data, the CTRAging factory test program). Its Gas section stops after a short introduction (`...todo...`). The same notes were mirrored on the Citra project wiki, which is gone since the `citra-emu/citra` repository was removed.
-- Citra project wiki, "GPU_LUTINPUT_CP" (anisotropic reflection and tangent mapping) — no live copy found; cited by title.
+- [wwylele, "GPU_LUTINPUT_CP" (gist)](https://gist.github.com/wwylele/f61d6653620bb763ab9dc7a60a9831ce) — the primary write-up: CP input, unnormalised H′, configuration 7 only, normal-mapping and tangent-mapping caveats; checked by fetching the gist. The same text was on the Citra project wiki, which is gone; Citra/Azahar's implementation file was not located or checked, so no implementation file is cited.
 - [4Gamer.net: ［CEDEC 2012］3DSはまだその実力を100％発揮できていない!? 3DSが搭載するGPUコア「PICA200」の詳細](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's talk on procedural textures, secondary vertex cache and subdivision, fixed-function fragment stage, power saving (in Japanese).
 - [3dbrew: GPU/Fragment Lighting](https://www.3dbrew.org/wiki/GPU/Fragment_Lighting) and [GPU/Procedural Texture Generation](https://www.3dbrew.org/wiki/GPU/Procedural_Texture_Generation) — lighting equation setups and the procedural pipeline.
 - [citro3d source (devkitPro)](https://github.com/devkitPro/citro3d) — LUT sizes and module names (`lightlut.h`, `proctex.h`, `fog.h`, `gas.h`).

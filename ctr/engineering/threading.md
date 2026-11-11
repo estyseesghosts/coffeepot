@@ -65,34 +65,43 @@ The libctru primitives do not implement priority inheritance ([kernel](../softwa
 
 ## A worker-thread pattern
 
-A job queue with one worker, woken by an event, with a bounded shutdown:
+A job queue with one worker, woken by an event, with a synchronised, bounded shutdown. All state lives under one lock; the stop flag is only read or written while holding it, so no `volatile` is needed.
 
 ```c
 #include <3ds.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #define QUEUE_LEN 16
 typedef struct { void (*fn)(void *); void *arg; } Job;
 
+typedef enum { JOBS_IDLE, JOBS_RUNNING, JOBS_STOPPING, JOBS_STOPPED } JobsState;
+
 static Job queue[QUEUE_LEN];
 static int q_head, q_tail;            // protected by q_lock
+static JobsState q_state = JOBS_IDLE; // protected by q_lock
 static LightLock q_lock;
 static LightEvent q_wake;             // RESET_ONESHOT
-static volatile bool q_quit;
 static Thread worker;
 
 static void worker_main(void *unused)
 {
-    while (true) {
+    (void)unused;
+    for (;;) {
         LightEvent_Wait(&q_wake);
         for (;;) {
             LightLock_Lock(&q_lock);
-            if (q_head == q_tail) { LightLock_Unlock(&q_lock); break; }
+            if (q_head == q_tail) {
+                bool quit = q_state != JOBS_RUNNING; // checked under the lock
+                LightLock_Unlock(&q_lock);
+                if (quit) return;                    // queue drained and stopping
+                break;
+            }
             Job job = queue[q_head];
             q_head = (q_head + 1) % QUEUE_LEN;
             LightLock_Unlock(&q_lock);
-            job.fn(job.arg);                       // run outside the lock
+            job.fn(job.arg);                         // run outside the lock
         }
-        if (q_quit) break;
     }
 }
 
@@ -100,29 +109,52 @@ bool jobs_start(int core, int prio)
 {
     LightLock_Init(&q_lock);
     LightEvent_Init(&q_wake, RESET_ONESHOT);
+    q_head = q_tail = 0;
+    q_state = JOBS_RUNNING;
     worker = threadCreate(worker_main, NULL, 32 * 1024, prio, core, false);
-    return worker != NULL;                         // caller falls back to another core on failure
+    if (!worker) { q_state = JOBS_IDLE; return false; } // caller falls back to another core
+    return true;
 }
 
 bool jobs_push(void (*fn)(void *), void *arg)
 {
     LightLock_Lock(&q_lock);
     int next = (q_tail + 1) % QUEUE_LEN;
-    bool ok = next != q_head;                      // false when full: caller decides what to do
+    bool ok = q_state == JOBS_RUNNING && next != q_head; // refuse when stopping or full
     if (ok) { queue[q_tail] = (Job){ fn, arg }; q_tail = next; }
     LightLock_Unlock(&q_lock);
     if (ok) LightEvent_Signal(&q_wake);
     return ok;
 }
 
-void jobs_stop(void)
+// Returns true if the worker exited and was freed. Returns false on timeout:
+// the thread is still running, so its stack and the queue must stay valid.
+bool jobs_stop(s64 timeout_ns)
 {
-    q_quit = true;
+    LightLock_Lock(&q_lock);
+    if (q_state != JOBS_RUNNING) { LightLock_Unlock(&q_lock); return q_state == JOBS_STOPPED; }
+    q_state = JOBS_STOPPING;                         // from now on jobs_push fails
+    LightLock_Unlock(&q_lock);
     LightEvent_Signal(&q_wake);
-    threadJoin(worker, U64_MAX);
+
+    if (R_FAILED(threadJoin(worker, (u64)timeout_ns))) return false; // do NOT threadFree
     threadFree(worker);
+    worker = NULL;
+    LightLock_Lock(&q_lock);
+    q_state = JOBS_STOPPED;
+    LightLock_Unlock(&q_lock);
+    return true;
 }
 ```
+
+Verification: builds (compile only, `-Wall -Wextra -O2 -mtp=soft`, no warnings) with devkitARM r68 GCC 16.1.0 and libctru 2.7.1-1, inside a stub `main` that starts, pushes one job and stops. Not run on hardware or an emulator.
+
+Shutdown contract:
+
+- **Ownership.** The thread that called `jobs_start` owns `worker` and is the only one that may call `jobs_stop`. Jobs already queued when stopping begins are still run; later `jobs_push` calls return `false`, so the caller must free any argument it did not hand over.
+- **Timeout.** `threadJoin` with a finite timeout returns a failure result if the worker has not finished. Then the worker may still be running a job. Do not `threadFree` it (that would free the stack it runs on), and do not kill it: libctru has no safe thread-cancel, and forcible killing can leave a lock held or a job half-finished. Instead keep the queue, the lock, the event and every buffer a job uses alive (static or leaked on purpose), report the failure, and either retry `jobs_stop` later or exit the process, where the kernel reclaims everything. A leaked worker must never touch memory you freed.
+- **Jobs must be bounded too.** A join can only time out sensibly if jobs finish in finite time; long jobs should poll their own cancel flag.
+- Evidence: the semantics of `threadJoin`, `threadFree` and `LightEvent` are read from libctru `source/thread.c` and `source/synchronization.c` `[documented]` (see Thread lifetime below). The stop-flag-under-lock argument is ordinary mutex reasoning; it has not been stress-tested on hardware `[hypothesis]` that no lost wakeup occurs: `LightEvent_Signal` after setting state is sticky until the worker's next wait, and the worker re-checks the queue and state after every wake.
 
 Design notes:
 

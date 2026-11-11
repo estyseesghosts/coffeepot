@@ -16,12 +16,12 @@ Entries are grouped by area and list the person or group, what this wiki credits
 
 | Who | Credited with | Read more |
 | --- | ------------- | --------- |
-| smea (Smealum) | `ctrulib` (now libctru), released in early 2014 with yellows8, ichfly, WinterMute, fincs, mtheall and plutoo; `aemstro`, the first PICA200 shader (dis)assembler | [history](history.md), [libctru](libctru.md), [development workflow](development-workflow.md#toolchain) |
-| WinterMute and devkitPro | `devkitARM`, maintenance of libctru, citro3d, citro2d and the tools | [development workflow](development-workflow.md#toolchain) |
+| smea (Smealum) | `ctrulib` (now libctru), released in early 2014 with yellows8, ichfly, WinterMute, fincs, mtheall and plutoo; `aemstro`, the first PICA200 shader (dis)assembler | [history](history.md), [libctru](libctru.md), [development workflow](development-workflow.md#2-install-devkitpro) |
+| WinterMute and devkitPro | `devkitARM`, maintenance of libctru, citro3d, citro2d and the tools | [development workflow](development-workflow.md#2-install-devkitpro) |
 | fincs | `picasso`, `citro3d`, `citro2d`; co-author of libctru | [picasso and citro3d](picasso-and-citro3d.md) |
-| neobrain | `nihstro` shader assembler; `braindump` and `uncart` dumping tools | [development workflow](development-workflow.md#toolchain) |
+| neobrain | `nihstro` shader assembler; `braindump` and `uncart` dumping tools | [development workflow](development-workflow.md#2-install-devkitpro) |
 | 3dsguy, profi200 | `makerom` (author, maintainer) | [file formats](../software/file-formats.md) |
-| Steveice10 | `bannertool` | [development workflow](development-workflow.md#toolchain) |
+| Steveice10 | `bannertool` | [development workflow](development-workflow.md#2-install-devkitpro) |
 | Pierre Wendling | SDL's Nintendo 3DS port (SDL2 2.26+ and SDL3) | [porting](../engineering/porting.md#libraries-that-shorten-a-port) |
 | Gericom | Super Mario 64 3DS port | [porting](../engineering/porting.md#what-published-ports-report) |
 
@@ -38,7 +38,7 @@ Entries are grouped by area and list the person or group, what this wiki credits
 
 | Who | Credited with | Read more |
 | --- | ------------- | --------- |
-| smea | redNAND (2013); the original Homebrew Launcher; `arm9loaderhax`, `memchunkhax2` and related reveals at 32C3 (with derrek and plutoo) | [history](history.md), [custom firmware](custom-firmware.md), [development workflow](development-workflow.md#legacy-the-original-homebrew-launcher) |
+| smea | redNAND (2013); the original Homebrew Launcher; `arm9loaderhax`, `memchunkhax2` and related reveals at 32C3 (with derrek and plutoo) | [history](history.md), [custom firmware](custom-firmware.md), [development workflow](development-workflow.md#8-reference-links) |
 | yellows8 | `memchunkhax` (first ARM11 kernel exploit); TWL key entropy and key-generator analysis (with plutoo); `smashbroshax`/`beaconhax` | [history](history.md), [exploits](exploits.md) |
 | derrek | Boot ROM dumping and **sighax** (33C3, December 2016); RAM not cleared on MCU reboot; `soundhax`/`fasthax` reveal | [boot9strap](boot9strap.md), [exploits](exploits.md#hardware-and-boot-rom) |
 | SciresM, Myria | Practical sighax signatures and **boot9strap**; principles of **ntrboot** (33.5C3) | [boot9strap](boot9strap.md) |

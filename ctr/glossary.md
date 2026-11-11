@@ -172,7 +172,7 @@ The six fixed-function "texture environment" stages of the PICA200's fragment pi
 
 ### Homebrew Menu and hb:ldr {#hbmenu}
 
-The **Homebrew Menu** (`3ds-hbmenu`, file `boot.3dsx`) lists and starts `.3dsx` programs and includes the 3dslink netloader. **`hb:ldr`** is the Luma3DS loader service that actually loads a 3DSX into a taken-over title's process. See [development workflow](homebrew/development-workflow.md#running-on-a-console) and [Luma3DS](homebrew/luma3ds.md#homebrew-loading-hbldr).
+The **Homebrew Menu** (`3ds-hbmenu`, file `boot.3dsx`) lists and starts `.3dsx` programs and includes the 3dslink netloader. **`hb:ldr`** is the Luma3DS loader service that actually loads a 3DSX into a taken-over title's process. See [development workflow](homebrew/development-workflow.md#5-run-it) and [Luma3DS](homebrew/luma3ds.md#homebrew-loading-hbldr).
 
 ### 3dslink {#3dslink}
 
@@ -181,4 +181,24 @@ A devkitPro protocol and PC tool that sends a `.3dsx` to the Homebrew Menu over 
 
 ### Extended header (exheader) {#exheader}
 
-The part of an executable title (NCCH) that declares what the program may do: its memory mode, CPU cores and clock, thread priority, the system services and filesystem areas it may use, memory mappings and kernel calls. The kernel and loader enforce it. Luma3DS generates one for `.3dsx` homebrew. See [file formats](software/file-formats.md) and [development workflow](homebrew/development-workflow.md#packaging-3dsx-or-cia).
+The part of an executable title (NCCH) that declares what the program may do: its memory mode, CPU cores and clock, thread priority, the system services and filesystem areas it may use, memory mappings and kernel calls. The kernel and loader enforce it. Luma3DS generates one for `.3dsx` homebrew. See [file formats](software/file-formats.md) and [development workflow](homebrew/development-workflow.md#3dsx-versus-cia).
+
+### Applet manager (APT) {#apt}
+
+The system service that tells each running program whether it is in front, suspended, asleep or ordered to close, and that launches applets such as the HOME Menu and the software keyboard. libctru wraps it as `aptMainLoop` and the APT hooks. See [application lifecycle](engineering/application-lifecycle.md).
+
+### FS archive {#fs-archive}
+
+One storage area (SD card, save data, extdata, RomFS) opened through the file service, then mounted by libctru as a device name such as `sdmc:`. See [files and saves](engineering/filesystem-and-saves.md).
+
+### RomFS {#romfs}
+
+The read-only file tree bundled inside a program. A `.3dsx` can embed one, and `romfsMountSelf` mounts it. See [files and saves](engineering/filesystem-and-saves.md).
+
+### Save data {#save-data}
+
+Private per-title storage on an installed title. Changes must be committed explicitly (`ARCHIVE_ACTION_COMMIT_SAVE_DATA`). See [CTR savegames](software/savegames.md) and [files and saves](engineering/filesystem-and-saves.md).
+
+### Extdata {#extdata}
+
+Larger storage that a title creates on the SD card. libctru's stdio layer treats it as read-only. See [files and saves](engineering/filesystem-and-saves.md).

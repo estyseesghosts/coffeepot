@@ -74,7 +74,7 @@ Always check the result: `arm-none-eabi-objdump -drwC file.o` for the generated 
 
 ## Hardware performance counters
 
-Each ARM11 core has a cycle counter and two configurable event counters, and the Snoop Control Unit (SCU) has more counters for coherency and memory traffic [documented: DDI 0360E §3.4.27, chapter 9]. The kernel controls them through **`svcControlPerformanceCounter`** (system call `0x3E`), which libctru wraps with named operations, registers and events [documented: libctru `svc.h`]. Normal titles cannot call it, but Luma3DS's 3DSX extended header allows every system call ([development workflow](../homebrew/development-workflow.md#technical-details)), so `.3dsx` homebrew can.
+Each ARM11 core has a cycle counter and two configurable event counters, and the Snoop Control Unit (SCU) has more counters for coherency and memory traffic [documented: DDI 0360E §3.4.27, chapter 9]. The kernel controls them through **`svcControlPerformanceCounter`** (system call `0x3E`), which libctru wraps with named operations, registers and events [documented: libctru `svc.h`]. Normal titles cannot call it, but Luma3DS's 3DSX extended header allows every system call ([development workflow](../homebrew/development-workflow.md#5-run-it)), so `.3dsx` homebrew can.
 
 Events available per core counter include instruction-cache misses, stalls waiting for instructions, stalls on data hazards, micro-TLB and main-TLB misses, branches executed, branches mispredicted or not predicted, instructions executed, data-cache reads, read misses, writes, write misses and line evictions, store-buffer drains and stalls because the load/store unit is full. SCU events include line fills that missed or hit per core, line migrations between cores, and external reads and writes.
 
