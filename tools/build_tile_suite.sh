@@ -16,7 +16,7 @@ if [ "${2:-}" = "n3ds" ]; then extra="-DBENCH_SPEEDUP=1 -DSUITE_N3DS=1"; suffix=
 mkdir -p "$out"
 
 commit="$(git -C "$root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-if [ -n "$(git -C "$root" status --porcelain -- ctr tools 2>/dev/null)" ]; then commit="${commit}_dirty"; fi
+if [ -n "$(git -C "$root" -c core.autocrlf=true status --porcelain -- ctr tools 2>/dev/null)" ]; then commit="${commit}_dirty"; fi
 
 mapfile -t lines < <(grep -v '^\s*#' "$proj/suite.txt" | grep -v '^\s*$')
 total=${#lines[@]}

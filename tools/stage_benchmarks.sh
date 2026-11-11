@@ -8,7 +8,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="${1:-$root/dist}"
 commit="$(git -C "$root" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-if [ -n "$(git -C "$root" status --porcelain -- ctr tools 2>/dev/null)" ]; then commit="${commit}_dirty"; fi
+if [ -n "$(git -C "$root" -c core.autocrlf=true status --porcelain -- ctr tools 2>/dev/null)" ]; then commit="${commit}_dirty"; fi
 
 rm -rf "$out/sdmc"
 mkdir -p "$out/sdmc/3ds/coffeebench" "$out/sdmc/3ds/coffeepot-tiles"
