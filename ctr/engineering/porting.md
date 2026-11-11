@@ -359,6 +359,8 @@ Do not replace a CPU DS renderer with “upload the whole 256×192 framebuffer e
 
 **Three independently useful comparisons:** (1) captured-state offline fixtures against the reference renderer, (2) same-state replay with both backends in the same build, and (3) old/new physical 3DS tests. They catch different failures. The emulator is additional debugging coverage, not a substitute for the third. [Rendering-2D](rendering-2d.md), [testing on hardware](testing-on-hardware.md).
 
+**Caching decoded geometry requires its dependencies.** SM64DS Enhanced describes memoizing DS display-list decoding while preserving dynamic matrix operations [reported: project patch, revision and test model unspecified; [case study](case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws)]. List address alone is not a sufficient key if bytes or inherited graphics state can change. Track those inputs, invalidate when they change, and compare cached execution with the uncached reference on identical captured state. Count hits, invalidations and mismatches before relying on the cache.
+
 ### 6.5 Porting 3D geometry and material pipelines
 
 For a fixed-function or early-shader-era 3D engine, translate mesh/material submissions into **sorted render passes**:

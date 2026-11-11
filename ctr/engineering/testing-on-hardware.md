@@ -63,6 +63,10 @@ Rules that keep results honest:
 - **Report distributions.** Medians hide hitches; worst-case frames are what players feel.
 - **Label the result** with the wiki's [evidence labels](../../AGENTS.md#evidence-labels) when adding it to a page: `[measured]` plus the console and conditions.
 
+### Compare correctness as well as speed
+
+For renderer changes, replay the same captured state through the reference and candidate paths, then compare images and log mismatches, unsupported features and queue overflows. Include palette changes, external state changes, overlap and blend order, scanline boundaries and scene transitions. Test emulator and hardware separately: the [SM64DS Enhanced case study](case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws) describes a presentation flicker seen on hardware but not in Azahar [reported: project renderer, revision and model unspecified]. Record each intentional approximation alongside timings so a faster but different image is not mistaken for an equivalent result.
+
 ## Benchmark record format
 
 A benchmark record has a human part (this table, filled in for a README or page) and a machine part (the lines `common/bench.h` already writes). The human table below is the shape suggested by the review that prompted it; the example values are **illustrative, not measured**.

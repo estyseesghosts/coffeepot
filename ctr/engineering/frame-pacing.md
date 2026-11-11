@@ -48,6 +48,12 @@ while (aptMainLoop()) {
 
 Putting game logic between `C3D_FrameBegin` and `C3D_FrameEnd` serialises the two processors: the GPU idles while the CPU updates, then the CPU idles in the next `C3D_FrameBegin` [documented mechanism; the size of the gain depends on the workload and is unmeasured here]. If you must prepare GPU-visible data before `C3D_FrameBegin`, write it into a second copy of the buffer (double-buffering) and swap.
 
+### Frame-ahead ownership
+
+A more aggressive pipeline can prepare a later command buffer while an earlier frame executes. Keep each command buffer and every referenced texture or vertex buffer immutable until GPU completion; separately keep a framebuffer unavailable for reuse while it is pending presentation or scanout. Track these as distinct ownership transitions and measure CPU wait, GPU completion, presentation and input latency. More buffers can improve overlap but can also increase latency and memory use; the net result is [hypothesis] until measured on the target.
+
+SM64DS Enhanced's [case study](case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws) describes such a pipeline and a hardware flicker problem absent in its emulator. Its implementation depends on citro3d internals, so it is an example of the ownership problem, not a stable API recipe. [reported: project renderer, revision and test model unspecified]
+
 ## Locking the frame rate
 
 | Goal | How |
@@ -89,6 +95,8 @@ while (aptMainLoop()) {
 - For games ported from a console with its own refresh rate (the DS refreshes at about 59.83 Hz, not 60), decide explicitly whether to run the logic at the original rate or at 60; small differences accumulate in music and timers.
 - Report two numbers separately: logic ticks per second and distinct frames shown per second.
 - If a separate render thread produces pictures that the display consumes (a pattern from a large port, [porting](porting.md#lessons-reported-by-one-large-port)), also log how old the picture on screen is in logic ticks, and keep the hand-over queue short (one pending plus one in flight was the starting point in that port's notes); show the newest finished picture and drop unstarted older ones under load, but never drop logic ticks or audio `[hypothesis]` (from the unpublished notes of that port; not tested for this wiki).
+
+Interpolation can show an intermediate pose without running another game tick. When the source does not expose stable object identities, matching across frames becomes part of the cost and can fail: test object creation and deletion, camera cuts, teleports and animation discontinuities, and fall back to an uninterpolated frame when a match is unreliable. Count simulation ticks, displayed frames and matching time separately. SM64DS Enhanced describes this approach; its default disables interpolation on Old 3DS. **New 3DS:** the supplied research reports it enabled by default. [reported: project interpolation implementation, revision and test conditions unspecified; [case study](case-studies-rendering-tradeoffs.md#ds-geometry-translated-to-native-draws)]
 
 ## Detecting missed frames
 

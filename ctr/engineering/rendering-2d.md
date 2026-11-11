@@ -711,6 +711,10 @@ DS 2D features that do not map one-to-one onto PICA200 quads (same source, same 
 | Alpha blending and brightness | Combiner constants, vertex colour, target blending in a proven order | Coefficient clamping and target masks need exact test cases |
 | Capture, bitmap and other unusual modes | A separate proven path, or the software renderer | Do not reinterpret them as ordinary background quads |
 
+**Choose strip height as a fidelity setting.** A fixed-height strip can approximate a scroll value that changes per scanline, but changes inside the strip are lost. Sonic CD 11's hardware path uses 16-pixel strips [reported: `Drawing.cpp`, revision and test model unspecified; [case study](case-studies-rendering-tradeoffs.md#sonic-cd-convert-a-software-renderer-to-gpu-layers)]. Compare reference images at boundaries and during motion, then measure preparation and GPU time for several heights on hardware. Do not infer the best height from that port.
+
+**Count both kinds of capacity.** An application may have its own fixed sprite or tile queues in addition to citro2d's object limit. Record high-water marks and overflow counts for each; test a crowded scene and make overflow visible rather than silently dropping draws.
+
 Build such a renderer in steps: start with one narrow subset that you can prove exact against the software renderer (for example opaque scrolling text backgrounds), send everything else to the software path, and log one reason code per scene for each fallback. A hybrid that mixes CPU and GPU layers is safe only where both agree on layer order and alpha; otherwise fall back for the whole screen. Keep the software renderer: it is the oracle and the fallback.
 
 Verify such a path by comparing both renderers on the same captured state, then on an Old 3DS and a New 3DS; an emulator pass is not enough ([testing on hardware](testing-on-hardware.md)).

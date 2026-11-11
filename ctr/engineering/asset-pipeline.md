@@ -84,6 +84,12 @@ ETC1 is lossy and blurs hard pixel edges; do not use it for pixel art or text. R
 
 Put sprites drawn together into the same atlas so citro2d or your batcher can draw them in one call ([GPU rendering](gpu-rendering.md#2d-games-citro2d)). With bilinear filtering, use `-b edge` (or `transparent`) so neighbouring images do not bleed into each other at their borders; with nearest-neighbour pixel art at integer positions, no border is needed.
 
+### Repacking an unusual source layout
+
+Some ports must load assets in their original layout at runtime. The Sonic CD 11 3DS research describes rearranging a 16 × 16384 indexed tileset into a 512 × 512 direct-colour atlas: for integer source coordinates `(sx, sy)`, use `dx = sx + 16 * (sy / 512)` and `dy = sy % 512`. A 512 × 512 RGBA5551 atlas uses 512 KiB for pixels alone. [reported: project renderer, revision and test model unspecified; see the [case study](case-studies-rendering-tradeoffs.md#sonic-cd-convert-a-software-renderer-to-gpu-layers)]
+
+Expand indices through the active palette, then tile the resulting texture for the GPU. Validate the first and last pixel of each 512-row section and compare tile addresses and orientation against the original. Keep the original palette or a way to reconstruct it: when it changes, invalidate all converted pixels that depend on it. Include source, destination and any temporary buffers in the peak load budget.
+
 ## Shaders with picasso
 
 Shader source files ending in `.v.pica` in a source directory are assembled one per output file; to put several shaders (for example a vertex and a geometry shader) into one `.shbin`, list them in a `.shlist` file. The generated header declares `<name>_shbin` and `<name>_shbin_size`, which you pass to `DVLB_ParseFile` ([picasso and citro3d](../homebrew/picasso-and-citro3d.md)).
