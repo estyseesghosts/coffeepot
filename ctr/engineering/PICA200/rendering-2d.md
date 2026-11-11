@@ -23,7 +23,7 @@ Background pages: [GPU rendering](gpu-rendering.md) (draw-call costs, combiners,
 
 - Checked against citro2d 1.7.0 (installed headers and library), citro3d 1.7.1 and libctru 2.7.1 (cloned sources), devkitARM r68 (GCC 16.1.0), tex3ds 2.3.0 (see [source versions](../source-versions.md)). Old 3DS is the default target; New 3DS differences are in **New 3DS:** notes.
 - citro2d's source (`source/base.c`) is **not cloned** in this repository. Where this page says what citro2d does internally, the evidence is one of: the installed 1.7.0 headers `[documented]`; a disassembly of `base.o` inside the installed `libcitro2d.a` (`arm-none-eabi-objdump`) `[reverse-engineered]` — these are the wiki author's readings of compiled code and name the function; or upstream `master` `base.c` as cited by earlier pages `[documented, not re-verified locally]`.
-- All code on this page builds. The [2D tile renderer](2d-tile-renderer.md) was run on an Old 3DS (strategies 0-3, default settings, two sessions, no errors; [first results](2d-tile-renderer.md#first-hardware-runs-old-3ds)); the rest of the code on this page is **not run on Old 3DS, New 3DS or an emulator** (details in [Verification status](#verification-status)). Expect to debug the first run: orientation and colour conventions below were derived from tool output and library sources, not seen on a screen.
+- All code on this page builds. The [2D tile renderer](2d-tile-renderer.md) was run on an Old 3DS and a New 2DS XL (20 configurations, one session each, no errors; [results](2d-tile-renderer.md#suite-results-old-3ds-and-new-3ds)); the rest of the code on this page is **not run on Old 3DS, New 3DS or an emulator** (details in [Verification status](#verification-status)). Expect to debug the first run: orientation and colour conventions below were derived from tool output and library sources, not seen on a screen.
 - Jargon: a **draw call** is one request to the GPU to draw a list of triangles; a **batch** is a run of quads that citro2d submits in one draw call; an **atlas** (sprite sheet) is one texture holding many images; a **render target** is a buffer the GPU draws into.
 
 ## 1. Setup and the frame loop
@@ -801,7 +801,7 @@ Validate with status-only and VCOUNT-only changes, scroll/palette/OAM/VRAM write
 | Setup/teardown and frame-loop fragments | this page | yes (the same calls are used in both programs) | not run | not run | not run |
 | Manual render-target and stereo-eye fragments | this page | yes (compiled inside a stub `main`, `-Wall -Wextra`, linked) | not run | not run | not run |
 
-The tile renderer (30 configurations: four strategies, texture, shape, bottom-screen, edit and scripted-run modes) builds, and strategies 0-3 with `BENCH_AUTO=1` have run on an Old 3DS without errors; its rows are on [its page](2d-tile-renderer.md#verification-status). Pictures were not compared. The validation checklist above is a plan; all of its rows are `not run`.
+The tile renderer (30 configurations: four strategies, texture, shape, bottom-screen, edit and scripted-run modes) builds, and 20 of them have run with `BENCH_AUTO=1` on an Old 3DS and a New 2DS XL (268 MHz) without errors; its rows are on [its page](2d-tile-renderer.md#verification-status). Pictures were not compared. The validation checklist above is a plan; all of its rows are `not run`.
 
 ## Pitfalls
 

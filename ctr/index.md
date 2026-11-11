@@ -115,7 +115,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Case studies: commercial 3DS games](engineering/case-studies/case-studies-commercial.md) — developer-stated techniques from five shipped games, labelled as reported, with what hardware tests would verify them.
 - [Case studies: large 3DS ports](engineering/case-studies/case-studies-ports.md) — reported techniques and results from three N64 ports (F-Zero X, Super Mario 64, Ocarina of Time), with model and conditions.
 - [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
-- [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush, instruction-cache and draw-call costs (`membench`, `flushbench`, `icachebench`, `drawbench`) and the result-recording format (run on an Old 3DS, two sessions; results in the README).
+- [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush, instruction-cache and draw-call costs (`membench`, `flushbench`, `icachebench`, `drawbench`) and the result-recording format (run on an Old 3DS and a New 3DS in 268 MHz mode; results in the README).
 
 ## Notes and open questions
 

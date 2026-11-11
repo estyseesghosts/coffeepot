@@ -1,0 +1,39 @@
+meta,program,membench
+meta,session,2
+meta,repo_commit,458e8a9_dirty
+meta,luma3ds_version,13.3.3
+meta,system_version,11.17.0-50U
+meta,build_date,Nov 11 2026 13:35:26
+meta,compiler,16.1.0
+meta,libctru_version,not-readable
+meta,citro3d_version,not-readable
+meta,model,New 2DS XL
+meta,new3ds,1
+meta,firm_version,2.58.0
+meta,kernel_version,2.58.0
+meta,speedup_requested,untouched
+meta,speedup_l2_state,not-readable
+meta,cpu_ticks_per_usec,268.1119
+meta,linear_free_bytes,31941632
+meta,runs,31
+meta,linear_heap_bytes,33554432
+result,membench,gsp_flush_whole,cold-first,33554432,1,158.04,158.04,158.04
+result,membench,gsp_flush_whole,warm-clean,33554432,31,90.21,97.27,241.01
+result,membench,gsp_flush_whole,dirtied-chunk,33554432,31,148.09,157.75,298.79
+meta,dirtied_chunk_bytes,30892032
+result,membench,memset_heap,default,16384,31,23.89,24.49,36.38
+result,membench,memset_linear,default,16384,31,24.06,24.63,42.04
+result,membench,memcpy_heap_to_linear,default,16384,31,142.14,153.94,187.63
+result,membench,svc_flush_written,default,16384,31,64.59,69.69,100.14
+result,membench,gsp_flush_written,default,16384,31,125.79,129.18,166.17
+result,membench,memset_heap,default,262144,31,631.13,638.61,707.27
+result,membench,memset_linear,default,262144,31,629.52,637.47,711.20
+result,membench,memcpy_heap_to_linear,default,262144,31,3107.83,3161.40,3213.58
+result,membench,svc_flush_written,default,262144,31,65.91,74.69,110.20
+result,membench,gsp_flush_written,default,262144,31,128.28,133.87,426.93
+result,membench,memset_heap,default,1048576,31,2558.89,2575.69,2649.71
+result,membench,memset_linear,default,1048576,31,2563.47,2576.15,2643.52
+result,membench,memcpy_heap_to_linear,default,1048576,31,12669.59,12743.23,12806.45
+result,membench,svc_flush_written,default,1048576,31,68.31,88.73,112.72
+result,membench,gsp_flush_written,default,1048576,31,135.42,146.41,188.25
+note,done errors=0

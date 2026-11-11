@@ -130,7 +130,7 @@ The default is safe: every vertex, index and texture byte the CPU wrote anywhere
 
 ### Measured costs (Old 3DS)
 
-`[measured]` Old 3DS (2011 unit), system 11.17.0-50U, Luma3DS 13.0.2, devkitARM r68 and libctru 2.7.1 builds of [`membench`](../benchmarks/README.md#membench) and [`flushbench`](../benchmarks/README.md#flushbench), two sessions that agree within a few percent (medians; full tables and caveats in the [benchmark README](../benchmarks/README.md#hardware-runs)). **New 3DS:** not measured.
+`[measured]` Old 3DS (2011 unit), system 11.17.0-50U, Luma3DS 13.0.2, devkitARM r68 and libctru 2.7.1 builds of [`membench`](../benchmarks/README.md#membench) and [`flushbench`](../benchmarks/README.md#flushbench), two sessions that agree within a few percent (medians; full tables and caveats in the [benchmark README](../benchmarks/README.md#hardware-runs)). **New 3DS:** [below the table](#measured-costs-old-3ds).
 
 | Operation | Cost | Notes |
 | --------- | ---- | ----- |
@@ -143,6 +143,8 @@ The default is safe: every vertex, index and texture byte the CPU wrote anywhere
 | Flush right after writing 16 KiB to 16 MiB | 60-80 µs (kernel), 115-135 µs (GSP) | Only the part still in the 16 KiB L1 cache is dirty at call time |
 | Whole 32 MiB linear heap through the GSP | 80-89 µs clean, 135-140 µs with 30 MB just rewritten | |
 | `C3D_FrameEnd(0)` against `C3D_FrameEnd(GX_CMDLIST_FLUSH)` on an empty scene | 147 µs against 57 µs | The difference, about 90 µs, is the whole-heap flush |
+
+**New 3DS (a New 2DS XL at the default 268 MHz clock, Luma3DS 13.3.3; three sessions, [details](../benchmarks/README.md#suite-runs-old-3ds-and-new-3ds)):** the shape is the same and the costs are higher. Kernel flush of a clean range 32 µs (1 KiB) and 51 µs (16 KiB to 16 MiB), against 24 and 34 µs on the Old 3DS; GSP flush 79 µs and 102-108 µs, against 61 and 84-85 µs; the whole 32 MiB heap through the GSP 97 µs clean and 158 µs dirtied, against 81 and 135 µs; `C3D_FrameEnd(0)` 174 µs against 149 µs, and `GX_CMDLIST_FLUSH` 61 µs on both, so the avoidable flush is 112 µs per frame (0.7% of a frame). `memset` is 4% faster (388 against 371 MiB/s outside L1) and heap-to-linear `memcpy` 6% slower (12.7 against 12.0 ms per MiB). This says nothing about 804 MHz mode, with the L2 cache on, which has not been run.
 
 Three consequences:
 
@@ -279,9 +281,9 @@ With citro3d's standard frame loop, "GPU finished" for everything drawn in frame
 
 - Whether tracked flush ranges beat the full-heap flush in a real scene. The microbenchmarks bound the saving at about 90 µs per frame and put the break-even near three ranges ([measured costs](#measured-costs-old-3ds)); a scene benchmark with a tracker has not been run. **New 3DS:** not measured.
 - Whether VRAM-resident textures sample measurably faster than linear-memory textures, and the break-even number of samples per upload.
-- The cost of the full linear-heap flush in `C3D_FrameEnd` is measured on an Old 3DS (about 90 µs, [above](#measured-costs-old-3ds)); **New 3DS:** not measured. The 32 MiB heap is the Old 3DS size; the extra 2 MB L2 of a New 3DS may change the figures.
-- Whether the kernel switches to a whole-cache clean above some range size is not documented in the sources used. The measured cost is flat above 16 KiB, which is consistent with it; a flush sweep at 16-64 KiB and the kernel source would settle where.
-- CPU write bandwidth to the application heap versus linear heap is measured (identical, [above](#measured-costs-old-3ds)); read bandwidth is not, and neither is anything on a New 3DS.
+- The cost of the full linear-heap flush in `C3D_FrameEnd` is measured on an Old 3DS (about 90 µs, [above](#measured-costs-old-3ds)) and on a New 2DS XL at 268 MHz (about 112 µs). **New 3DS at 804 MHz with L2:** not measured; the extra 2 MB L2 may change the figures.
+- Whether the kernel switches to a whole-cache clean above some range size is not documented in the sources used. The measured cost is flat above 16 KiB on both an Old 3DS and a New 3DS, which is consistent with it; a flush sweep at 16-64 KiB and the kernel source would settle where.
+- CPU write bandwidth to the application heap versus linear heap is measured on both models (identical, [above](#measured-costs-old-3ds)); read bandwidth is not, and neither is anything at 804 MHz.
 
 ## Sources
 

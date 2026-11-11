@@ -7,8 +7,8 @@
 // reopens the loader with the new target. It needs Luma3DS's Rosalina loader; on anything else
 // the call returns an error and the caller must stop and tell the user.
 //
-// Status: builds. Adapted from the hgss-3ds chainload smoke test, which is also unproven on
-// hardware as of this writing; treat the first chained run on a console as the test.
+// Status: builds; confirmed on hardware (20 chained binaries on an Old 3DS under Luma3DS 13.0.2
+// and a New 2DS XL under 13.3.3). Adapted from the hgss-3ds chainload smoke test.
 //
 // argv passed to the next program: argv[0] = its own path (sdmc:-prefixed), then the strings
 // in extra[]. Header-only; all functions are static inline.

@@ -5,7 +5,7 @@ A program that works in an emulator, or on a New 3DS alone, can still crash, stu
 ## Before you start
 
 - A console with [Luma3DS](../homebrew/luma3ds.md) and the Homebrew Menu, on the same network as your PC.
-- The [benchmark suite](../benchmarks/README.md) builds without warnings with devkitARM r68 and libctru 2.7.1 and has been run on one Old 3DS (system 11.17.0-50U, Luma3DS 13.0.2; two sessions, default variants; New 3DS: not run). The results are in the [benchmark README](../benchmarks/README.md#hardware-runs).
+- The [benchmark suite](../benchmarks/README.md) builds without warnings with devkitARM r68 and libctru 2.7.1 and has run on an Old 3DS (system 11.17.0-50U, Luma3DS 13.0.2) and a New 2DS XL (11.17.0-50U, Luma3DS 13.3.3, default 268 MHz clock). Results: [benchmark README](../benchmarks/README.md#hardware-runs).
 
 ## Test tiers
 
@@ -118,7 +118,7 @@ What the first Old 3DS runs have answered, with the page that holds each answer 
 - How code footprint beyond 16 KB affects cycles per instruction: 1.0 up to 16 KiB, 2.9 at 20 KiB, 5.6 from 32 KiB ([CPU optimisation](cpu-optimization.md#icachebench-on-an-old-3ds)).
 - Draw-call cost in citro3d: 9.7 µs per separate draw, 1-2 µs more per state change ([GPU rendering](PICA200/gpu-rendering.md#what-a-draw-call-costs)).
 
-Still unmeasured: the effect of an `APT_SetAppCpuTimeLimit` share on flush cost, anything with `osSetSpeedupEnable(true)` or on a New 3DS, read bandwidth, and the draw-call cost at other quad counts.
+Also measured on a New 2DS XL at 268 MHz (the same shapes, dearer flushes and I-cache misses). Still unmeasured: the effect of an `APT_SetAppCpuTimeLimit` share on flush cost, anything with `osSetSpeedupEnable(true)` (804 MHz and the L2 cache), read bandwidth, and the draw-call cost for larger quads.
 
 ### The benchmark suite
 
@@ -142,6 +142,8 @@ These came out of running the suite on an Old 3DS and apply to any microbenchmar
 
 - **Run each program at least twice and compare the medians.** On this console the sessions agreed within about 1%, which is what makes a difference of a few percent believable; a single run cannot show that.
 - **Report medians, and read the max column as noise.** One flush in 15 can take 2-5 times the median.
+- **A New 3DS runs at 268 MHz unless the program asks.** The first New 2DS XL runs were at the Old 3DS clock because nothing called `osSetSpeedupEnable(true)`; the `loop_256b` time (3,857 µs on both models) is the quick check, and the CSV does not otherwise record the clock. Build with `-DBENCH_SPEEDUP=1` for full speed.
+- **Chaining works.** Twenty tile binaries ran from one start on both consoles; a chained suite is a practical way to take many variants without touching the console. Stop the chain on errors, as the suite does.
 - **Never let two sessions share a file.** The first tile-renderer build appended to one CSV, and a file left on the SD card silently turned the next session's file into two sessions. The suites now write `sdmc:/coffeepot/s<NNN>/` per session; do the same in your own benchmarks.
 - **Record the system version, the CFW version and whether the boot was fresh in the log itself**, not only in your notes. The `meta` block holds the firmware and kernel number (`2.58.0` for system 11.17.0-50U) but not the Luma3DS version, and the SD-card timestamps were wrong because the console clock was unset.
 - **Do not read `begin_ms` or `period` as cost.** Both are display waits; the loop period was 16.71 ms (59.83 Hz) for every tile strategy ([frame pacing](PICA200/frame-pacing.md#open-questions)).

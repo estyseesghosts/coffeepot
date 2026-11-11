@@ -2,7 +2,7 @@
 
 Small, self-contained 3DS programs that measure costs the wiki's engineering pages depend on: memory and cache behaviour, cache-flush cost, instruction-cache pressure, and citro3d draw-call overhead. Each one builds from source with the standard devkitPro toolchain and prints its results on the console's screen and writes them to a file on the SD card. They exist so that performance claims on this wiki can become `[measured]` instead of `[hypothesis]` ([evidence labels](../../AGENTS.md#evidence-labels)).
 
-**Status: the programs build and have been run on one Old 3DS (two sessions each, default variants only). New 3DS, emulator and the non-default variants are not run.** The tables under each benchmark hold the Old 3DS results, flagged `[measured]` with the caveats in [Hardware runs](#hardware-runs). Raw CSV files are in [`hardware-runs/`](hardware-runs/).
+**Status: the programs build and have run on two consoles: an Old 3DS and a New 2DS XL (New 3DS family) in its default 268 MHz mode. The micro suite ran three sessions on each, the 20-variant tile suite one session on each, and the first standalone builds two sessions on the Old 3DS. The New 3DS at 804 MHz with its L2 cache, the emulator and the non-default variants are not run.** The tables under each benchmark hold the results, flagged `[measured]` with the caveats in [Hardware runs](#hardware-runs). Raw CSV files are in [`hardware-runs/`](hardware-runs/).
 
 ## Before you start
 
@@ -14,13 +14,15 @@ Small, self-contained 3DS programs that measure costs the wiki's engineering pag
 
 | Benchmark | Builds | Emulator | Old 3DS | New 3DS |
 | --------- | ------ | -------- | ------- | ------- |
-| [`membench`](#membench) | yes (r68) | not run | 2 sessions, default variant, no errors | not run |
-| [`flushbench`](#flushbench) | yes (r68) | not run | 2 sessions, no errors | not run |
-| [`drawbench`](#drawbench) | yes (r68) | not run | 2 sessions, 1000 quads only, no errors | not run |
-| [`icachebench`](#icachebench) | yes (r68; also compiled directly with `-Wall -Wextra`) | not run | 2 sessions, performance counters worked, no errors | not run |
-| [`tile-renderer`](../engineering/PICA200/2d-tile-renderer.md) | default builds (r68); `BENCH_AUTO=1` builds of strategies 0-3 run | not run | 2 sessions of strategies 0-3 at default settings, no errors; experiments E1-E6 not run | not run |
-| [`coffeebench`](#building-and-running) (micro suite) | yes (r68) | not run | not run | not run |
-| [tile suite](#tile-renderer-suite) (20 chained binaries) | yes (r68) | not run | not run (chained launch unconfirmed) | not run |
+| [`membench`](#membench) | yes (r68) | not run | 5 sessions (2 standalone, 3 in the suite), no errors | 3 sessions in the suite, 268 MHz mode, no errors |
+| [`flushbench`](#flushbench) | yes (r68) | not run | 5 sessions, no errors | 3 sessions, 268 MHz mode, no errors |
+| [`drawbench`](#drawbench) | yes (r68) | not run | 2 standalone sessions at 1000 quads, 3 suite sessions over 125-4096 quads, no errors | 3 suite sessions, 268 MHz mode, no errors |
+| [`icachebench`](#icachebench) | yes (r68; also compiled directly with `-Wall -Wextra`) | not run | 5 sessions, counters worked; corrected control run in 3 | 3 sessions, counters worked, 268 MHz mode |
+| [`tile-renderer`](../engineering/PICA200/2d-tile-renderer.md) | default builds (r68) | not run | 4 strategies x 2 standalone sessions; the 20-variant suite x 1 session, no errors | the 20-variant suite x 1 session, 268 MHz mode, no errors |
+| [`coffeebench`](#building-and-running) (micro suite) | yes (r68) | not run | 3 sessions | 3 sessions, 268 MHz mode |
+| [tile suite](#tile-renderer-suite) (20 chained binaries) | yes (r68) | not run | 1 session; the chain ran all 20 | 1 session; the chain ran all 20 |
+
+All New 3DS runs so far are a New 2DS XL at the default 268 MHz clock, which a program gets unless it calls `osSetSpeedupEnable(true)`. They show how the New 3DS behaves in compatibility mode, not its full speed.
 
 Emulator runs only show that a program works; never record emulator timings as results.
 
@@ -42,16 +44,51 @@ Output:     hardware-runs/o3ds-0 and hardware-runs/o3ds-1 (the coffeepot-<progra
 
 Every file ends with `note,done errors=0`. Read the tables with these limits in mind:
 
-- **Two sessions, not three.** The rule under [Recording results](#recording-results) asks for at least three runs after a fresh boot. Boot state before each session was not recorded. The two sessions agree closely (medians within about 1% apart from the cases noted), which is encouraging, but a third session is still owed.
+- **Session counts.** The rule under [Recording results](#recording-results) asks for at least three runs after a fresh boot. The micro suite has three sessions per console, which meets it. The tile suite has one session per console, so its numbers are single runs (the two standalone Old 3DS sessions of strategies 0-3 agreed within 0.5%, and the suite's baseline matches them). Boot state before each session was not recorded.
 - **`o3ds-1/coffeepot-tilerenderer.csv` contains two sessions.** The build that produced these files opened one file for append (current builds write one file per session and variant) and the first file was left on the SD card, so `o3ds-1` begins with a byte-for-byte copy of `o3ds-0` and then adds the second session. Split the file at the second `meta,program,tilerenderer` block, before computing statistics. The other four programs overwrote their file. These files predate the session directories.
 - **The libctru and citro3d versions are `not-readable`** in every file, as designed.
 - **Three benchmarks are single points.** `drawbench` ran only at 1000 quads; the tile renderer only at 416 visible tiles, 40 sprites and the default path. Nothing here fits a curve.
 - The SD-card file timestamps read 2011: the console clock was not set. That is irrelevant to the timings.
 
+## Suite runs (Old 3DS and New 3DS)
+
+Raw files: [`hardware-runs/o3ds-2`](hardware-runs/o3ds-2/) (Old 3DS, the 2011 unit, Luma3DS 13.0.2, system 11.17.0-50U) and [`hardware-runs/n3ds-0`](hardware-runs/n3ds-0/) (New 2DS XL, Luma3DS 13.3.3, system 11.17.0-50U), each as the SD card's `coffeepot/` directory: sessions `s001` to `s003` are the micro suite and `s004` the tile suite. All 64 CSV files end `note,done errors=0`. Both builds report `repo_commit 458e8a9_dirty`, recorded before the work was committed; the source corresponds to the commit that added the suites. Both consoles ran at 268 MHz (the `loop_256b` control takes 3,857 µs on both), because the programs did not call `osSetSpeedupEnable`; whether the New 3DS's L2 cache was on is `not-readable`. **The New 3DS columns below are therefore a New 3DS in its compatibility clock mode, not its full speed.**
+
+Medians of the three micro-suite sessions, Old 3DS / New 3DS (268 MHz mode). Sessions agree within 1% except where noted.
+
+| Measurement | Old 3DS | New 3DS | Note |
+| ----------- | ------- | ------- | ---- |
+| `memset` 16 KiB, heap or linear | 24.5 µs | 24.5 µs | Inside L1 |
+| `memset` 1 MiB, heap or linear | 2,692 µs (371 MiB/s) | 2,576 µs (388 MiB/s) | Heap and linear identical on both |
+| `memcpy` heap to linear, 256 KiB / 1 MiB | 2,984 / 12,016 µs | 3,171 / 12,743 µs | See the memcpy note below |
+| `svcFlushProcessDataCache`, clean, 1 KiB / 16 KiB / 16 MiB | 23.7 / 34.2 / 34.5 µs | 31.9 / 50.9 / 50.9 µs | Flat above 16 KiB on both |
+| `GSPGPU_FlushDataCache`, clean, 1 KiB / 16 KiB / 16 MiB | 60.7 / 84.2 / 85.3 µs | 78.6 / 107.6 / 102.3 µs | |
+| Flush after writing 16 MiB, kernel / GSP | 79.0 / 136.0 µs | 96.4 / 157.5 µs | |
+| Whole 32 MiB linear heap via GSP, warm / dirtied | 80.8 / 135.3 µs | 97.4 / 157.8 µs | |
+| `C3D_FrameEnd(0)` / `C3D_FrameEnd(GX_CMDLIST_FLUSH)` | 149.1 / 60.0 µs | 173.5 / 61.2 µs | Heap flush costs 89 / 112 µs |
+| `icachebench` CPI at 4-12 / 16 / 20 / 24 / 32+ KiB | 1.02-1.04 / 1.07 / 2.89 / 4.10 / 5.59 | 1.02-1.05 / 1.07 / 3.11 / 4.45 / 6.11 | Same cliff, deeper on the New 3DS |
+| I-cache miss cost (stall cycles per miss) | 36.5 cycles | 40.6 cycles | Without the L2 benefit |
+| `loop_256b` CPI (corrected control) | 0.99 | 0.99 | 3,857 µs on both: same clock |
+| `drawbench` batched, 125 to 4096 quads (record + `C3D_FrameEnd`) | 0.21 ms, flat | 0.24 ms, flat | |
+| `drawbench` per-quad at 125 / 1000 / 4096 quads | 1.42 / 9.81 / 39.5 ms | 1.45 / 9.84 / 39.6 ms | 9.6-9.8 µs per draw |
+| ... plus uniform / bind / combiner / texture swap, 4096 quads | +4.8 / +8.7 / +3.7 / +8.5 ms | +4.8 / +8.7 / +3.7 / +8.6 ms | 1.2 / 2.1 / 0.9 / 2.1 µs per draw |
+
+What the later runs add:
+
+- **The draw-call cost is linear in the draw count and the same on both models.** From 125 to 4,096 quads the per-quad variants grow in proportion (about 9.6-9.8 µs per draw, with a fixed 0.2 ms), while the batched variant stays at 0.21-0.24 ms. About 1,700 separate draws fill a 16.7 ms frame. The New 3DS at 268 MHz is within 1% on all draw variants, so the CPU-side cost of citro3d is the clock, not the model.
+- **The I-cache cliff is the same on the New 3DS; only the miss price differs.** The cliff sits at the same footprint (CPI 1.07 at 16 KiB, 3.11 at 20 KiB), so the L1 instruction cache is 16 KiB on that model too, as far as a step can show. A miss costs about 40.6 cycles against 36.5 on the Old 3DS, 11% more. An enabled L2 cache should make misses cheaper; this run did not test that.
+- **Flushes cost more on the New 3DS at the same clock**: 16-17 µs more for the kernel call (51 against 34 µs from 16 KiB up) and 20-25 µs more for the GSP call. `C3D_FrameEnd(0)` costs 174 µs against 149 µs. `GX_CMDLIST_FLUSH` costs the same, so the avoidable heap flush is 112 µs on the New 3DS (0.7% of a frame) against 89 µs on the Old 3DS (0.5%).
+- **`memcpy` from the heap to linear memory is 12.0 ms per MiB in the suite, against 10.7 ms in the two standalone sessions on the same Old 3DS** while `memset` and every other row stayed within 1%. The cause is not established; buffer alignment after other modules' allocations is the candidate. Treat 10.7-12.0 ms/MiB as the range on an Old 3DS, and the New 3DS's 12.7 ms as within it plus 6%.
+- **The `straight_16k` row moved** (CPI 1.07 in the suite, 1.10-1.15 standalone): with a footprint that just fits, where the function sits in the binary changes how many lines collide. Code placement matters at the boundary, away from it the rows are stable.
+- **The corrected `loop_256b` control gives CPI 0.99 on both models** with no misses, so the earlier control was close enough; the cliff is unchanged.
+
+The 20-variant tile-suite results, and what they settle for E1 to E6, are on the [tile page](../engineering/PICA200/2d-tile-renderer.md#suite-results-old-3ds-and-new-3ds).
+
 ## Lessons for running and reading these benchmarks
 
 - **The performance counters work from a `.3dsx` under Luma3DS 13.0.2.** `icachebench` printed `note,perf,...` lines, not `note,perf_unavailable`, so `svcControlPerformanceCounter` accepted `ENABLE` for a homebrew process. The cycle counter ran at the CPU clock: the `loop_256b` control took 1,051,362 counted cycles in 3,917 µs, which is 268.4 cycles per microsecond against `cpu_ticks_per_usec` 268.11 for the system tick.
-- **Results repeat very closely on this console.** Between the two sessions the `drawbench` `record_ms` values differ by at most 0.003 ms, the `icachebench` medians by under 1% (one 16 KiB point aside), and the tile renderer's `mean_cpu_build_record_frameend_us` by under 0.5%. That says nothing about other consoles.
+- **Results repeat very closely.** Across the three suite sessions on each console, drawbench rows differ by under 1% and icachebench CPI by 0.01-0.03; flush and memory medians by 1-3%, with outliers in the max column. The next point is the same, from the first sessions.
+- **Results repeat very closely on the first console.** Between the two sessions the `drawbench` `record_ms` values differ by at most 0.003 ms, the `icachebench` medians by under 1% (one 16 KiB point aside), and the tile renderer's `mean_cpu_build_record_frameend_us` by under 0.5%. That says nothing about other consoles.
 - **Outliers are in the max column, not the median.** A handful of flush calls are 2-5 times slower than their median (for example 193 µs against 53 µs for one `svc_store` at 16 KiB; 276 µs against 128 µs for one GSP flush). Report the median and the spread across sessions, never a minimum or a single sample. The `cold-first` rows are single samples by design.
 - **`begin_ms` is slack, not cost.** In `drawbench`, `begin_ms + record_ms + frameend_ms` is 16.7 ms for every variant (for example 6.797 + 9.710 + 0.202), because `C3D_FrameBegin(C3D_FRAME_SYNCDRAW)` waits for the display. When a variant's CPU work grows, `begin_ms` shrinks by the same amount.
 - **The loop period is the display period.** In the tile renderer the median `period` is 16,712-16,717 µs for all four strategies. That is a refresh rate of 59.83 Hz `[measured]`, the same for every strategy that fits the frame, which is why the wiki decides on CPU and GPU cost, not on `period`.
@@ -76,7 +113,7 @@ bash tools/stage_benchmarks.sh dist     # builds all, fails on any warning, writ
 
 Copy `dist/sdmc/*` to the SD card root. You get `3ds/coffeebench/coffeebench.3dsx` and `3ds/coffeepot-tiles/` with `coffeepot-tiles.3dsx` (the Homebrew Menu entry; a copy of `t01.3dsx`), `t01.3dsx` to `t20.3dsx` and `suite.txt`. `tools/build_benchmarks.sh` builds every folder and the tile suite and fails on any warning; the single programs build with `make` in their folder. Each project is a copy of the `3ds-examples` application template Makefile (public domain), with `-lcitro3d` added where needed; `common/bench.h` is shared by all of them.
 
-**Running it.** Boot, close everything else, run `coffeebench` from the Homebrew Menu and wait for "finished"; then run `coffeepot-tiles` and leave it alone (about 15 seconds per variant, 5 minutes in all). Each suite run is a new session, `s001`, `s002`, ..., so run each suite at least three times and nothing is overwritten or appended. The chain stops, with a message on screen and `error,` or a missing file as evidence, at the first run with errors or a failed launch; START at any point stops it. **The chained launch has not been confirmed on hardware.** It is adapted from a Luma3DS loader protocol that also has no hardware run yet; if the first `coffeepot-tiles` run ends with "chainload FAILED", the CSV of that variant is still valid, and the remaining binaries can be started by hand from the card (they are plain `.3dsx` files, but not listed by the Homebrew Menu; use 3dslink or move them to their own folders).
+**Running it.** Boot, close everything else, run `coffeebench` from the Homebrew Menu and wait for "finished"; then run `coffeepot-tiles` and leave it alone (about 15 seconds per variant, 5 minutes in all). Each suite run is a new session, `s001`, `s002`, ..., so run each suite at least three times and nothing is overwritten or appended. The chain stops, with a message on screen and `error,` or a missing file as evidence, at the first run with errors or a failed launch; START at any point stops it. **The chained launch is confirmed on hardware:** on an Old 3DS (Luma3DS 13.0.2) and a New 2DS XL (13.3.3) all 20 binaries ran in turn from one start. If it ever stops with "chainload FAILED", the CSV of the variant that just ran is still valid and the remaining binaries can be started by hand (they are plain `.3dsx` files, but the Homebrew Menu lists only `coffeepot-tiles.3dsx`; use 3dslink or move them into their own folders).
 
 ## Output format and metadata
 
@@ -243,7 +280,7 @@ Per quad (divide by 1000; arithmetic from the table): a separate `C3D_DrawArrays
 
 **Reading the output:** compare µs per instruction (`med_us` / (insns per pass x 64)) across footprints; the counters, if available, give cycles per instruction and I-cache misses per instruction directly. Expect, if the 16 KB figure is right, a step between 16 and 24 KiB `[hypothesis]`; the `loop_256b` row is the no-miss reference. **New 3DS:** run it separately (and with `-DBENCH_SPEEDUP=0` and `=1`); the L2 cache may change the shape, and no New 3DS statement is made here. The straight-line code is not typical of game code (no data accesses, perfectly predicted), so this is a probe of fetch cost only, not a prediction for any program.
 
-**Changes after the first hardware run.** (1) `loop_256b` was built from a 260-byte, 65-instruction loop body that executed 16,642 instructions, not the 256 bytes and 16,384 the label said, so it was not an exact control for `straight_64k`. It is now a line-aligned 64-instruction (256-byte) body run 256 times: 16,384 instructions in the loop plus `mov`, `b` and `bx lr` once per call, and the `insns` column counts every executed instruction (the straight functions add their `bx lr`). The tables below used the old counts: the straight-line rows are off by at most 0.1% (their `bx lr`), but the `loop_256b` row is not: it executed 16,642 instructions per call, not 16,384, so its CPI was 0.99 rather than 1.00 (the ARM11 folds the taken loop branch). A CPI below 1 is what that fold would produce, not an error in the counters. (2) Every `svcControlPerformanceCounter` call is now checked: a failure is reported as `error,perf ...`, turns the counters off, and the run is no longer a result. A zero cycle count is also an error. The results below are from the first build; a rerun with the corrected control is owed.
+**Changes after the first hardware run.** (1) `loop_256b` was built from a 260-byte, 65-instruction loop body that executed 16,642 instructions, not the 256 bytes and 16,384 the label said, so it was not an exact control for `straight_64k`. It is now a line-aligned 64-instruction (256-byte) body run 256 times: 16,384 instructions in the loop plus `mov`, `b` and `bx lr` once per call, and the `insns` column counts every executed instruction (the straight functions add their `bx lr`). The tables below used the old counts: the straight-line rows are off by at most 0.1% (their `bx lr`), but the `loop_256b` row is not: it executed 16,642 instructions per call, not 16,384, so its CPI was 0.99 rather than 1.00 (the ARM11 folds the taken loop branch). A CPI below 1 is what that fold would produce, not an error in the counters. (2) Every `svcControlPerformanceCounter` call is now checked: a failure is reported as `error,perf ...`, turns the counters off, and the run is no longer a result. A zero cycle count is also an error. The first-build results are below; the corrected control has run since ([later runs](#suite-runs-old-3ds-and-new-3ds)): `loop_256b` CPI 0.99 on both consoles, no counter errors, and the straight-line rows unchanged.
 
 **Verification status:** builds (devkitARM r68, no warnings with `-Wall -Wextra`); run on an Old 3DS (below), the first build only.
 
@@ -293,7 +330,7 @@ Not in the suite: `TILE=12` and 24, `NPC_COUNT=0`, other speeds and edit rates, 
 
 Per variant the suite writes two files. `tile-<id>.csv` has the usual `meta`, `result` and `summary` lines (and the suite index, id, session and provenance in `meta`). `tile-<id>-frames.csv` has one row per measured frame with every phase in microseconds (`period_us`, `update_us`, `build_us`, `record_us`, `framebegin_us`, `frameend_us`, `c3d_proc_us`, `c3d_gpu_us`), so rebuild spikes and what they do to the loop period can be seen, not only summarised. The suite does not compare pictures; a variant that silently omits work will look fast. Two things are still unsolved and are stated on the tile page: `dropped_objects` and `cmdbuf_peak_pct` do not prove a complete frame.
 
-**Status:** all 20 build without warnings (devkitARM r68). The chain, the per-frame files and the session directories have not been run on hardware.
+**Status:** all 20 build without warnings (devkitARM r68) and ran on an Old 3DS and a New 2DS XL (268 MHz mode), one session each, with no errors, no missed frames and no dropped objects. Results: [tile page](../engineering/PICA200/2d-tile-renderer.md#suite-results-old-3ds-and-new-3ds). The pictures were not compared.
 
 ## Planned experiments
 

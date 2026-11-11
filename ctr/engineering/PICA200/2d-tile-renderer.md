@@ -2,9 +2,9 @@
 
 A scrolling tilemap is the standard test of a 2D engine: a world far larger than the screen, a camera that follows the player, animated tiles, characters that walk in front of and behind each other, text, and a way to see what the frame costs. This page walks through one complete program that does all of that with [citro2d](rendering-2d.md), using only art generated in code, so it builds with no asset files. The program also has compile-time switches that change *how the tiles reach the GPU* (four strategies) and a scripted mode that records per-phase timings to a file on the SD card, so the crossover questions on [2D rendering](rendering-2d.md#design-alternatives-and-how-to-choose) can be answered on a console.
 
-> **Status: instrumentation is incomplete.** `dropped_objects` covers selected tile calls only, command-buffer usage is sampled before citro2d’s final frame-end flush, and automatic runs still draw debug text. A zero drop count or a pre-flush occupancy reading cannot establish a valid complete frame. Fix and validate those limitations before relying on results. Strategies 0-3 with default settings have run on an Old 3DS ([first hardware runs](#first-hardware-runs-old-3ds)); no other configuration and no emulator.
+> **Status: instrumentation is incomplete.** `dropped_objects` covers selected tile calls only, command-buffer usage is sampled before citro2d’s final frame-end flush, and automatic runs still draw debug text. A zero drop count or a pre-flush occupancy reading cannot establish a valid complete frame. Fix and validate those limitations before relying on results. The 20-variant suite has run once on an Old 3DS and once on a New 2DS XL at its default 268 MHz clock ([results](#suite-results-old-3ds-and-new-3ds)); the other configurations and the emulator have not.
 
-> **Status: this is an experiment rig, not a performance reference.** Only one set of runs exists: strategies 0-3 at default settings on an Old 3DS ([first hardware runs](#first-hardware-runs-old-3ds)). Nothing here has run on a New 3DS or an emulator, and experiments E1-E6 have not been run as specified. Numbers outside that section are arithmetic or a `[hypothesis]`; no crossover has been measured, and none may be quoted from here. What *has* been done: the program compiles without warnings in 30 configurations ([build matrix](#verification-status)). Expect to debug the first run (orientation of the cached layer, the manual-draw state hand-over; see [Pitfalls](#pitfalls)). The result of a run is a CSV file whose format is fixed in [Output records](#output-records) so that results from different people can be compared.
+> **Status: this is an experiment rig, not a performance reference.** The 20 suite variants have run once on an Old 3DS and once on a New 2DS XL at its default 268 MHz clock ([results](#suite-results-old-3ds-and-new-3ds)), plus four strategies twice standalone ([first runs](#first-hardware-runs-old-3ds)). Nothing here has run at 804 MHz or in an emulator, and the E1-E6 sweeps are covered only at the points the suite chose. Numbers outside those sections are arithmetic or a `[hypothesis]`; each suite figure is one session, so quote it with that stated. What *has* been done: the program compiles without warnings in 30 configurations ([build matrix](#verification-status)). Expect to debug the first run (orientation of the cached layer, the manual-draw state hand-over; see [Pitfalls](#pitfalls)). The result of a run is a CSV file whose format is fixed in [Output records](#output-records) so that results from different people can be compared.
 
 Read [2D rendering](rendering-2d.md) first for the setup, coordinate and texture rules this program relies on. This page assumes you know what an atlas, a draw call and a batch are (defined there).
 
@@ -137,9 +137,40 @@ What the runs show, and what they cannot:
 - **The sessions agree to within 0.5%** on every mean, so two sessions per variant is enough to see differences of a few percent on this console; E1-E6 still ask for three.
 - **Not shown:** pixel equality between strategies (the runs were not photographed or dumped), anything with a different `TILE`, `CAM_SPEED`, `NPC_COUNT`, edit rate or texture mode, and any New 3DS behaviour.
 
+## Suite results (Old 3DS and New 3DS)
+
+`[measured]` The 20-variant [tile suite](../../benchmarks/README.md#tile-renderer-suite), one session per console, all with `BENCH_AUTO=1`, 120 warm-up and 600 recorded frames: an Old 3DS (2011 unit, system 11.17.0-50U, Luma3DS 13.0.2) and a New 2DS XL (11.17.0-50U, Luma3DS 13.3.3) **at its default 268 MHz clock** (it ran at the Old 3DS speed: the benchmarks did not call `osSetSpeedupEnable`; the L2 state is not readable). Raw files: [`o3ds-2`](../../benchmarks/hardware-runs/o3ds-2/) and [`n3ds-0`](../../benchmarks/hardware-runs/n3ds-0/), session `s004`, including a per-frame file for each variant. No `error,` line, no frame over 25 ms and no dropped object in any of the 40 runs (the instrumentation caveats above still apply). Median loop period 16.704-16.715 ms in all 40. Pictures were not compared. Costs in microseconds: CPU is `mean_cpu_build_record_frameend_us`, GPU is the median and maximum of `c3d_gpu`.
+
+| t | Variant | Visible tiles | Old CPU | Old GPU med / max | New CPU | New GPU med | Rebuilds |
+| - | ------- | ------------- | ------- | ----------------- | ------- | ----------- | -------- |
+| 01 | `direct_t16` | 416 | 1,501 | 2,154 / 2,546 | 1,557 | 2,146 | 0 |
+| 02 | `manual_t16` | 416 | 1,017 | 2,179 / 2,434 | 1,051 | 2,216 | 0 |
+| 03 | `chunks16_t16` | 416 | 900 | 2,319 / 2,648 | 949 | 2,363 | 0 |
+| 04 | `cache_t16` | 416 | 864 | 1,988 / 4,497 | 898 | 2,028 | 9 |
+| 05 | `direct_t32` | 117 | 965 | 2,151 / 2,425 | 1,012 | 2,173 | 0 |
+| 06 | `manual_t32` | 117 | 863 | 2,116 / 2,372 | 904 | 2,149 | 0 |
+| 07 | `direct_t8` | 1,500 | 3,587 | 2,323 / 2,850 | 3,638 | 2,383 | 0 |
+| 08 | `manual_t8` | 1,500 | 1,553 | 2,314 / 2,720 | 1,563 | 2,364 | 0 |
+| 09 | `chunks16_t8` | 1,500 | 1,116 | 2,667 / 3,275 | 1,155 | 2,697 | 0 |
+| 10 | `cache_still` | 416 | 830 | 1,959 / 2,202 | 840 | 2,022 | 0 |
+| 11 | `cache_speed4` | 416 | 891 | 1,970 / 4,517 | 926 | 2,019 | 23 |
+| 12 | `cache_edit30` | 416 | 922 | 1,997 / 4,810 | 956 | 2,036 | 24 |
+| 13 | `chunks8_t16` | 416 | 967 | 2,233 / 2,534 | 1,012 | 2,264 | 0 |
+| 14 | `chunks32_t16` | 416 | 884 | 2,547 / 3,300 | 927 | 2,584 | 0 |
+| 15 | `chunks16_edit1` | 416 | 1,076 | 2,313 / 2,666 | 1,128 | 2,359 | 600 |
+| 16 | `direct_tex1` | 416 | 7,193 | 2,635 / 2,884 | 8,118 | 2,708 | 0 |
+| 17 | `direct_tex2` | 416 | 1,602 | 2,179 / 2,571 | 1,632 | 2,173 | 0 |
+| 18 | `direct_bottom4` | 416 | 1,373 | 1,458 / 2,585 | 1,429 | 1,460 | 0 |
+| 19 | `direct_shape1` | 416 | 2,485 | 2,239 / 2,619 | 2,516 | 2,259 | 0 |
+| 20 | `direct_shape2` | 416 | 1,668 | 2,205 / 2,559 | 1,670 | 2,184 | 0 |
+
+(Visible tiles is the count in the last measured frame, as the page warned: 117 and 1,500 rather than the 126 and 1,581 of the worst-case arithmetic. `cache` and `chunks` rebuild counts are the `rebuilds` summary; `chunks16_edit1` rebuilds one chunk every frame by design.)
+
+Across the 20 variants the New 2DS XL at 268 MHz costs 1-5% more CPU than the Old 3DS (13% more for `direct_tex1`) and 0-3% more GPU time, so every ranking below holds on both. At the same clock the model barely matters for this program; the difference to look for is at 804 MHz, which has not been run.
+
 ## Experiments
 
-Only the default-setting four-strategy run has been done ([above](#first-hardware-runs-old-3ds)); none of E1-E6 has been run as specified. Each experiment names its variables, metrics, build lines and the rule that turns numbers into a decision. Only the listed macros vary; everything else stays at its default. The table that places these experiments among all the design choices is [Design alternatives and how to choose](rendering-2d.md#design-alternatives-and-how-to-choose).
+The 20-variant suite covers part of each experiment (one session per console; [results](#suite-results-old-3ds-and-new-3ds), with a **Result** paragraph under each experiment); the sweeps below list the points still missing. Each experiment names its variables, metrics, build lines and the rule that turns numbers into a decision. Only the listed macros vary; everything else stays at its default. The table that places these experiments among all the design choices is [Design alternatives and how to choose](rendering-2d.md#design-alternatives-and-how-to-choose).
 
 **Protocol for all of them.** Old 3DS first (the primary target), then a New 3DS as a separate data set. Fresh boot, close other homebrew, detach the debugger, no game plugins ([benchmark README](../../benchmarks/README.md#before-you-start)). Build with `BENCH_AUTO=1` (or use the 20-variant [tile suite](../../benchmarks/README.md#tile-renderer-suite), which already covers most of the variables below), run from the Homebrew Menu, wait for "bench done", press START, copy the session directory `sdmc:/coffeepot/s<NNN>/` (one `tile-<id>.csv` and one per-frame file per variant; every session gets a new directory). At least three runs per variant. A reported `error,` line or a nonzero `dropped_objects` invalidates a run. However, the counter covers only selected tile calls, not all sprite, shape, text and cache draws; zero does not prove success. `cmdbuf_peak_pct` is sampled before the final citro2d flush and can understate usage. Fix and validate full submission accounting and final command-buffer occupancy before treating the results as valid. Per run use the median of each phase; report the spread across runs. Emulator output is never a result.
 
@@ -158,6 +189,8 @@ Why not decide on `period`: the loop is locked to the display, so any variant wh
 | Decision | Fit a line (cost against visible tiles) to each strategy over the five points. The crossover N\* is the smallest tile count at which strategy 1 is cheaper than strategy 0 by more than the spread across runs and stays cheaper for every larger count. If the lines do not cross within 126 to 1,581 say so; do not extrapolate |
 | Confounds, stated | Strategy 1 pays `C2D_Flush` + `C2D_Prepare` + `C2D_SceneBegin` once per frame (inside `record`); it draws with the depth test off, so depth-write cost differs; its vertex is 20 bytes against citro2d's 32 (inferred from 128 bytes per quad). The experiment compares end-to-end submission paths, not the library call alone |
 
+**Result (suite points: 117, 416 and 1,500 tiles, `NPC_COUNT=40`; one session per console, Old 3DS figures first, New 3DS ordering identical):** manual is cheaper than direct at every tested count: 863 against 965 µs at 117 tiles (11% less), 1,017 against 1,501 at 416 (32%) and 1,553 against 3,587 at 1,500 (57%). Per visible tile, direct costs about 1.8-1.9 µs and manual about 0.5-0.52 µs; the fixed part of both (sprites, text, the frame) is about 750-800 µs. GPU time is within 2% for the two. So no crossover was found between 117 and 1,500 tiles; it lies below 117 or does not exist, and the rule above forbids extrapolating, so a `TILE=32` run with `NPC_COUNT=0` and a larger tile such as 48 are the missing points. Chunks at 1,500 tiles cost 1,116 µs, 28% less than manual, for 353 µs more GPU time.
+
 ### E2: cached background versus direct tiles
 
 *Question:* when does the render-target cache pay for its VRAM and its redraw spikes?
@@ -170,6 +203,8 @@ Why not decide on `period`: the loop is locked to the display, so any variant wh
 | Metrics | `mean_`, `p99_` and max of `build`; `mean_cpu_build_record_frameend_us`; `c3d_gpu` median and max; `rebuilds`; missed frames; VRAM cost as `meta,vram_free_bytes` of the strategy-0 build minus the strategy-3 build (arithmetic expectation 1,572,864 bytes plus allocator rounding) |
 | Decision | The cache pays at a camera speed and edit rate if its mean cost is lower **and** its p99 and missed-frame count are no worse than strategy 0's. Report the largest speed and highest edit rate at which that holds, beside the VRAM bytes: the answer is "a win for x bytes of VRAM" |
 | Also read | The cached quad streams 400×240×4 = 384,000 bytes of texture per frame, against a 16 KiB hot atlas for strategy 0 (arithmetic); if `c3d_gpu` rises in strategy 3 on a still camera, that is the bandwidth effect `[hypothesis]` |
+
+**Result (suite points: 416 tiles at `TILE=16`, speeds 0, 2 and 4, edits 0 and every 30 frames; one session per console):** the cache is the cheapest strategy on average and the only one with a tail. With a standing camera (`cache_still`) it costs 830 µs, 45% below direct tiles' 1,501, has no rebuilds and a 2.2 ms worst GPU frame against 2.5 ms for direct: it wins outright. With the camera moving at speed 2 (864 µs, 9 rebuilds), speed 4 (891 µs, 23 rebuilds) or a map edit every 30 frames (922 µs, 24 rebuilds) the mean stays 38-45% below direct, but each rebuild costs about 1.9 ms of CPU (99th-percentile `build` 1.89-1.91 ms against 0) and drives the worst GPU frame to 4.5-4.8 ms (99th percentile 4.3-4.5 ms against 2.5 ms for direct). By the rule above the cache does not pay at those settings, because its 99th percentile is worse; no frame was missed (worst loop period 18.7-18.9 ms against the 25 ms threshold). Rebuild counts rise less than the 48 ÷ speed arithmetic predicts (see the open questions). The VRAM cost is 1,572,864 bytes on both consoles (free VRAM 5,254,656 falls to 3,681,792). Whether a 2 ms late frame is visible was not examined.
 
 ### E3: alternating textures
 
@@ -184,6 +219,8 @@ Why not decide on `period`: the loop is locked to the display, so any variant wh
 | Metrics | `record`, `frameend`, `c3d_gpu` medians; `cmdbuf_peak_pct` |
 | Decision | Per-switch cost ≈ (mode 1 − mode 2) ÷ (N − 2), for CPU (`build + record + frameend`) and GPU (`c3d_gpu`) separately, per `TILE`. Mode 2 against mode 0 isolates the cost of merely having two textures of equal content. Compare with [drawbench](../../benchmarks/README.md#drawbench) `+texswap`, which measures the same thing one level lower (citro3d, 8×8 textures) |
 
+**Result (suite points: `TILE=16`, `NPC_COUNT=0` not used so sprites are included; one session per console):** alternating the texture at every tile (`TEX_MODE=1`) costs 7,193 µs against 1,501 for one atlas, a 5.7 ms increase; drawing the same two atlases as two runs (`TEX_MODE=2`) costs 1,602 µs, 101 µs more than one atlas. Per switch that is (7,193 − 1,602) ÷ (416 − 2) = 13.5 µs on the Old 3DS and 15.7 µs on the New 2DS XL, and the GPU adds about 1.1 µs per switch (2,635 against 2,179 µs). The command buffer reached 28.3% (`cmdbuf_peak_pct`), safely under the 98% limit. This agrees with [drawbench](../../benchmarks/README.md#drawbench): a separate draw (9.7 µs) plus a texture swap (2.1 µs) is about 12 µs, and citro2d ends the batch at each change. Group tiles by texture; two atlases drawn as two runs cost almost nothing.
+
 ### E4: chunk size and rebuild-on-change
 
 *Question:* which chunk size balances over-submitted vertices against rebuild cost, and does retained geometry beat E1's manual path?
@@ -195,6 +232,8 @@ Why not decide on `period`: the loop is locked to the display, so any variant wh
 | Metrics | `build` mean, p99 and max (chunk rebuild and water vertices); `record`; `c3d_gpu`; `meta,chunk_build_all_ms` (start-up cost of building the whole world) |
 | Decision | With no edits: the chunk size with the lowest `mean_cpu_build_record_frameend_us` and `c3d_gpu`. With an edit every frame: rebuild cost per edited chunk = `build` mean at `MAP_EDIT_PERIOD=1` minus at 0. Retained chunks beat the manual path only if their total is lower at the same `TILE` |
 
+**Result (suite points: chunk sizes 8, 16 and 32 tiles at 416 tiles; 16 at 1,500 tiles; an edit every frame; one session per console):** CPU falls slightly with chunk size (967, 900 and 884 µs for 8, 16 and 32 tiles: fewer draw calls) while GPU time rises (2,233, 2,319 and 2,547 µs median), because bigger chunks submit more vertices (5,760, 9,216 and 24,576 by the arithmetic above). The GPU slope is about 17 ns per extra submitted vertex between 8 and 32 tiles, 25 ns between 8 and 16. At 16 px tiles the retained chunks beat manual by 12% of CPU (900 against 1,017 µs) for 140 µs more GPU time; at 1,500 tiles by 28% for 353 µs more. Rebuilding one chunk every frame raises `build` from 22 to 204 µs (about 180 µs per rebuilt chunk) and the total to 1,076 µs, which is 59 µs above manual and 28% below direct; `chunks16_edit1` rebuilt one chunk in each of the 600 frames as designed. At this scene 16 tiles is a sensible middle: 32 tiles saves 2% of CPU against it and costs 10% more GPU time, and 8 tiles costs 7% more CPU for 4% less GPU time.
+
 ### E5: static bottom-screen content
 
 *Question:* what does leaving the bottom screen untouched save?
@@ -204,6 +243,8 @@ Why not decide on `period`: the loop is locked to the display, so any variant wh
 | Variables | `BOTTOM_PERIOD` in {1, 2, 4, 30}, default strategy |
 | Metrics | `record`, `frameend`, `c3d_gpu` means (a skipped frame omits the bottom clear, scene and transfer; the mean captures the average) |
 | Decision | Saving per skipped frame = (mean at period 1 − mean at period N) × N ÷ (N − 1). Mechanism: a target that is not drawn is neither transferred nor swapped `[documented: renderqueue.c]`; the size of the saving is `[hypothesis]` |
+
+**Result (suite point: `BOTTOM_PERIOD=4`, the bottom screen drawn every fourth frame; one session per console):** mean CPU 1,373 µs against 1,501, so 128 µs less per frame and by the formula above 171 µs per skipped frame; mean GPU time 1,663 µs against 2,167, 504 µs less per frame or about 670 µs per skipped frame (the median GPU time of a skipped frame is 1,458 µs against 2,154). The GPU saving is the larger one: a skipped bottom screen removes its clear, scene and display transfer. Periods 2 and 30 were not run.
 
 ### E6: shape batching
 
@@ -216,6 +257,8 @@ The claim was checked against the local sources: `include/c2d/base.h` of the ins
 | Variables | `SHAPE_MODE` in {0, 1, 2}; `SHAPE_PAIRS` in {8, 32, 128} |
 | Metrics | `record` mean and `c3d_gpu` |
 | Decision | Mode 1 makes about 2 × pairs switches into and out of circle mode, mode 2 about 2. Cost per switch ≈ (mode 1 − mode 2) ÷ (2 × pairs − 2). If it is below the run-to-run noise, shape grouping does not matter for this workload |
+
+**Result (suite points: `SHAPE_PAIRS=32`, 64 shapes; one session per console):** drawing the 64 shapes grouped (all rectangles, then all circles) costs 167 µs more than no shapes (1,668 against 1,501 µs, about 2.6 µs per shape). Interleaving them costs 817 µs more again (2,485 µs), and Mode 1 makes about 2 × 32 switches, so 13.2 µs per switch into and out of circle mode on the Old 3DS (13.6 µs on the New 2DS XL); GPU time differs by 34 µs. So citro2d's "expensive state change" is about 13 µs of CPU, comparable to a separate draw call, and shapes should be drawn grouped. Pairs of 8 and 128 were not run, so linearity is assumed, not shown.
 
 ## Output records
 
@@ -261,19 +304,19 @@ A row in the wiki's results tables is one variant on one console: the median of 
 
 ## Open questions
 
-Every item is an experiment above; only the default-setting four-strategy run has been done.
+Every item is an experiment above; the suite has run once per console and the sweeps below list what is still open.
 
-- E1 to E6: the numbers, on an Old 3DS and a New 3DS.
+- E1 to E6: the points the suite did not cover (TILE=12 and 24, `NPC_COUNT=0`, speeds 1 and 8, edit rate 5, `BOTTOM_PERIOD` 2 and 30, `SHAPE_PAIRS` 8 and 128, other chunk sizes with edits), a second and third session of everything, and the New 3DS at 804 MHz with L2.
 - Whether the cached layer is upright and pixel-exact with a standard subtexture, and whether strategies 0 to 3 produce identical pixels (the [validation checklist](rendering-2d.md#validation-checklist-for-a-2d-engine) describes the comparison; this program has no framebuffer dump).
 - Whether the cache redraw spike shows as a visible hitch at 60 frames per second. On an Old 3DS the spike is 1.9 ms of CPU and up to 4.4-4.5 ms of GPU time with no loop period over 18.7 ms and no missed frame at the 25 ms threshold, but whether a late frame of that size can be seen was not looked at ([first hardware runs](#first-hardware-runs-old-3ds)).
-- Why strategy 3 rebuilt its cache only 9 times in 600 frames when [E2](#e2-cached-background-versus-direct-tiles) estimates about 48 ÷ speed = 24 frames between redraws (about 25 rebuilds). The estimate was arithmetic; the camera path or the cache window re-centring was not examined.
+- Why strategy 3 rebuilt its cache only 9 times in 600 frames at speed 2 and 23 at speed 4 when [E2](#e2-cached-background-versus-direct-tiles) estimates about 48 ÷ speed = 24 and 12 frames between redraws (about 25 and 50 rebuilds). The estimate was arithmetic; the camera path or the cache window re-centring was not examined.
 - Whether citro2d's internal state survives the strategy 1 and 2 hand-over unchanged.
 - Whether the number of draw calls per frame matches the expected structure.
 - Whether any of this differs between Old 3DS and New 3DS. Unknown: GPU-side costs on the New 3DS.
 
 ## Verification status
 
-Emulator: not run. New 3DS: not run. Old 3DS: strategies 0, 1, 2 and 3 with `BENCH_AUTO=1` at default settings ran twice with no `error,` lines ([results](#first-hardware-runs-old-3ds)); every other row is not run. Whether the pictures are correct was not checked.
+Emulator: not run. Old 3DS: the 20 suite configurations ran once with no `error,` lines, and strategies 0 to 3 at default settings ran twice standalone ([results](#suite-results-old-3ds-and-new-3ds)); every other row is not run. New 3DS: the same 20 ran once at 268 MHz. Whether the pictures are correct was not checked.
 
 | Configuration (`-D` flags) | Builds |
 | -------------------------- | ------ |

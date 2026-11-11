@@ -75,7 +75,7 @@ Do not extend the G-Diffuser numbers: one program's probe, one unit, an unstated
 
 ### icachebench on an Old 3DS
 
-`[measured]` Old 3DS (2011 unit), system 11.17.0-50U, Luma3DS 13.0.2, devkitARM r68, two sessions that agree within 0.05 CPI ([`icachebench`](../benchmarks/README.md#icachebench), full table and conditions in the [benchmark README](../benchmarks/README.md#hardware-runs)). Straight-line `add` instructions, 64 passes per run, performance counters on; medians. **New 3DS:** not measured.
+`[measured]` Old 3DS (2011 unit), system 11.17.0-50U, Luma3DS 13.0.2, devkitARM r68, five sessions (two standalone, three in the suite) that agree within 0.05 CPI except at 16 KiB ([`icachebench`](../benchmarks/README.md#icachebench), full table and conditions in the [benchmark README](../benchmarks/README.md#hardware-runs) and the [suite runs](../benchmarks/README.md#suite-runs-old-3ds-and-new-3ds)). Straight-line `add` instructions, 64 passes per run, performance counters on; medians. **New 3DS:** see the last bullet below.
 
 | Distinct code per pass | Cycles per instruction | I-cache misses per 32-byte line fetched | Cycles stalled on fetch |
 | ---------------------- | ---------------------- | --------------------------------------- | ----------------------- |
@@ -90,6 +90,7 @@ Do not extend the G-Diffuser numbers: one program's probe, one unit, an unstated
 - **A miss costs about 36.5 cycles** (stall cycles divided by miss count, 36.4-36.7 from 20 KiB up, in both sessions), about 136 ns. This is the "about 37 cycles" the G-Diffuser page states.
 - **It reproduces the G-Diffuser numbers.** CPI 1.06 / 4.10 / 5.62 at 16 / 24 / 32 KB `[reported]` against 1.10-1.15 / 4.11 / 5.60 here `[measured]`. Two independent probes agree on this console model, so the figures can be used as a planning number for straight-line code: **budget fewer than 16 KiB of distinct code per hot loop**, and expect the penalty to reach its ceiling of about 5.6 cycles per instruction once the footprint is twice that.
 - **Misses rise gradually, not at once** (0.41 and 0.67 per line at 20 and 24 KiB, 1.00 from 32 KiB). A least-recently-used cache hit by a cyclic walk over more than its capacity would miss on every line immediately, so the policy is probably not LRU `[hypothesis]`; DDI 0360E lists random and round-robin replacement, and the policy was not read from the console.
+- **The New 3DS shows the same cliff with a dearer miss.** A New 2DS XL at the default 268 MHz clock (Luma3DS 13.3.3, three sessions) has the same CPI at every footprint up to 16 KiB (1.02-1.05; 1.07 at 16 KiB), 3.11 at 20 KiB, 4.45 at 24 KiB and 6.11 from 32 KiB, with the same miss counts per line. A miss costs about 40.6 cycles against 36.5 on the Old 3DS, so the plateau is 9% higher. The step position says the L1 instruction cache is 16 KiB on that model as well. Whether the L2 cache was enabled is not readable, and 804 MHz mode was not run, so how much an L2 hit softens a miss is open.
 - **Limits.** The code is perfectly predicted straight-line arithmetic with no data accesses: it measures instruction fetch only. A real program's penalty depends on how much of its footprint is hot, and the 16 KiB size is inferred from the step, not read from the cache-type register.
 
 
@@ -294,7 +295,7 @@ Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a c
 ## Open questions
 
 - Real per-event numbers for common workloads on Old 3DS first, then New 3DS (sprite update, vertex generation, decompression).
-- Whether the G-Diffuser I-cache cliff reproduces: it does on an Old 3DS with a different probe ([above](#icachebench-on-an-old-3ds)). Still open: read the cache-type register (`MRC p15,0,Rd,c0,c0,1`) to confirm 16 KB, and **New 3DS:** repeat with and without `osSetSpeedupEnable(true)`, since its L2 may soften a miss.
+- Whether the G-Diffuser I-cache cliff reproduces: it does on an Old 3DS with a different probe ([above](#icachebench-on-an-old-3ds)), and the same cliff appears on a New 2DS XL at 268 MHz. Still open: read the cache-type register (`MRC p15,0,Rd,c0,c0,1`) to confirm 16 KB, and **New 3DS at 804 MHz with L2:** repeat with `osSetSpeedupEnable(true)`, since the L2 may soften a miss.
 - Whether grouping by operation type beats per-element indirect dispatch on a real workload (needs a dispatch-heavy loop in both forms, identical output, counters on).
 - Whether the 3DS kernel enables the MPCore's unaligned-access support for user processes.
 - Whether counter values read from one core can be affected by threads on another.

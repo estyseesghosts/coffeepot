@@ -1,0 +1,40 @@
+meta,program,icachebench
+meta,session,3
+meta,repo_commit,458e8a9_dirty
+meta,luma3ds_version,13.0.2
+meta,system_version,11.17.0-50U
+meta,build_date,Nov 11 2026 13:35:26
+meta,compiler,16.1.0
+meta,libctru_version,not-readable
+meta,citro3d_version,not-readable
+meta,model,Old 3DS
+meta,new3ds,0
+meta,firm_version,2.58.0
+meta,kernel_version,2.58.0
+meta,speedup_requested,untouched
+meta,speedup_l2_state,not-readable
+meta,cpu_ticks_per_usec,268.1119
+meta,linear_free_bytes,31941632
+meta,runs,15
+meta,passes_per_run,64
+result,icachebench,footprint,straight_4k,4096,15,249.16,249.20,249.92
+note,perf,straight_4k,4096,65600,68032,6,206
+result,icachebench,footprint,straight_8k,8192,15,495.60,495.94,570.14
+note,perf,straight_8k,8192,131136,134307,35,1061
+result,icachebench,footprint,straight_12k,12288,15,740.01,740.06,820.22
+note,perf,straight_12k,12288,196672,199815,35,989
+result,icachebench,footprint,straight_16k,16384,15,1033.34,1038.20,1129.80
+note,perf,straight_16k,16384,262208,280095,343,15894
+result,icachebench,footprint,straight_20k,20480,15,3460.06,3538.42,3583.74
+note,perf,straight_20k,20480,327744,950405,16719,618418
+result,icachebench,footprint,straight_24k,24576,15,5951.84,6010.52,6096.43
+note,perf,straight_24k,24576,393280,1613218,33093,1214939
+result,icachebench,footprint,straight_32k,32768,15,10882.41,10951.28,11009.43
+note,perf,straight_32k,32768,524352,2937897,65965,2402477
+result,icachebench,footprint,straight_48k,49152,15,16342.07,16409.26,16443.34
+note,perf,straight_48k,49152,786496,4401570,98735,3603119
+result,icachebench,footprint,straight_64k,65536,15,21737.20,21861.51,21886.12
+note,perf,straight_64k,65536,1048640,5863035,131503,4802162
+result,icachebench,footprint,loop_256b,256,15,3856.87,3856.87,3903.37
+note,perf,loop_256b,256,1048768,1035248,0,0
+note,done errors=0
