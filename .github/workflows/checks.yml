@@ -13,6 +13,18 @@ jobs:
       - run: python3 tools/check_docs.py
       - run: python3 -m unittest discover -s tests -p "test_check_docs.py"
 
+  site:
+    name: Build the zensical site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - run: pip install zensical
+      # --strict turns a broken link or anchor into a build failure.
+      - run: zensical build --strict --clean
+
   benchmarks:
     name: Build CTR benchmarks
     runs-on: ubuntu-latest

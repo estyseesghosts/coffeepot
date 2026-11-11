@@ -8,6 +8,7 @@ It serves two readers: a curious human, and a future coding agent doing hardware
 
 ```text
 AGENTS.md
+zensical.toml               # site config: navigation, theme, and what is excluded
 glossary.md                  # global jargon glossary
 README.md                    # human landing page (what this wiki covers)
 <console>/                   # one directory per console platform (e.g. ctr/, nx/)
@@ -21,6 +22,7 @@ README.md                    # human landing page (what this wiki covers)
 tools/
   check_docs.py              # link, anchor and Sources-section checker
   build_benchmarks.sh        # builds every benchmark, fails on warnings
+site/                        # generated site output (not committed)
 ```
 
 Current scope is two platforms: `ctr/` (Nintendo 3DS family) and `nx/` (Nintendo Switch family). Add a new top-level platform directory only for a distinct hardware platform, using its established codename or short kebab-case name (e.g. `ctr`, `nx`).
@@ -268,7 +270,7 @@ Code examples must state what they were checked against: at minimum, that they c
 - Benchmarks live in `<console>/benchmarks/<name>/` as complete projects (Makefile + sources). Their README states the question, the method, the variants to run, and how to record results. Raw results go in the README; the page whose claim they settle gets the `[measured]` label and a link.
 - Emulator timings are never results.
 - When a claim depends on a library or firmware version, pin it: record the commit on the source-versions page and link the source file at that commit when the exact behaviour matters.
-- Run `python3 tools/check_docs.py` (and `tools/build_benchmarks.sh` if code changed) before committing. CI runs both.
+- Run `python3 tools/check_docs.py` and `zensical build --strict` (and `tools/build_benchmarks.sh` if code changed) before committing. CI runs all three.
 
 ## Writing guidelines
 
@@ -279,6 +281,23 @@ Code examples must state what they were checked against: at minimum, that they c
 - **State uncertainty explicitly.** Use `Notes and open questions` or inline `> Unknown:` callouts. Never present a guess as fact. Record the firmware/model/revision a fact was verified against where it matters.
 - **Keep it readable.** Short paragraphs, one idea per paragraph, tables for specs, code blocks or hex tables for layouts. No walls of unexplained hex.
 - **No placeholders.** Don't create a page that is only headings. If research is thin, write the Overview + what is known + open questions, and say so.
+
+## The site (zensical)
+
+The wiki is published as a static site with [zensical](https://zensical.org/), configured in `zensical.toml`. The site is the wiki: `docs_dir` is the repository root, so every Markdown page in the repository is a wiki page, and the rendered output is written to `site/`.
+
+```bash
+pip install zensical
+zensical serve              # live preview on http://localhost:8000/coffeepot/
+zensical build --clean      # write the static site to site/
+zensical build --strict     # same, but fail the build on a broken link or anchor
+```
+
+- **Navigation is explicit.** `nav` in `zensical.toml` lists every page, in the order a reader should meet it. The console `index.md` pages carry the same curated order; keep the two in step.
+- **A new page must be added to `nav`.** A page that is not in `nav` is still built, but it is not reachable from the sidebar.
+- **`exclude_docs` lists what is not a wiki page**: repository plumbing, vendored trees, benchmark build artefacts. Anything added to the repository that is not a page belongs in that list, or it gets published.
+- **Links between pages use source paths** (`../software/os.md`, `../../glossary.md#soc`). zensical rewrites them to site URLs and validates both the target and the anchor, so a broken link fails `zensical build --strict`.
+- `site/` is generated output and is not committed.
 
 ## Agent workflow
 

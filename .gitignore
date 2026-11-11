@@ -1,1 +1,9 @@
 private_please_gitignore/
+
+# Zensical build output and cache
+site/
+.cache/
+
+# Python bytecode
+__pycache__/
+*.pyc

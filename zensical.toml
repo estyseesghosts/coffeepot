@@ -1,0 +1,251 @@
+# Zensical configuration for the coffeepot wiki.
+#
+# The wiki content lives at the repository root (README.md, glossary.md, ctr/,
+# nx/), so the docs directory is the project root itself and the rendered site
+# is written to site/.
+
+[project]
+site_name = "Coffeepot"
+site_description = "How Nintendo consoles work: the hardware, the software, and how to write homebrew for them."
+site_author = "Coffeepot contributors"
+site_url = "https://estyseesghosts.github.io/coffeepot/"
+
+repo_url = "https://github.com/estyseesghosts/coffeepot"
+repo_name = "estyseesghosts/coffeepot"
+edit_uri = "edit/main/"
+
+# The wiki *is* the repository, so the docs directory is the project root.
+docs_dir = "."
+site_dir = "site"
+
+# Everything that is not a wiki page. Patterns follow .gitignore syntax and are
+# relative to the docs directory (the repository root).
+exclude_docs = """
+# Generated site output
+site/
+.cache/
+
+# Repository plumbing, not wiki pages
+.github/
+.git/
+zensical.toml
+.gitattributes
+.gitignore
+tests/
+
+# Vendored third-party trees, not ours
+private_please_gitignore/
+
+# Benchmark build artefacts. The sources, Makefiles and READMEs are kept,
+# because pages link to them.
+ctr/benchmarks/.gitignore
+ctr/benchmarks/*/build/
+ctr/benchmarks/*/*.3dsx
+ctr/benchmarks/*/*.elf
+ctr/benchmarks/*/*.smdh
+"""
+
+nav = [
+  { "Home" = "README.md" },
+  { "Global glossary" = "glossary.md" },
+  { "Contributing" = "AGENTS.md" },
+  { "Nintendo 3DS (CTR)" = [
+    { "Overview" = "ctr/index.md" },
+    { "CTR glossary" = "ctr/glossary.md" },
+    { "Hardware" = [
+      { "CPU" = "ctr/hardware/cpu.md" },
+      { "Memory" = "ctr/hardware/memory.md" },
+      { "GPU" = "ctr/hardware/gpu.md" },
+      { "Displays" = "ctr/hardware/display.md" },
+      { "Audio" = "ctr/hardware/audio.md" },
+      { "Input/output and peripherals" = "ctr/hardware/io-and-peripherals.md" },
+      { "Peripheral control registers" = "ctr/hardware/peripheral-registers.md" },
+      { "Game cards" = "ctr/hardware/gamecard.md" },
+      { "GPU shading features" = "ctr/hardware/gpu-shading-features.md" },
+      { "Security hardware" = "ctr/hardware/security-hardware.md" },
+      { "Models and variants" = "ctr/hardware/models.md" },
+      { "ARM11 MPCore internals" = "ctr/hardware/arm11-mpcore.md" },
+      { "GPU internal registers" = "ctr/hardware/gpu-internal-registers.md" },
+      { "GPU external registers" = "ctr/hardware/gpu-external-registers.md" },
+      { "DSP firmware interface" = "ctr/hardware/dsp.md" },
+      { "Screen video capture points" = "ctr/hardware/video-capture.md" },
+      { "Board test points" = "ctr/hardware/tp-nets.md" },
+    ] },
+    { "Software" = [
+      { "Firmware" = "ctr/software/firmware.md" },
+      { "Boot process" = "ctr/software/boot-process.md" },
+      { "OS" = "ctr/software/os.md" },
+      { "Kernel and system calls" = "ctr/software/kernel.md" },
+      { "Services" = "ctr/software/services.md" },
+      { "Titles" = "ctr/software/titles.md" },
+      { "File formats" = "ctr/software/file-formats.md" },
+      { "NAND filesystem" = "ctr/software/nand-filesystem.md" },
+      { "SD filesystem" = "ctr/software/sd-filesystem.md" },
+      { "Savegames" = "ctr/software/savegames.md" },
+      { "CRO dynamic modules" = "ctr/software/cro-modules.md" },
+      { "StreetPass (CEC)" = "ctr/software/streetpass-cec.md" },
+      { "Country/region data" = "ctr/software/country-region-data.md" },
+      { "Security architecture" = "ctr/software/security-architecture.md" },
+      { "Development units" = "ctr/software/dev-unit-software.md" },
+      { "Kernel objects" = "ctr/software/kernel-objects.md" },
+      { "SVC reference" = "ctr/software/svc-reference.md" },
+      { "Title metadata and tickets" = "ctr/software/title-metadata-and-tickets.md" },
+      { "System title list" = "ctr/software/title-list.md" },
+      { "System update data" = "ctr/software/update-data.md" },
+      { "System flaws" = "ctr/software/system-flaws.md" },
+    ] },
+    { "Homebrew" = [
+      { "History" = "ctr/homebrew/history.md" },
+      { "Exploit catalogue" = "ctr/homebrew/exploits.md" },
+      { "boot9strap, sighax and ntrboot" = "ctr/homebrew/boot9strap.md" },
+      { "Custom firmware" = "ctr/homebrew/custom-firmware.md" },
+      { "Luma3DS" = "ctr/homebrew/luma3ds.md" },
+      { "libctru" = "ctr/homebrew/libctru.md" },
+      { "picasso and citro3d" = "ctr/homebrew/picasso-and-citro3d.md" },
+      { "Development workflow" = "ctr/homebrew/development-workflow.md" },
+      { "Research index" = "ctr/homebrew/research-index.md" },
+      { "3ds-examples catalogue" = "ctr/homebrew/3ds-examples.md" },
+    ] },
+    { "Engineering" = [
+      { "Debugging" = "ctr/engineering/debugging.md" },
+      { "Performance" = "ctr/engineering/performance.md" },
+      { "Memory and cache" = "ctr/engineering/memory-and-cache.md" },
+      { "Testing on hardware" = "ctr/engineering/testing-on-hardware.md" },
+      { "CPU optimisation" = "ctr/engineering/cpu-optimization.md" },
+      { "Threading" = "ctr/engineering/threading.md" },
+      { "Audio" = "ctr/engineering/audio.md" },
+      { "Porting" = "ctr/engineering/porting.md" },
+      { "Application lifecycle" = "ctr/engineering/application-lifecycle.md" },
+      { "Files and saves" = "ctr/engineering/filesystem-and-saves.md" },
+      { "IPC and services" = "ctr/engineering/ipc-and-services.md" },
+      { "Networking" = "ctr/engineering/networking.md" },
+      { "Input and sensors" = "ctr/engineering/input-and-sensors.md" },
+      { "Cameras and Y2R" = "ctr/engineering/camera-and-y2r.md" },
+      { "Microphone" = "ctr/engineering/microphone.md" },
+      { "NFC and infrared" = "ctr/engineering/nfc-and-infrared.md" },
+      { "System information and power" = "ctr/engineering/system-info-and-power.md" },
+      { "New 3DS extras: QTM and MVD" = "ctr/engineering/new-3ds-qtm-and-mvd.md" },
+      { "Local wireless" = "ctr/engineering/local-wireless.md" },
+      { "libctru service groups" = "ctr/engineering/service-groups.md" },
+      { "citro3d fixed-function API" = "ctr/engineering/citro3d-fixed-function-api.md" },
+      { "Source versions and verification" = "ctr/engineering/source-versions.md" },
+      { "Benchmark suite" = "ctr/benchmarks/README.md" },
+      { "Tile renderer experiment" = "ctr/benchmarks/tile-renderer/README.md" },
+      { "PICA200 and GPU" = [
+        { "GPU rendering" = "ctr/engineering/PICA200/gpu-rendering.md" },
+        { "Asset pipeline" = "ctr/engineering/PICA200/asset-pipeline.md" },
+        { "Frame pacing" = "ctr/engineering/PICA200/frame-pacing.md" },
+        { "2D rendering" = "ctr/engineering/PICA200/rendering-2d.md" },
+        { "2D tile renderer" = "ctr/engineering/PICA200/2d-tile-renderer.md" },
+        { "PICA200 command pipeline" = "ctr/engineering/PICA200/pica200-command-pipeline.md" },
+        { "PICA200 shader programming" = "ctr/engineering/PICA200/pica200-shader-programming.md" },
+        { "Renderer architecture" = "ctr/engineering/PICA200/renderer-architecture.md" },
+        { "Stereo engineering" = "ctr/engineering/PICA200/stereo-engineering.md" },
+        { "3D scene optimisation" = "ctr/engineering/PICA200/3d-scene-optimisation.md" },
+      ] },
+      { "Case studies" = [
+        { "Case study: HGSS port" = "ctr/engineering/case-studies/case-study-hgss-port.md" },
+        { "Case studies: rendering trade-offs" = "ctr/engineering/case-studies/case-studies-rendering-tradeoffs.md" },
+        { "Case studies: commercial 3DS games" = "ctr/engineering/case-studies/case-studies-commercial.md" },
+        { "Case studies: large 3DS ports" = "ctr/engineering/case-studies/case-studies-ports.md" },
+      ] },
+    ] },
+  ] },
+  { "Nintendo Switch (NX)" = [
+    { "Overview" = "nx/index.md" },
+    { "NX glossary" = "nx/glossary.md" },
+    { "Hardware" = [
+      { "CPU" = "nx/hardware/cpu.md" },
+      { "GPU" = "nx/hardware/gpu.md" },
+      { "Memory" = "nx/hardware/memory.md" },
+      { "Input and display" = "nx/hardware/input-and-display.md" },
+      { "Models and revisions" = "nx/hardware/models.md" },
+    ] },
+    { "Software" = [
+      { "Firmware" = "nx/software/firmware.md" },
+      { "OS" = "nx/software/os.md" },
+      { "Services and IPC" = "nx/software/services-and-ipc.md" },
+    ] },
+    { "Homebrew" = [
+      { "Toolchain and workflow" = "nx/homebrew/toolchain-and-workflow.md" },
+      { "libnx and deko3d" = "nx/homebrew/deko3d-and-libnx.md" },
+      { "Atmosphere and running" = "nx/homebrew/atmosphere-and-running.md" },
+    ] },
+    { "Engineering" = [
+      { "Rendering" = "nx/engineering/rendering.md" },
+      { "Performance and porting" = "nx/engineering/performance-and-porting.md" },
+    ] },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.action.view",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.code.select",
+  "content.footnote.tooltips",
+  "content.tabs.link",
+  "content.tooltips",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "search.suggest",
+  "toc.follow",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+toc.permalink = true
+pymdownx.arithmatex.generic = true
+pymdownx.betterem = {}
+pymdownx.caret = {}
+pymdownx.details = {}
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.keys = {}
+pymdownx.magiclink = {}
+pymdownx.mark = {}
+pymdownx.smartsymbols = {}
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+pymdownx.tabbed.alternate_style = true
+pymdownx.tabbed.combine_header_slug = true
+pymdownx.tasklist.custom_checkbox = true
+pymdownx.tilde = {}
