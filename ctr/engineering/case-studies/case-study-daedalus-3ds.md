@@ -5,8 +5,8 @@ An N64 emulator for 3DS that runs commercial games at reduced speed by recompili
 ## Before you start
 
 - Evidence: facts read in the vendored tree are `[documented]` with the source file. Unverified public claims are `[reported]`. Performance inferences are `[hypothesis]` until measured. See [evidence labels](../../../AGENTS.md).
-- Tree: `private_please_gitignore/DaedalusX64-3DS` (November 2026 checkout).
-- Old 3DS is the default. The tree detects the model with `APT_CheckNew3DS` and enables the higher clock (`SysCTR/main.cpp`) [documented]; faster-hardware-only items are marked **New 3DS:**.
+- Source: [masterfeizz/DaedalusX64-3DS](https://github.com/masterfeizz/DaedalusX64-3DS) commit `31c5e56` (2022-10-17; see [source versions](../source-versions.md)).
+- Old 3DS is the default. The tree calls `osSetSpeedupEnable(true)` unconditionally and uses `APT_CheckNew3DS` only to switch on the 800-pixel wide mode (`SysCTR/main.cpp` lines 94-101) [documented]; faster-hardware-only items are marked **New 3DS:**.
 
 Jargon: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; **[PICA200](../../glossary.md#pica200)** is the GPU; a **[display list](../../glossary.md#display-list)** is the N64 drawing-command stream; **[FCRAM](../../glossary.md#fcram)** is main memory and **[VRAM](../../glossary.md#vram)** is fast GPU memory; a **[draw call](../../glossary.md#draw-call)** is one request to draw triangles; **[V-blank](../../../glossary.md#vblank)** is the pause between screen refreshes.
 
@@ -16,7 +16,7 @@ DaedalusX64-3DS is the 3DS backend of DaedalusX64, also ported to PSP and Vita. 
 
 ## CPU: interpreter bootstraps a dynarec
 
-Cold N64 code runs on a plain interpreter [documented]. After 10 passes a loop trace becomes hot and compiles to ARM (`Dynamo.cpp`, `gHotTraceThreshold`) [documented]. Fragments live in a cache of about 9,216 entries [documented]. The 3DS backend emits ARM through `SysCTR/DynaRec/arm/CodeGeneratorARM.cpp` with a register cache [documented]. The code buffer is 8 MB, page-aligned, marked executable; when it fills, a reset rewinds the pointer and discards everything (`CodeBufferManagerARM.cpp`) [documented].
+Cold N64 code runs on a plain interpreter [documented]. After 10 passes a loop trace becomes hot and compiles to ARM (`Dynamo.cpp`, `gHotTraceThreshold`) [documented]. Fragments live in a cache capped at 9,216 entries (8,192 + 1,024) [documented]. The 3DS backend emits ARM through `SysCTR/DynaRec/arm/CodeGeneratorARM.cpp` with a register cache [documented]. The code buffer is 8 MB, page-aligned, marked executable; when it fills, a reset rewinds the pointer and discards everything (`CodeBufferManagerARM.cpp`) [documented].
 
 ## RSP: task switch instead of vector emulation
 
@@ -34,7 +34,7 @@ Input polls once per frame, halves the circle-pad range into N64 stick units, an
 
 ## How it pushes 3DS hardware
 
-CPU is the ceiling: recompiled N64 code, display-list parsing, combiner evaluation and audio microcode share two 268 MHz cores with the OS owning part of the second. The tree requests the higher application clock at boot [documented]. GPU rasterisation is cheap by comparison — the ports page reports G-Diffuser at 3.6 ms GPU-busy inside a 96 ms frame [reported] — and two-cycle combiners become multi-pass PICA200 work, multiplying CPU vertex replays and command traffic `[hypothesis]`. Memory is comfortable but split: 8 MB dynarec buffer, ~1 MB vertex staging, converted textures, audio buffers and the RDRAM image compete for contiguous [linear heap](../../glossary.md#linear-heap) blocks `[hypothesis]`.
+CPU is the ceiling: recompiled N64 code, display-list parsing, combiner evaluation and audio microcode share two 268 MHz cores with the OS owning part of the second. The tree requests the higher application clock at boot, unconditionally [documented]. GPU rasterisation is cheap by comparison — the ports page reports G-Diffuser at 3.6 ms GPU-busy inside a 96 ms frame [reported] — and two-cycle combiners become multi-pass PICA200 work, multiplying CPU vertex replays and command traffic `[hypothesis]`. Memory is comfortable but split: 8 MB dynarec buffer, ~1 MB vertex staging, converted textures, audio buffers and the RDRAM image compete for contiguous [linear heap](../../glossary.md#linear-heap) blocks `[hypothesis]`.
 
 Right: the threshold-10 ladder, the RSP task switch, mux-keyed combiner caching, and one VI-origin gate for video, audio and frameskip. Wrong: multi-pass fallback replays whole vertex buffers per pass; blend coverage is an ever-growing per-game table; Old 3DS audio shares the emulation thread; frameskip hides rather than shrinks per-frame work.
 
@@ -51,7 +51,7 @@ Right: the threshold-10 ladder, the RSP task switch, mux-keyed combiner caching,
 
 ## Technical details
 
-- Dynarec: hot threshold 10, trace map ~3,072 entries, fragment cache ~9,216 (`Dynamo.cpp`); 8 MB executable buffer, permissions 7 at init [documented].
+- Dynarec: hot threshold 10, fragment cache ~9,216 (`Dynamo.cpp`); 8 MB executable buffer, permissions 7 at init [documented].
 - Graphics: picaGL `pglInitEx(0x080000, 0x040000)`, 400x240 target, 30,000-vertex linear staging [documented]. **New 3DS:** `gfxSetWide(true)` 800-pixel mode [documented].
 - Audio: 44.1 kHz stereo ndsp, six 512-sample buffers, DSP cache flushed per refill [documented]. **New 3DS:** 8 KB worker at priority `0x18` on core 2 [documented].
 - Pacing: origin-change gate, auto-skip when sync below 0.965, VI-sync clamp 1,500–4,000 [documented].
@@ -63,5 +63,6 @@ Right: the threshold-10 ladder, the RSP task switch, mux-keyed combiner caching,
 - Combiner-state cache hit rate per game? The map exists but publishes no statistics.
 ## Sources
 
-- [DaedalusX64-3DS tree](https://github.com/MasterFeizz/daedalusX64-3DS) — README; `SysCTR/main.cpp`; `SysCTR/DynaRec/arm/`; `Core/Dynamo.cpp`, `Interpret.cpp`; `Core/RSP_HLE.cpp`; `SysCTR/HLEGraphics/`, `SysCTR/Graphics/GraphicsContextCTR.cpp`; `SysCTR/HLEAudio/`; `SysCTR/Input/InputManagerCTR.cpp`; `Core/Save.cpp`, `PIF.cpp`.
-- [Case studies: three large 3DS ports](case-studies-ports.md) — companion page; G-Diffuser GPU-busy figure cited above, not repeated.
+[masterfeizz/DaedalusX64-3DS](https://github.com/masterfeizz/DaedalusX64-3DS) commit `31c5e56` (2022-10-17), files under `Source/`: `SysCTR/main.cpp` (model check, clock, `pglInitEx`, wide mode); `Core/Dynamo.cpp` (hot threshold 10 at line 63, fragment cache 8,192 + 1,024 at line 61); `SysCTR/DynaRec/arm/CodeBufferManagerARM.cpp` (8 MB code buffer at line 32); `Core/RSP_HLE.cpp`; `SysCTR/HLEGraphics/` (`RendererCTR.cpp`, `GraphicsPluginCTR.cpp`: pacing thresholds); `SysCTR/Graphics/GraphicsContextCTR.cpp` (30,000 vertices at line 95); `SysCTR/HLEAudio/` (`AudioOutput.cpp`: six 512-sample buffers; `AudioPluginCTR.cpp`: New 3DS worker at priority `0x18` on core 2); `SysCTR/Input/InputManagerCTR.cpp`; `Core/Save.cpp`, `PIF.cpp`.
+
+- [Case studies: three large 3DS ports](case-studies-ports.md) — companion page; the G-Diffuser GPU-busy figure cited above is from there `[reported]`.

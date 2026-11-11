@@ -1,6 +1,6 @@
 # Case study: Xash3DS (Half-Life on the 3DS)
 
-A port of Xash3D FWGS — a clean-room Gold Source–compatible engine — to the 3DS. All facts are `[documented]` in the vendored tree (`private_please_gitignore/Xash3DS/`); nothing was built or run. The strategy is containment: one static binary, a fixed 400x240 renderer through an OpenGL wrapper, stubbed platform features instead of emulated ones.
+A port of Xash3D FWGS — a clean-room Gold Source–compatible engine — to the 3DS. All facts are `[documented]` in [masterfeizz/Xash3DS](https://github.com/masterfeizz/Xash3DS) commit `8590409d` (2019-09-14; see [source versions](../source-versions.md)); nothing was built or run. The strategy is containment: one static binary, a fixed 400x240 renderer through an OpenGL wrapper, stubbed platform features instead of emulated ones.
 
 ## Before you start
 
@@ -34,7 +34,7 @@ Saves are the weak point: `SV_AutoSave_f` (`engine/server/sv_cmds.c`) is compile
 
 ## Packaging and technical details
 
-`Makefile` uses `-O2 -ffast-math` with dead-section stripping. `cia.rsf` asks for 80 MB, core 0, priority 16, 0x200 handles. **New 3DS:** the extended block requests 124 MB, 804 MHz, L2 and core 2 — granted or not, no engine code branches on the model.
+`Makefile` uses `-O2 -ffast-math` with dead-section stripping. `cia.rsf` asks for the 80 MB system mode, ideal processor 0, priority 16 and a 0x200-entry handle table. **New 3DS:** the extended block requests 124 MB, 804 MHz, L2 and core 2 — granted or not, no engine code branches on the model.
 
 | Item | Value | File |
 | ---- | ----- | ---- |
@@ -67,6 +67,4 @@ Saves are the weak point: `SV_AutoSave_f` (`engine/server/sv_cmds.c`) is compile
 
 ## Sources
 
-- `private_please_gitignore/Xash3DS/engine/platform/ctr/{vid_ctr.c,snd_ctr.c,in_ctr.c,dll_ctr.c,dll_ctr.h}` — video, audio, input, loader shim.
-- `private_please_gitignore/Xash3DS/{Makefile,cia.rsf}` — flags, asset rules, title configuration.
-- `private_please_gitignore/Xash3DS/engine/{common/filesystem.c,server/sv_cmds.c}` — filesystem carve-outs, autosave removal.
+[masterfeizz/Xash3DS](https://github.com/masterfeizz/Xash3DS) commit `8590409d`: `engine/platform/ctr/` (`vid_ctr.c` with the 256 px cap at line 142, `snd_ctr.c`, `in_ctr.c`, `dll_ctr.c`, `dll_ctr.h`); `Makefile`; `cia.rsf` (system mode, priority, New 3DS block); `engine/common/filesystem.c`; `engine/server/sv_cmds.c` (autosave disabled on `_3DS`, comment at line 589 citing the Old 3DS).

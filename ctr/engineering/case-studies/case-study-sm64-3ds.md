@@ -9,7 +9,7 @@ The `sm64-port/sm64_3ds` tree kept privately in this repository: a first-generat
 ## Before you start
 
 - Claims are `[documented]` in the named file unless labelled; nothing is `[measured]`.
-- Read 11 November 2026 from `private_please_gitignore/sm64_3ds/` (not committed). Old 3DS is the default; the faster clock is enabled only after detecting a New 3DS.
+- Source: [sm64-port/sm64_3ds](https://github.com/sm64-port/sm64_3ds) commit `0a82ae2` (2020-08-03; see [source versions](../source-versions.md)). Old 3DS is the default; the faster clock is enabled only after detecting a New 3DS.
 
 The 3DS **[GPU](../../../glossary.md#gpu)** is the **[PICA200](../../glossary.md#pica200)**; its CPU is the **[ARM11](../../glossary.md#arm11)**. A **[display list](../../glossary.md#display-list)** is the N64 command stream; a **[draw call](../../glossary.md#draw-call)** is one request to draw triangles; **[libctru](../../glossary.md#libctru)** is the homebrew GPU wrapper and user library.
 
@@ -60,5 +60,5 @@ Fixes are `[hypothesis]` until measured.
 
 ## Sources
 
-- `private_please_gitignore/sm64_3ds/` as read (`gfx_citro3d.c`, `gfx_3ds.c`, `shader.v.pica`, `gfx_pc.c`, `pc_main.c`, `audio_3ds.c`, `Makefile`, `README.md` with clone URL `sm64-port/sm64_3ds`).
+- [sm64-port/sm64_3ds](https://github.com/sm64-port/sm64_3ds) commit `0a82ae2` (2020-08-03): `src/pc/gfx/gfx_citro3d.c`, `gfx_3ds.c` (`C3D_FRAME_SYNCDRAW` at line 128), `shader.v.pica` (three `mov` instructions), `gfx_pc.c` (`MAX_BUFFERED 256`, 26 floats per vertex), `src/pc/pc_main.c` (pool at line 136), `src/pc/audio/audio_3ds.c`, `Makefile`, `README.md`.
 - [Case studies: three large 3DS ports](case-studies-ports.md) — the newer SM64 figures contrasted here.

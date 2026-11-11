@@ -1,64 +1,67 @@
-# Case study: SRB2 3DS port (Doom-Legacy software renderer)
+# Case study: SRB2 3DS port (Doom Legacy hardware renderer on citro3d)
 
-A 3DS port of Sonic Robo Blast 2 v2.1.25, built on the Doom Legacy codebase. It keeps the original CPU software renderer on the 3DS CPU and presents through SDL. The README states it needs a New 3DS for acceptable speed. Nothing below was measured by Coffeepot; claims are `[reported]` by the port README or `[documented]` in its `Makefile` and `src/` tree.
+A 3DS port of Sonic Robo Blast 2 v2.1.25, built on the Doom Legacy codebase. It does not run the engine's CPU software rasteriser. It builds the engine's hardware-renderer interface (`-DHWRENDER`) and implements it on citro3d in `src/nds/r_nds3d.c`, with a small PICA200 vertex shader, a texture cache, stereoscopic and wide modes, and a render worker thread that consumes a ring buffer of draw packets. The README says the port targets the New 3DS and does not run acceptably on an Old 3DS. Nothing below was measured by Coffeepot; tree facts are `[documented]` in the named file and the model statement is `[reported]` by the README.
 
 ## Before you start
 
-- Evidence: model and feature claims are `[reported]` by the [port README](https://github.com/derrek/SRB2-3DS); build facts are `[documented]` in the `Makefile`.
-- Assets are separate SD downloads to `/3ds/srb2_3ds`; DSP firmware must be dumped or there is no sound.
-- Playable target is the New 3DS: **New 3DS:** required for acceptable speed `[reported]`; Old 3DS is "extremely laggy" `[reported]`. Old 3DS remains the default for unmarked general statements.
-- Companion pages: [porting](../porting.md), [CPU optimization](../cpu-optimization.md), [memory and cache](../memory-and-cache.md), [audio](../audio.md).
+- Evidence: [derrekr/srb2_3ds](https://github.com/derrekr/srb2_3ds) commit `e8726772` (2026-05-03; see [source versions](../source-versions.md)). The tree states no frame rates, so none are given.
+- Model: **New 3DS:** the README says the port is for the New 3DS and 2DS, and that it "does *NOT* run on o3DS devices" because it is "extremely laggy" there `[reported]`. Old 3DS is still this wiki's default for unmarked statements, so every lesson below that is about Old 3DS is a `[hypothesis]`.
+- Companion pages: [porting](../porting.md), [GPU rendering](../PICA200/gpu-rendering.md), [stereo engineering](../PICA200/stereo-engineering.md), [threading](../threading.md), [memory and cache](../memory-and-cache.md), [audio](../audio.md).
 
-Jargon: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; a **[cache](../../../glossary.md#cache)** is fast memory in front of main memory; **[FCRAM](../../glossary.md#fcram)** is 3DS main memory; a **[framebuffer](../../../glossary.md#framebuffer)** holds one image; the **[DSP](../../../glossary.md#dsp)** is the audio processor.
+Jargon: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; the **[PICA200](../../glossary.md#pica200)** is the 3DS GPU; the **[linear heap](../../glossary.md#linear-heap)** is contiguous memory the GPU can read; **[VRAM](../../glossary.md#vram)** is the 6 MB of fast GPU memory; a **[draw call](../../glossary.md#draw-call)** is one request to draw triangles; a **[TEV](../../glossary.md#tev)** stage is one fixed-function combiner step; a **[shader](../../../glossary.md#shader)** is a small GPU program.
 
-## What makes it tick
+## What it is
 
-**Engine.** SRB2 is a Doom-derivative floor-plan engine: BSP sorting (`r_bsp.c`), column-drawn walls (`r_segs.c`, `r_draw.c`), planes (`r_plane.c`), sprites (`r_things.c`), fixed-point 35 Hz logic (`p_tick.c`, `m_fixed.c`). The port compiles this tree largely as-is (`[documented]` in the `Makefile` object list).
+| Layer | Approach |
+| ----- | -------- |
+| Engine | Doom Legacy / SRB2 2.1.25: BSP levels, 35 Hz fixed-point logic, Lua scripting (`-DHAVE_BLUA`). The engine's `src/hardware/` renderer is compiled in (`-DHWRENDER`)`[documented]` (`Makefile` lines 40, 66). |
+| GPU driver | `src/nds/r_nds3d.c` ("NDS 3D API for SRB2") implements the hardware-renderer driver interface on citro3d. Its header comment says that in an ideal world it would share code with the OpenGL driver `r_opengl.c` `[documented]`. |
+| Vertex shader | `vshader.v.pica`: multiply position by model-view and projection, pass texture coordinates through, output constant white colour `[documented]`. Lighting and colour are not in the shader. |
+| Textures | `r_texcache.c`: 2,048 cache entries with aging (`TEX_AGING`) and a purge call; `i_video.c` creates textures with `C3D_TexInit` or `C3D_TexInitMipmap`, optionally `C3D_TexInitVRAM`, and copies with `C3D_SyncTextureCopy` `[documented]`. |
+| Draw submission | `r_queue.c`: a ring of 8,192 packets (draw, blend, clear, fade, flush, transform, suspend, exit) consumed by a worker thread, with events for empty, almost-empty and allocation-ok `[documented]`. |
+| Output | `vid.width = 400`, `vid.height = 240`. Render targets are created 240x400 (the panel's native orientation) with a 24-bit depth plus 8-bit stencil buffer, for the left eye, the right eye and a 240x800 wide target `[documented]` (`i_video.c` line 1021; `r_nds3d.c` lines 188-190). |
+| Audio | SDL_mixer at 44,100 Hz, 16-bit stereo, 4,096-byte buffer `[documented]` (`i_sound.c`). No MIDI `[reported]`. |
+| Build | `-march=armv6k -mtune=mpcore -mfloat-abi=hard -O3`, links `-lcitro3d -lctru` and a fork of citro3d `[documented]` (`Makefile`; README). Netplay, post-processing and splitscreen are compiled out (`-DNONET -DNOPOSTPROCESSING -DNOSPLITSCREEN`). |
 
-**Software renderer on the ARM11.** Wall columns and floor spans are composited by CPU loops into a low-resolution framebuffer that SDL presents. The tree also builds `src/hardware` (`hw_main.o`, `hw_draw.o`) behind `-DHWRENDER`, but the described runtime path is the software rasteriser (`[documented]` in `Makefile` `SOURCES`/`DEFINES`).
+An earlier version of this page said the port keeps the software renderer on the CPU. That was wrong: the Makefile defines `HWRENDER`, links citro3d and builds `src/nds/`, and the README requires the citro3d fork.
 
-**Fixed timestep and audio.** Logic ticks at 35 Hz regardless of draw speed, so slow drawing means stuttering presentation, not slow motion. Audio goes through SDL_mixer (`-lSDL_mixer -lmikmod -lmad -lvorbisidec`, `[documented]`), with no MIDI support (`[reported]`).
+## How it uses the hardware
 
-## How it pushes 3DS hardware
+**Render worker.** `i_video.c` creates a worker thread, trying priorities upward from `0x32` until `threadCreate` succeeds, then raises the main thread's priority; the worker consumes packets and issues the citro3d calls, so command recording is off the game thread `[documented]` (lines 430-460). On an Old 3DS it also tries to raise the application's CPU time limit (`APT_SetAppCpuTimeLimit` to 30, then 40 percent) and prints the result `[documented]`; whether either call succeeded on a real console is not recorded. **New 3DS:** `i_system.c` calls `osSetSpeedupEnable(true)` and `PTMSYSM_ConfigureNew3DSCPU(3)` ("enable fast clock + L2 cache on new3ds") `[documented]`.
 
-**Resolution scaling.** The renderer draws into a low-resolution buffer (Doom-family 320x200-class) and upscales to the 400x240 screen, so fill cost follows the small buffer. Exact shipped dimensions are unstated. > Unknown: internal resolution and upscale filter.
+**Stereo and wide mode.** The 3D slider position sets the eye separation and the `gr_3dsfoclen` setting the focal length (`get3DSettings` in `r_nds3d.c`); with the slider at zero, 3D is off. `gr_3dswidemode` selects the 800-pixel mode, and the targets are recreated at the start of a frame, never while the GPU has work in flight `[documented]`. Stereo draws the scene twice, once per eye (see [stereo engineering](../PICA200/stereo-engineering.md)); this tree does not say what it costs.
 
-**CPU and cache ceiling.** Per-pixel wall, plane, and sprite loops get no PICA200 help on the shipped path. The README blames both clock and cache: the New 3DS has "higher CPU clock frequencies and another layer of cache" (`[reported]`). **New 3DS:** faster clock mode and extra cache change the ceiling; the port targets that model only.
+**Colour format.** The `gr_3dsrtformat` setting chooses RGBA8 or RGB565 render targets. A code comment says RGB565 halves colour-write bandwidth but quantises colour enough to expose tiny mismatches between adjacent regions `[documented]`; the effect on speed is not measured.
 
-**Memory, assets, cuts.** WAD and `.pk3` add-on lumps (deflate-compressed, hence the `3ds-zlib` dep) stream from SD via `w_wad.c`; `config.cfg` and saves sit beside the game in `/3ds/srb2_3ds` (`[reported]`). Hold the working set in FCRAM; treat SD as load-time only. Netplay (`-DNONET -DNOHS`), splitscreen, and post-processing (`-DNOPOSTPROCESSING -DNOSPLITSCREEN`) are compiled out (`[documented]`); the lower screen is unused (`[reported]`). No separate render or audio core assignment is documented — assume single-core rasterisation.
+**Fog.** Fog uses cached hardware fog lookup tables, one per density step `[documented]` (`fogLUTs` in `r_nds3d.c`).
 
-## Right and wrong
+**Memory and loading.** `gr_3dsprecache` (default on) loads a level's textures at level start so first use does not stall; the code stops precaching when free linear heap falls below a safety margin so that runtime allocations (HUD, colour-translated sprites) still fit `[documented]` (comment in `i_video.c`).
 
-Right: pinning upstream v2.1.25, fixing the asset path, and cutting netplay, splitscreen, and post passes left one bottleneck — raw rasterisation. Right again: zlib support so `.pk3` add-ons load directly. Wrong for Old 3DS owners: no reduced-geometry or lower-resolution fallback shipped, so the README declares the Old 3DS unsupported rather than scaling down. The custom citro3d-fork build dep also raises the build bar (`[documented]`).
+**Smaller choices.** `gr_3dsdisablebottom` powers the bottom backlight off after the first rendered frame; `vid_wait` is the vsync setting `[documented]`. Assets are separate downloads in `/3ds/srb2_3ds`; the DSP firmware must be dumped or there is no sound `[reported]`.
 
-## Technical details
+## What it gets right and wrong
 
-- Files read: `README.md`, `Makefile` (ARCH, DEFINES, objects, LIBS), `src/` listing.
-- ARCH `-march=armv6k -mtune=mpcore -mfloat-abi=hard -O3`; DEFS include `-D__3DS__ -D_NDS -DNONET -DNOPOSTPROCESSING -DNOSPLITSCREEN` (`[documented]`).
-- Renderer objects linked: `r_bsp.o r_data.o r_draw.o r_main.o r_plane.o r_segs.o r_sky.o r_splats.o r_things.o` plus `v_video.o screen.o` (`[documented]`).
-- Present path runs through `src/sdl/` (`i_video.c`) and `v_video.c`/`screen.c`; copy-vs-present mechanics not read for this page.
+Right: the engine already had a hardware-renderer interface, so the port is a driver, not a renderer rewrite; command recording moved off the game thread; the texture cache and level precache avoid first-use stalls; targets are recreated only between frames. Wrong or costly: the README gives up on Old 3DS instead of providing a cheaper mode; the port needs a custom citro3d fork, which raises the build bar `[documented]`.
 
-## Lesson table: 2D and 2.5D software-engine rules
+## Lessons
 
-Each rule is a `[hypothesis]` until measured on your workload.
+Each is a `[hypothesis]` drawn from this tree. Confirm with [performance](../performance.md) counters.
 
-| # | Symptom on Old 3DS | Fix |
-| - | ------------------ | --- |
-| 1 | Rasteriser misses budget at panel resolution | Render at half resolution or below; budget fill in source pixels |
-| 2 | Upscale shimmers and costs a filter pass | Integer ratio with nearest-neighbour; filter offline or not at all |
-| 3 | Level loads stall on compressed lumps | Decompress per lump at load, never per frame |
-| 4 | Audio stutters as frames drop | Mix at native rate, fixed channels; no per-frame resampling |
-| 5 | Gameplay hitches on storage | SD for loads and saves only; working set stays in FCRAM |
-| 6 | Port too big or too slow to tune | Cut netplay, splitscreen, post passes before touching the renderer |
-| 7 | Builds irreproducible | Pin upstream version, library commits, and asset pack versions |
+| Symptom | Idea from this port |
+| ------- | ------------------- |
+| Game thread spends its frame recording GPU commands | Put the GPU driver behind a ring of command packets and a worker thread; size the ring and block the producer when it is nearly full |
+| First-use texture stalls in a level | Precache at level load, but stop at a linear-heap safety margin |
+| Render-target changes crash or glitch | Create or delete targets only at the start of a frame after draining the GPU |
+| Colour-write bandwidth looks high | Offer an RGB565 target as a setting and test the quantisation artefacts before defaulting to it |
+| Stereo roughly doubles scene cost | Make 3D and wide mode runtime settings; leave them off by default on Old 3DS |
+| Port is Old-3DS-hostile | Decide the minimum model up front and say so, as the README does |
 
 ## Open questions
 
-- Shipped internal resolution and upscale filter? Not stated; `sdl/i_video.c` and `v_video.c` would settle it.
-- How much of the Old 3DS gap is clock vs cache? A clock-locked New 3DS run would separate them.
-- Does the `src/hardware` path run? It compiles (`[documented]`) but is not the described runtime.
+- What frame rate does a level hold on a New 3DS and on an Old 3DS, and what does stereo cost? The tree says nothing; an on-hardware run with the settings above toggled would answer it.
+- Did the `APT_SetAppCpuTimeLimit` calls succeed, and did they help? The code prints the result but nothing is recorded.
+- Is the render worker or the game thread the limit in a busy level? A per-thread CPU-time log would settle it.
 
 ## Sources
 
-- [SRB2 3DS README](https://github.com/derrek/SRB2-3DS) — model requirement, asset install, build deps, known issues (read November 2026).
-- Port `Makefile` and `src/` listing — flags, disabled features, renderer and WAD objects.
+- [derrekr/srb2_3ds](https://github.com/derrekr/srb2_3ds) commit `e8726772`: `README.md` (model statement, build dependencies, known issues); `Makefile` (flags, `HWRENDER`, `-lcitro3d`); `src/nds/r_nds3d.c`, `r_nds3d.h` (renderer driver, targets, stereo, fog); `src/nds/r_queue.c`, `r_queue.h` (packet ring); `src/nds/r_texcache.c` (texture cache); `src/nds/i_video.c` (settings, worker thread, textures); `src/nds/i_system.c` (clock setup); `src/nds/i_sound.c` (audio); `src/nds/vshader.v.pica` (vertex shader).

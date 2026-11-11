@@ -1,18 +1,18 @@
-# Case study: GTA III (re3) on New 3DS
+# Case study: what GTA III (re3) would need on a 3DS (source read, no port code)
 
-GTA III from fully reversed source (GTAmodding's re3), retargeted at the New 3DS by the re3onN3ds fork. **New 3DS:** this project targets the New 3DS only — 804 MHz clock, extra cores and larger application memory are load-bearing. Old 3DS figures are the machine a port would have to squeeze into instead; every fit claim is a `[hypothesis]`.
+GTA III from fully reversed source (GTAmodding's re3). The repository this page was written from, [wabisuke-dev/re3onN3ds](https://github.com/wabisuke-dev/re3onN3ds) at commit `3233ffe1` (2021-09-03), is named for the 3DS but its saved checkout contains **no 3DS code**: it is upstream re3 at a merge commit, its README is re3's, and a search for libctru, citro3d or `__3DS__` finds nothing. So this page does not describe a 3DS port. It reads re3's streaming and configuration code and asks what a port would have to cut. Every fit claim is a `[hypothesis]`. The New 3DS (804 MHz, extra cores, up to 124 MB for games) is the realistic target, with the Old 3DS as the limit.
 
 ## Before you start
 
 - Engine facts are `[documented]` in the named files. All 3DS performance and fit claims are `[hypothesis]`. Coffeepot ran nothing on hardware.
-- Old 3DS is the default: **ARM11** at 268 MHz on two cores, ~64 MB for the game, no level-2 cache. **New 3DS:** to 804 MHz, four cores, to 124 MB, plus 2 MB level-2 cache ([CTR CPU](../../hardware/cpu.md), [CTR memory](../../hardware/memory.md)).
+- Old 3DS is the default: **ARM11** at 268 MHz on two cores, ~64 MB for the game, no level-2 cache. **New 3DS:** to 804 MHz, four cores, to 124 MB, plus 2 MB level-2 cache ([CTR CPU](../../hardware/cpu.md), [CTR memory](../../hardware/memory.md)). The saved re3 checkout adds none of this: it has no 3DS code to read.
 - Companion pages: [porting](../porting.md), [performance](../performance.md), [memory and cache](../memory-and-cache.md), [threading](../threading.md), [audio](../audio.md).
 
 Jargon: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; **[FCRAM](../../glossary.md#fcram)** is main memory (128 MB; **New 3DS:** 256 MB); **[VRAM](../../glossary.md#vram)** is 6 MB of on-chip GPU memory; **[PICA200](../../glossary.md#pica200)** is the 3DS GPU; a **[draw call](../../glossary.md#draw-call)** is one request to draw triangles with the current state.
 
 ## What makes it tick: the streaming core
 
-GTA III never loads Liberty City whole. `src/core/Streaming.h` shows the design `[documented]`: a table of entries (one per model plus texture dictionaries) with load states (`NOTLOADED` / `LOADED` / `INQUEUE` / `READING` / `STARTED`), flags (`DONT_REMOVE`, `SCRIPTOWNED`, `DEPENDENCY`, `PRIORITY`) and a position and size on disc. Channels queue a few reads at a time so sectors page in ahead of the camera and out behind it. The README notes re3 can drop the island loading screens — keeping more city resident, which a small-memory port cannot afford `[hypothesis]`. `src/core/config.h` pins the working set `[documented]`: 5,500 model slots, 140 peds, 110 vehicles (50 loaded), 1,250 map objects, 4,930 path nodes.
+GTA III never loads Liberty City whole. `src/core/Streaming.h` shows the design `[documented]`: a table of entries (one per model plus texture dictionaries) with load states (`NOTLOADED` / `LOADED` / `INQUEUE` / `READING` / `STARTED`), flags (`DONT_REMOVE`, `SCRIPTOWNED`, `DEPENDENCY`, `PRIORITY`) and a position and size on disc. Channels queue a few reads at a time so sectors page in ahead of the camera and out behind it. The README lists "No loading screens between islands (\"map memory usage\" in menu)" as an option `[documented]` (`README.md` line 52); keeping more city resident is something a small-memory port may not be able to afford `[hypothesis]`. `src/core/config.h` pins the working set `[documented]`: 5,500 model-info slots (`MODELINFOSIZE`, 3,150 on PS2), 140 peds, 110 vehicles with 50 loaded at once (`MAXVEHICLESLOADED`, 70 on mobile), 1,250 map objects (`NUM_MAPOBJECTS`), 4,930 path nodes.
 
 ## The PICA200 path: RenderWare has to go
 
@@ -33,7 +33,7 @@ Audio mixes through Miles or OpenAL (`sampman_miles.cpp`, `sampman_oal.cpp`) `[d
 ## Technical details
 
 - `Streaming.h`: channel struct holds 4 stream IDs with offsets, state, position, size, retries, status `[documented]`.
-- `config.h`: 5500 model slots (PS2: 3150), 50 vehicles loaded, 140 peds, 110 vehicles, 4930 path nodes `[documented]`.
+- `config.h`: `MODELINFOSIZE` 5500 (PS2: 3150), `MAXVEHICLESLOADED` 50 (mobile: 70), `NUMPEDS` 140, `NUMVEHICLES` 110, `NUM_PATHNODES` 4930, `NUM_MAPOBJECTS` 1250 `[documented]`.
 - 3DS reference: ARM11 268 MHz, **New 3DS:** to 804 MHz via `osSetSpeedupEnable` behind a model check; ~64/124 MB for games; VRAM 6 MB; L2 **New 3DS** only `[documented]`.
 
 ## Lesson table
@@ -51,11 +51,11 @@ All rows are `[hypothesis]`.
 
 ## Open questions
 
-- No frame-rate, memory or streaming figures from the fork were available locally; every fit claim needs a `[measured]` New 3DS result.
+- No 3DS code, frame-rate, memory or streaming figures exist in the saved checkout; every fit claim needs a `[measured]` New 3DS result from an actual port.
 - Does the city at a playable draw distance fit 124 MB with audio and framebuffers? A per-island residency census would settle it.
 - Is the bottleneck CPU state translation or PICA200 fill? See [frame pacing](../PICA200/frame-pacing.md).
 
 ## Sources
 
-- [GTAmodding/re3](https://github.com/GTAmodding/re3) README, `src/core/Streaming.h`, `src/core/config.h`, `src/audio/` (read in `private_please_gitignore/re3onN3ds/`).
+- [wabisuke-dev/re3onN3ds](https://github.com/wabisuke-dev/re3onN3ds) commit `3233ffe1` (2021-09-03; see [source versions](../source-versions.md)): `README.md`, `src/core/Streaming.h`, `src/core/config.h`, `src/audio/` — all upstream re3 code. [GTAmodding/re3](https://github.com/GTAmodding/re3) is the upstream project.
 - [CTR CPU](../../hardware/cpu.md), [CTR memory](../../hardware/memory.md), [threading](../threading.md), [GPU rendering](../PICA200/gpu-rendering.md).

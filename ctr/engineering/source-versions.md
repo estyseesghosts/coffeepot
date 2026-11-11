@@ -20,6 +20,17 @@ Checked in November 2026.
 | [3ds-examples](https://github.com/devkitPro/3ds-examples) | `be2001fee08cf8ec7d3366e095e83f6f75da8942` | 2026-01-30 | v20240917 + 3 commits | Template Makefile, example code |
 | [aemstro](https://github.com/smealum/aemstro) | `51bfeef9e1a0149726dca43b50919bd45917015a` | 2015-01-02 | — | Historical shader tools |
 | [Architecture of Consoles](https://github.com/flipacholas/Architecture-of-consoles) | `9c41261f85f0a6ffdf2b1eea3f439208b11a68e8` | 2026-11-02 | — | Copetti's 3DS article source |
+| [DaedalusX64-3DS](https://github.com/masterfeizz/DaedalusX64-3DS) | `31c5e56` | 2022-10-17 | — | Daedalus case study |
+| [DXX-3DS](https://github.com/RossMeikleham/DXX-3DS) | `cdb4cc3` | 2018-12-07 | — | DXX case study |
+| [OpenLara](https://github.com/XProger/OpenLara) | `3b268ca` | 2026-07-26 | — | OpenLara case study |
+| [Quake2CTR](https://github.com/masterfeizz/Quake2CTR) | `993114e` | 2022-10-30 | — | Quake2CTR case study |
+| [re3onN3ds](https://github.com/wabisuke-dev/re3onN3ds) | `3233ffe1` | 2021-09-03 | upstream re3, no 3DS code | re3 case study |
+| [sm64_3ds](https://github.com/sm64-port/sm64_3ds) | `0a82ae2` | 2020-08-03 | — | older SM64 case study |
+| [sm64ds-enhanced](https://github.com/ethanseagull/sm64ds-enhanced) | `3f6dbc1` | 2026-11-08 | — | SM64 DS case study |
+| [Sonic-CD-11-3DS](https://github.com/SaturnSH2x2/Sonic-CD-11-3DS) | `8b30cf6` | 2025-02-24 | — | Sonic CD case study |
+| [srb2_3ds](https://github.com/derrekr/srb2_3ds) | `e8726772` | 2026-05-03 | — | SRB2 case study |
+| [vril-engine](https://github.com/nzp-team/vril-engine) | `9a26605` | 2026-11-08 | — | Vril case study |
+| [Xash3DS](https://github.com/masterfeizz/Xash3DS) | `8590409d` | 2019-09-14 | — | Xash3DS case study |
 
 The earlier batching review used an unpinned upstream `master` and installed citro2d 1.7.0 headers. The reproducible comparison source is [citro2d v1.7.0 `source/base.c` at `147b02aae021da61b1f620446ad2892ecc45411e`](https://github.com/devkitPro/citro2d/blob/147b02aae021da61b1f620446ad2892ecc45411e/source/base.c); this is the upstream release commit, but this wiki has not proved that its source exactly produced the installed package binary. Earlier installed-binary disassembly is not archived here; binary-only conclusions remain less reproducible.
 

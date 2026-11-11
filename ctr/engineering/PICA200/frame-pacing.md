@@ -127,6 +127,13 @@ Input read at the top of the loop is shown, at best, after the current frame's G
 
 See the [rendering trade-off case studies](../case-studies/case-studies-rendering-tradeoffs.md) for real port designs, fidelity compromises and suggested hardware comparisons.
 
+## Lessons from ported games
+
+- **Skip the picture, keep the tick.** sm64ds-enhanced's "dry" mode skips building a frame (no raster, no compose, no present) when a tick starts more than half a period behind the game clock, never two in a row, so logic catches up while the screens keep the last frame; the default on an Old 3DS with 60 fps off is "when behind" `[documented]` (`port3ds/game/main_game.cpp` near line 1236; [case study](../case-studies/case-study-sm64ds-enhanced.md)).
+- **One gate can pace video, audio and frameskip.** Daedalus treats a change of the emulated video origin as a finished frame, derives a sync ratio from it, enters frameskip when the ratio is below 0.965, and clamps its audio sync rate to 1,500-4,000 `[documented]` (`GraphicsPluginCTR.cpp` lines 46, 202-206, 227; [case study](../case-studies/case-study-daedalus-3ds.md)).
+- **Vsync through a library, no governor.** DXX's `gr_flip` blits and calls `SDL_Flip`; Quake2CTR's loop has an empty `Sys_Sleep` and swaps through picaGL. Neither skips frames, so a missed vsync is a visible hitch `[documented]` ([DXX](../case-studies/case-study-dxx-3ds.md), [Quake2CTR](../case-studies/case-study-quake2ctr.md)).
+- **Fixed-rate logic.** The Sonic CD port adds frame limiting to its fixed-timestep engine `[reported]` (README credits). With a fixed logic rate, slow drawing shows as stutter rather than slow motion `[hypothesis]`.
+
 ## Technical details
 
 - `C3D_FrameBegin(u8 flags)`: `C3D_FRAME_SYNCDRAW` = bit 0, `C3D_FRAME_NONBLOCK` = bit 1; returns `false` if already inside a frame or (non-blocking) if the GPU queue has not finished.

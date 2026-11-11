@@ -4,7 +4,7 @@ OpenLara is an open-source Tomb Raider engine with a dedicated 3DS backend: citr
 
 ## Before you start
 
-- Evidence: facts read from the vendored tree on 11 November 2026 (`src/gapi/c3d.h`, `src/platform/3ds/main.cpp`, `Makefile`, `src/shaders/pica/*`, `src/level.h`). Nothing here is `[measured]` by Coffeepot, and the tree states no frame-rate figures — do not quote any.
+- Evidence: [XProger/OpenLara](https://github.com/XProger/OpenLara) commit `3b268ca` (2026-07-26; see [source versions](../source-versions.md)); facts read from the tree on 11 November 2026 (`src/gapi/c3d.h`, `src/platform/3ds/main.cpp`, `Makefile`, `src/shaders/pica/*`, `src/level.h`). Nothing here is `[measured]` by Coffeepot, and the tree states no frame-rate figures — do not quote any.
 - **New 3DS:** only the clock check in `main.cpp` differs; everything else is the Old 3DS path.
 - Companion pages: [three large 3DS ports](./case-studies-ports.md), [porting](../porting.md), [performance](../performance.md), [GPU rendering](../PICA200/gpu-rendering.md), [audio](../audio.md).
 - Jargon: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; the **[PICA200](../../glossary.md#pica200)** is the 3DS GPU; **[VRAM](../../glossary.md#vram)** is the 6 MB of fast GPU memory; the **[linear heap](../../glossary.md#linear-heap)** is contiguous memory for GPU/DSP/DMA buffers. A **[draw call](../../glossary.md#draw-call)** is one request to draw triangles; a **[TEV](../../glossary.md#tev)** stage is one fixed-function combiner step; a **[shader](../../../glossary.md#shader)** is a small GPU program.
@@ -53,5 +53,4 @@ All rows `[hypothesis]` generalised from this tree; confirm with [performance](.
 
 ## Sources
 
-- OpenLara vendored tree: `src/gapi/c3d.h`, `src/platform/3ds/main.cpp` and `Makefile`, `src/shaders/pica/*.v.pica`, `src/level.h` — as detailed above; upstream state not re-fetched.
-- [XProger/OpenLara](https://github.com/XProger/OpenLara) — upstream project page. No 3DS performance figures read there.
+[XProger/OpenLara](https://github.com/XProger/OpenLara) commit `3b268ca` (2026-07-26): `src/gapi/c3d.h` (renderer, `DISPLAY_WIDTH 240`/`DISPLAY_HEIGHT 400`, depth alias group, fog, `mmAlloc`), `src/platform/3ds/main.cpp` (dead zone 0.3 at line 95, audio buffers, New 3DS check at line 206) and `Makefile` (`-Ofast -ffast-math`), `src/shaders/pica/*.v.pica`, `src/level.h`. The tree states no 3DS performance figures.

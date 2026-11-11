@@ -228,6 +228,15 @@ FREE → CPU writing → flushed → queued for GPU/DSP → GPU/DSP finished →
 
 With citro3d's standard frame loop, "GPU finished" for everything drawn in frame *N* is the moment `C3D_FrameBegin` returns for frame *N+1* ([performance](PICA200/frame-pacing.md#overlapping-cpu-and-gpu)). Data written for the GPU *before* that point needs a second copy. When deleting textures or buffers, wait for the GPU first (`C3D_FrameBegin` returning, or `C3D_Fini`), or the GPU may read freed and reused memory.
 
+## Lessons from ported games
+
+- **Stack.** libctru's default stack is 32 KB (`__stacksize__` in `libctru/source/system/stack_adjust.s`) `[documented]`; the stack sits in the heap you also allocate from, so a large `__stacksize__` takes heap. Engines that needed more: DXX 8 MB, Quake2CTR 3 MB ([DXX](case-studies/case-study-dxx-3ds.md), [Quake2CTR](case-studies/case-study-quake2ctr.md)).
+- **Heap and linear heap are a split you can choose.** Quake2CTR gives the linear heap one sixth of the remaining memory, capped at 24 MB; sm64ds-enhanced installs its own split because libctru's default 24/24 MB leaves too little heap on an Old 3DS, with a fixed-size linear heap for GPU buffers and textures (about 10-11 MB used by its comment) `[documented]`; Vril sizes one hunk from the model ([SM64 DS](case-studies/case-study-sm64ds-enhanced.md), [Vril](case-studies/case-study-vril-engine.md)).
+- **Free per scene.** sm64ds-enhanced frees caches, decoded textures and waves at each scene change; its comment says otherwise 1-2 MB leaks per scene `[reported]` (comment, not measured by Coffeepot).
+- **Precache with a margin.** SRB2 3DS loads a level's textures at level start and stops when free linear heap drops below a safety margin, so later runtime allocations still fit `[documented]` ([SRB2](case-studies/case-study-srb2-3ds.md)).
+- **A JIT's code buffer is memory you can lose.** Daedalus has an 8 MB executable buffer that, when full, rewinds and discards everything; whether that happens in play is unmeasured, so count resets before changing code generation ([Daedalus](case-studies/case-study-daedalus-3ds.md)).
+- **Hardware-read buffers come from the linear heap and are flushed.** Quake2CTR, Xash3DS, Vril and sm64_3ds all allocate their DSP sound buffers with `linearAlloc` and flush the data cache when they hand a refilled buffer over; Vril invalidates before the DSP reads its music buffers `[documented]` (see [audio](audio.md)).
+
 ## Technical details
 
 - `__ctru_heap_size` and `__ctru_linear_heap_size` are weak `u32` symbols in libctru; 0 means "automatic". Caps: `HEAP_SPLIT_SIZE_CAP` 24 MiB, `LINEAR_HEAP_SIZE_CAP` 32 MiB, heap area `OS_HEAP_AREA_BEGIN`–`OS_HEAP_AREA_END` (96 MiB).

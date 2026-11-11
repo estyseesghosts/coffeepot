@@ -4,7 +4,7 @@ A 3DS port of the 2011 Sonic CD remake, built on the RSDKv3 decompilation. It sh
 
 ## Before you start
 
-- Evidence: every behaviour is `[reported]` by the [port README](https://github.com/SaturnSH2x2/Sonic-CD-11-3DS) or `[documented]` in a named file. No frame-rate figure is stated.
+- Evidence: every behaviour is `[reported]` by the [port README](https://github.com/SaturnSH2x2/Sonic-CD-11-3DS) or `[documented]` in a named file, at commit `8b30cf6` (2025-02-24; see [source versions](../source-versions.md)). No frame-rate figure is stated.
 - The port is deprecated upstream in favour of a Redux fork; the design notes still apply to 2D sprite ports.
 - Old 3DS is the default model here. Model-specific claims name their model in the row.
 - Companion pages: [porting](../porting.md), [2D rendering](../PICA200/rendering-2d.md), [audio](../audio.md), [files and saves](../filesystem-and-saves.md).
@@ -64,5 +64,4 @@ Each rule is a `[hypothesis]` until measured on your workload.
 
 ## Sources
 
-- [Sonic-CD-11-3DS README](https://github.com/SaturnSH2x2/Sonic-CD-11-3DS) — backend split, model guidance, settings/mod/video notes (read November 2026).
-- `RSDKv3/3ds/` sources and `Makefile.3ds` — backend flag, screen size, tile sizing, link flags.
+[SaturnSH2x2/Sonic-CD-11-3DS](https://github.com/SaturnSH2x2/Sonic-CD-11-3DS) commit `8b30cf6`: `README.md` (deprecation notice; features including stereoscopic 3D in the HW build only; the FAQ on the HW and SW builds at lines 30-37; build flag `RETRO_USING_C2D`), `Makefile.3ds`, `RSDKv3/3ds/render_3ds.cpp` (tile caches), `render_3ds.hpp`, `video_3ds.cpp` (`SCREEN_WIDTH 400`).

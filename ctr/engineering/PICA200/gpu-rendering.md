@@ -180,6 +180,15 @@ The same scene can be built several ways. Each row is a strategy; the cost colum
 
 To compare two strategies on the same scene, record for each: draw calls per frame, command-buffer use (`C3D_GetCmdBufUsage`), CPU recording time (`C3D_GetProcessingTime`), `C3D_FrameEnd` time, GPU time (`C3D_GetDrawingTime`) and time blocked in `C3D_FrameBegin`, on an Old 3DS first. The planned experiments are G1 to G6 in [renderer architecture](renderer-architecture.md#planned-gpu-workload-characterisation-benchmarks); [`drawbench`](../../benchmarks/README.md#drawbench) already covers part of G1.
 
+## Lessons from ported games
+
+- **Render in the panel's native orientation.** The 3DS screens are physically 240 wide by 400 tall, rotated from how games think of them; OpenLara and SRB2 3DS render into 240x400 targets (and SRB2 into a 240x800 wide target) with a rotated viewport path `[documented]` (`OpenLara` `src/gapi/c3d.h`; `srb2_3ds` `src/nds/r_nds3d.c` lines 188-190; [OpenLara](../case-studies/case-study-openlara-3ds.md), [SRB2](../case-studies/case-study-srb2-3ds.md)).
+- **Make render-target format a setting.** SRB2 offers RGBA8 or RGB565 targets, and its comment records the trade: RGB565 halves colour-write bandwidth but can expose small mismatches between adjacent regions `[documented]`. No speed result is stated.
+- **Cache textures with ageing and precache at level start.** SRB2 keeps 2,048 texture entries with ageing, and stops precaching when free linear heap is low `[documented]`.
+- **Alias depth buffers.** OpenLara allocates a single aliased depth buffer group shared by its targets `[documented]` (`MAX_DEPTH_ALIAS_GROUPS 1`).
+- **Stereo and wide mode are runtime choices.** SRB2 recreates its render targets only between frames when 3D or wide mode changes; the Sonic CD port offers stereo only in its GPU build `[documented]`/`[reported]`. See [stereo engineering](stereo-engineering.md).
+- **Pick one fixed output size and build around it.** Quake2CTR, Vril, Sonic CD, SRB2 and OpenLara all fix 400x240; DXX uses 320x240 (80% of the top screen's pixels) `[documented]`.
+
 ## Technical details
 
 - `C3D_DEFAULT_CMDBUF_SIZE` = `0x40000` bytes (256 KiB) in linear memory; pass a larger size to `C3D_Init` for heavy frames.

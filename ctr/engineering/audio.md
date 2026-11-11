@@ -142,6 +142,25 @@ If you mix on the CPU (a software mixer, an emulated sound chip, synthesis) the 
 - **CSND.** The older DS-style sound hardware path is a separate service; this page and libctru's current audio API use ndsp ([hardware audio](../hardware/audio.md)).
 - **Microphone.** Capture is a different service (`audio/mic` example), not ndsp.
 
+## Lessons from ported games
+
+The ports below all use ndsp with a looping or ring of buffers allocated with `linearAlloc` and flush the data cache on every submit `[documented]`. Their rates and sizes differ, which is the point: each picked a rate that suited its source.
+
+| Port | Rate and buffers |
+| ---- | ---------------- |
+| Quake2CTR | 44,100 Hz stereo, one looping 4,096-sample buffer on channel 0 |
+| Xash3DS | One looping stereo buffer of 4,096 samples on channel 0 |
+| Vril | 22,050 Hz stereo, 2,048-sample loop for effects; MP3 music decoded into separate `linearAlloc` buffers and invalidated before the DSP reads them |
+| sm64_3ds | 32,000 Hz stereo, four 16 KB buffers, a target of 1,100 buffered samples, synthesised inline each frame in blocks of 544 samples (528 when enough are queued; 656/640 in the EU build) |
+| Daedalus | 44,100 Hz, six 512-sample buffers; pacing derived from the same ratio as video; New 3DS worker, Old 3DS inline |
+| OpenLara | 44,100 Hz, a mixer thread double-buffering 2,352 frames per half |
+
+Sources: the matching case studies ([Quake2CTR](case-studies/case-study-quake2ctr.md), [Xash3DS](case-studies/case-study-xash3ds.md), [Vril](case-studies/case-study-vril-engine.md), [SM64](case-studies/case-study-sm64-3ds.md), [Daedalus](case-studies/case-study-daedalus-3ds.md), [OpenLara](case-studies/case-study-openlara-3ds.md)).
+
+- **A buffered-sample target replaces a thread.** sm64_3ds has no audio thread: each frame it checks how many samples are queued and synthesises the larger or the smaller block to hold about 1,100 queued. Its limit is that audio is synthesised on the frame thread, so a slow frame can starve the DSP; its case study lists the second-core variant as the untested improvement.
+- **Pad on starvation rather than leave stale data.** The melonDS Switch port repeats the last frame when its source runs dry (see the Switch wiki's performance page); the 3DS ports reviewed here do not state what they do on a starved buffer.
+- **Rates do not have to match the source.** Vril runs effects at 22,050 Hz and Xash3DS and Quake2CTR use a fixed rate to skip a resampler. ndsp resamples per channel, so a mismatch is audible only as the wrong speed if you declare the rate wrongly (declaring 48,000 for 44,100 data plays about 9% fast, by arithmetic).
+
 ## Technical details
 
 - Sleep and HOME: ndsp suspends and resumes the DSP itself, saving its state across sleep [documented: `source/ndsp/ndsp.c`].

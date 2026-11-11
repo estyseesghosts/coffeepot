@@ -1,6 +1,6 @@
 # Case study: Vril engine (Nazi Zombies: Portable on the 3DS)
 
-Vril is the engine behind *Nazi Zombies: Portable* (NZ:P), a Call of Duty Zombies remake by the NZ:P Team. It descends from Quake source ports (dQuakePlus, ctrQuake, Quakespasm), reworked for multi-platform support, performance, and NZ:P-specific protocol and gameplay changes (`README.md`). Targets include Linux, PSP, PS2, Vita, Switch, Xbox and the 3DS (`Makefile.*`). This page covers only the CTR backend (`source/platform/ctr/`). All facts are `[documented]` in that tree; nothing was built or run. Its theme is graceful scaling: detect the console once at boot, then size memory, screen mode and controls to match.
+Vril is the engine behind *Nazi Zombies: Portable* (NZ:P), a Call of Duty Zombies remake by the NZ:P Team. It descends from Quake source ports (dQuakePlus, ctrQuake, Quakespasm), reworked for multi-platform support, performance, and NZ:P-specific protocol and gameplay changes (`README.md`). Targets include Linux, PSP, PS2, Vita, Switch, Xbox and the 3DS (`Makefile.*`). This page covers only the CTR backend (`source/platform/ctr/`). All facts are `[documented]` in that tree ([nzp-team/vril-engine](https://github.com/nzp-team/vril-engine) commit `9a26605`, 2026-11-08; see [source versions](../source-versions.md)); nothing was built or run. Its theme is graceful scaling: detect the console once at boot, then size memory, screen mode and controls to match.
 
 ## Before you start
 
@@ -12,11 +12,13 @@ Jargon: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; the **[PICA200]
 
 ## Architecture: Quake client/server, one heap, picaGL output
 
-Vril keeps the Quake shape — client, server, QuakeC VM (`source/qcvm/`), menus, tests — in one `nzportable` binary. Startup (`sys_ctr.c`) calls `APT_CheckNew3DS` once, then sizes the hunk: 20 MB on Old 3DS, 64 MB on New 3DS, plus `osSetSpeedupEnable(true)` where allowed. **New 3DS:** the 64 MB hunk and speedup request apply only there.
+Vril keeps the Quake shape — client, server, QuakeC VM (`source/qcvm/`), menus, tests — in one `nzportable` binary. Startup (`sys_ctr.c`) calls `APT_CheckNew3DS` once, then sizes the hunk: 20 MB on Old 3DS, 64 MB on New 3DS, and calls `osSetSpeedupEnable(true)` (line 440). **New 3DS:** the 64 MB hunk and speedup request apply only there.
 
 Rendering (`gl/`) goes through picaGL: `pglInitEx(0x040000, 0x100000)` reserves command and scratch space, the viewport is 400x240, each frame ends with `Draw_Flush` plus a swap. GL state is Quake-1-shaped: front-face culling, flat shading, nearest filtering, alpha test at 0.666. `VID_SetPalette` keeps the 8-bit software palette path including the 15-bit→8-bit nearest-colour table.
 
-## How it pushes 3DS hardware- **Memory.** The hunk split (20 vs 64 MB) is the main scaling lever, keyed off one boot flag. GPU/DSP buffers come from the linear heap (`linearAlloc` in `snd_ctr.c`, `music.c`, `gl_hyena.c`).
+## How it pushes 3DS hardware
+
+- **Memory.** The hunk split (20 vs 64 MB) is the main scaling lever, keyed off one boot flag. GPU/DSP buffers come from the linear heap (`linearAlloc` in `snd_ctr.c`, `music.c`, `gl_hyena.c`).
 - **Screen.** `gfxInit(GSP_BGR8_OES, GSP_RGB565_OES, false)` with no bottom-screen double buffering. Wide (800-wide) mode turns on only for a New 3DS that is not a 2DS, and off in `+sys_testmode`. Old 3DS output stays 400x240.
 - **Audio.** Two ndsp paths (ndsp drives the audio DSP — a **[DSP](../../../glossary.md#dsp)** is a processor for streaming audio work): effects mix into one looping stereo PCM16 buffer at 22050 Hz (2048 samples), while MP3 music decodes via libmpg123 into `linearAlloc`'d wave buffers invalidated before the DSP reads them.
 - **Input.** Buttons map through `Sys_SetKeys`; the gyroscope feeds yaw/pitch, touch drags aim with subpixel smoothing, a bottom overlay covers the rest, and Circle Pad Pro initialises on Old 3DS only (skipped when `new3ds_flag` is set — the New 3DS has its own C-stick).
@@ -61,6 +63,4 @@ Fragile: the file layer keeps a fixed table of 10 `FILE*` handles that fatals wh
 
 ## Sources
 
-- `private_please_gitignore/vril-engine/README.md` — what Vril is, platform list, Toolbox build.
-- `private_please_gitignore/vril-engine/Makefile.ctr` — flags, defines, object list, shader rules.
-- `private_please_gitignore/vril-engine/source/platform/ctr/{sys_ctr.c,in_ctr.c,snd_ctr.c,music.c,touch_ctr.c,platform_def.h,gl/gl_vidctr.c,gl/gl_hyena.c}` — boot, input, audio, video.
+[nzp-team/vril-engine](https://github.com/nzp-team/vril-engine) commit `9a26605`: `README.md`; `Makefile.ctr` (flags, `MAX_AI_COUNT`, `R_FIXED_FAR_CLIP`); `source/platform/ctr/` — `sys_ctr.c` (hunk sizes at lines 35-36, 10-handle file table at line 57, 256 KB stack at line 39), `in_ctr.c`, `snd_ctr.c` (22,050 Hz, 2,048 samples), `music.c`, `touch_ctr.c`, `gl/gl_vidctr.c` (alpha test 0.666 at line 51), `gl/gl_hyena.c`, `circle_pad_pro.c`.

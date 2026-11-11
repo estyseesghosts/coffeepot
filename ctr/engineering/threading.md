@@ -220,6 +220,14 @@ A producer/consumer queue also constrains exit order. Stop new production, drain
 
 For a port that emulates a burst of scanline interrupts, measure handler execution and scheduling separately. The HGSS port reported many costly thread switches during its H-blank walk and deferred them while preserving dispatch. This is application-specific: validate event ordering and all intermediate-state requirements before attempting it [reported: Old 3DS session 20, November 2026; same case study].
 
+## Lessons from ported games
+
+- **Move GPU command recording to a worker.** SRB2 3DS has the game thread push draw packets into a ring of 8,192 slots and a worker thread issue the citro3d calls; it chooses the worker's priority by trying `0x32` upward until `threadCreate` succeeds, then raises the main thread's priority ([SRB2](case-studies/case-study-srb2-3ds.md)). **New 3DS:** that port targets only this model.
+- **Overlap the present with the next tick.** sm64ds-enhanced builds frame N on a worker (core 2, a New 3DS core) while the game thread ticks N+1; on an Old 3DS the worker is on core 0 at one priority above the game thread. It moves the bottom-screen scan (about 7 ms by its comment) to its own double-buffered worker `[documented]` ([SM64 DS](case-studies/case-study-sm64ds-enhanced.md)).
+- **A watchdog thread must outrank the thread it watches.** A spinning game thread starves a lower-priority log writer, so sm64ds-enhanced runs a watchdog one priority above the game thread that wakes once a second, reports a stall after 4 seconds and flushes the SD log itself (see [debugging](debugging.md)).
+- **Optional audio worker.** Daedalus runs audio decoding on an 8 KB-stack worker at priority `0x18` on core 2 on a New 3DS and inline on the calling thread on an Old 3DS ([Daedalus](case-studies/case-study-daedalus-3ds.md)).
+- **Single-threaded ports exist.** Vril runs `Host_Frame` inside `aptMainLoop` on the application core and nothing else; its tree does not say whether that was the limit ([Vril](case-studies/case-study-vril-engine.md)).
+
 ## Technical details
 
 - `threadCreate` rounds the stack size up to 8 bytes (more if the TLS alignment requires) and copies initialised TLS data into the new thread's block; standard input/output streams are inherited.

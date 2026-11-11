@@ -4,7 +4,7 @@ A native 3DS port of Super Mario 64 DS — the DS game, not the N64 one, and not
 
 ## Before you start
 
-- Port facts are `[documented]` in the file named; comment timings are `[reported]`. Coffeepot ran nothing.
+- Source: [ethanseagull/sm64ds-enhanced](https://github.com/ethanseagull/sm64ds-enhanced) commit `3f6dbc1` (2026-11-08; see [source versions](../source-versions.md)). Port facts are `[documented]` in the file named; timings that appear only in code comments are `[reported]`. Coffeepot ran nothing. The author's emulator (Azahar) is mentioned in the code as not enforcing console memory limits (`early_io.cpp`), so emulator behaviour is not evidence of fit.
 - Old 3DS is the default; **New 3DS:** differences follow. `--option console=old` bakes Old 3DS defaults in.
 - Companion pages: [porting](../porting.md), [performance](../performance.md), [memory and cache](../memory-and-cache.md), [threading](../threading.md), [GPU rendering](../PICA200/gpu-rendering.md).
 
@@ -54,5 +54,5 @@ No city to stream, but the port still budgets like one. Assets arrive via manife
 
 ## Sources
 
-- `private_please_gitignore/sm64ds-enhanced/`: README, `docs/BUILDING.md`, `port3ds/src/`, `port3ds/game/`, `port3ds/shaders/gx_rec.v.pica`.
+- [ethanseagull/sm64ds-enhanced](https://github.com/ethanseagull/sm64ds-enhanced) commit `3f6dbc1` (2026-11-08): `README.md`, `docs/BUILDING.md`, `port3ds/src/` (`card3ds.cpp`, `gpu3ds.cpp`, `gpu3ds.h`), `port3ds/game/` (`main_game.cpp` dry-frame pacing near line 1236, `early_io.cpp` heap split near line 60, `watchdog3ds.cpp`, `options3ds.cpp`), `port3ds/shaders/gx_rec.v.pica`.
 - [CTR CPU](../../hardware/cpu.md), [CTR memory](../../hardware/memory.md).

@@ -151,6 +151,14 @@ To find the guilty draw, bisect: skip half the draws in a frame and see whether 
 
 Treat it as a correctness and debugging tool, not as evidence of speed: its CPU, memory, cache and GPU costs do not model the hardware, and it is more forgiving of some GPU misconfigurations (a program that runs in an emulator can still hang a real console) [hypothesis based on how high-level GPU emulation works; record concrete cases in Open questions]. Always confirm on a console, and on an [Old 3DS](../glossary.md#old-new-3ds) if you target one ([testing on hardware](testing-on-hardware.md)).
 
+## Lessons from ported games
+
+- **Watch for a hang from a thread that outranks the game.** sm64ds-enhanced found that a hang froze the picture while music kept playing and the log stopped, because the log writer ran below the spinning game thread. Its watchdog runs one priority above the game thread, wakes each second, and if the frame counter has not moved for 4 seconds (and the game is not in HOME, sleep or its menu) prints a `[hang]` report with the current phase, scene and stack words and flushes the SD log itself; it repeats every 10 seconds and prints "went on" if the game recovers, and can be turned off with `GAME3DS_WATCHDOG=0` `[documented]` (`port3ds/game/watchdog3ds.cpp`, [case study](case-studies/case-study-sm64ds-enhanced.md)). Look the stack words up with `addr2line` against the ELF.
+- **Write an early boot trace to the SD card.** The same port writes `sdmc:/sm64ds3ds/game3ds_early.log` before most of the game starts, so a crash before the first frame still leaves evidence `[documented]`.
+- **Name the missing thing at startup.** DXX's and Xash3DS's README entries say only that something crashes. Check data files and services at boot and print what is missing (`stat` the file; print the service result); the Switch port max_nx shows an on-screen error naming each missing data file, and so does Vril for fatal errors.
+- **Quake2CTR's `Sys_Error` requires the Start button and writes no log file,** so an error on a console with no attached terminal leaves only a screen ([Quake2CTR](case-studies/case-study-quake2ctr.md)). Combine it with [3dslink logging](#logging-over-the-network-3dslink) or a file.
+- **Screenshots from a GL wrapper.** picaGL has no `glReadPixels`; Vril's screenshot path calls `glFinish`, transfers the top screen to a readable framebuffer, invalidates the cache and de-rotates the columns in software `[documented]` ([Vril](case-studies/case-study-vril-engine.md)).
+
 ## Technical details
 
 - 3dslink: TCP port 17491 (`LINK3DS_COMM_PORT`), `link3dsConnectToHost(redirStdout, redirStderr)`; the receiving netloader is part of the Homebrew Menu (`3ds-hbmenu`). The PC tool's options are `-a` (address), `-r` (retries), `-0` (set `argv[0]`) and `-s` (stay as a server after upload).

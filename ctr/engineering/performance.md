@@ -215,6 +215,17 @@ Writing a log to the SD card from the frame thread blocks it for as long as the 
 - **Regression tests:** keep one fixed scene (input script, camera, seed) and run it on every performance-relevant change. A regression test is a stored `note,pct` line plus a stored checksum of the final framebuffer (or a screenshot); fail the change if p99 worsens by more than the run-to-run spread of the stored baseline, or if the checksum differs without an accepted reason.
 - **Reporting:** attach the raw `coffeepot-<program>.csv`, not a screenshot of averages; label the claim `[measured]` only with console model, firmware and build ([record format](testing-on-hardware.md#benchmark-record-format)).
 
+## Lessons from ported games
+
+None of the eleven ports reviewed in the [case studies](case-studies/case-study-daedalus-3ds.md) states a frame rate in its source tree, so these are patterns, each with a cost the case study records, not results.
+
+- **Count before you tune.** Daedalus compiles a code trace after it loops 10 times (`gHotTraceThreshold`), caches up to 9,216 fragments, and resets an 8 MB code buffer when it fills; its authors comment that one game is sensitive to the threshold. Add a counter for resets and cache fills before touching code generation ([Daedalus](case-studies/case-study-daedalus-3ds.md)).
+- **Pace once.** One gate that decides "this frame is finished" and feeds video, audio and frameskip is easier to reason about than three ([Daedalus](case-studies/case-study-daedalus-3ds.md), [frame pacing](PICA200/frame-pacing.md)).
+- **Ask for the clock, then record the answer.** `osSetSpeedupEnable(true)` is called unconditionally by Daedalus, Quake2CTR and Vril and only after a New 3DS check by sm64_3ds and OpenLara `[documented]`; no tree records whether Old 3DS timing changed. Time with it on and off ([testing on hardware](testing-on-hardware.md)).
+- **Move per-pixel work to the GPU when the CPU cannot finish the frame.** The Sonic CD FAQ says the CPU-rendered build needs a New 3DS for full speed and the citro2d build runs at full speed on an Old 3DS but loses real-time palettes `[reported]` ([Sonic CD](case-studies/case-study-sonic-cd-3ds.md)). DXX renders every pixel on the CPU and the older SM64 port does all its vertex work on the CPU; neither states a speed ([DXX](case-studies/case-study-dxx-3ds.md), [older SM64](case-studies/case-study-sm64-3ds.md)).
+- **Where the older SM64 port leaves time on the table (hypotheses):** a three-`mov` vertex shader that moves no work to the GPU, a flush on every state change, a second emission for fog, and a texture upload that initialises and swizzles on the CPU each time ([older SM64](case-studies/case-study-sm64-3ds.md)).
+- **Give expensive options a switch.** SRB2 3DS exposes stereo, wide mode, colour format, precache and bottom-backlight settings, and sm64ds-enhanced exposes 60 fps, anti-aliasing and the frame counter in a SELECT menu; each lets you measure what it costs on your own scene ([SRB2](case-studies/case-study-srb2-3ds.md), [SM64 DS](case-studies/case-study-sm64ds-enhanced.md)).
+
 ## Technical details
 
 - `SYSCLOCK_ARM11` = 268,111,856 Hz; `CPU_TICKS_PER_MSEC` = `SYSCLOCK_ARM11 / 1000.0`; **New 3DS:** its clocks are 2× and 3× that ([libctru](../homebrew/libctru.md#clocks-and-the-new-3ds-speed-up)). The system tick does not change rate with the New 3DS clock (libctru defines it from `SYSCLOCK_ARM11`; the claim is read from the headers, not measured on a New 3DS in 804 MHz mode).

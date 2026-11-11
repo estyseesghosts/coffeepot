@@ -136,6 +136,12 @@ How to read `membench`'s output:
 
 When you have results, add them to the relevant page with the console model, system and Luma3DS versions, and the build details.
 
+## Lessons from ported games
+
+- **An emulator can give a program more memory than a console would.** sm64ds-enhanced's source notes that its emulator (Azahar) does not enforce the New 3DS heap-area limit and gives an Old 3DS profile a `.3dsx` 96 MB, so the port caps itself at the retail 64 MB when running there `[documented]` (`port3ds/game/early_io.cpp`; [case study](case-studies/case-study-sm64ds-enhanced.md)). If you test fit in an emulator, set the limit by hand.
+- **Record whether a speed-up request worked.** SRB2 3DS calls `APT_SetAppCpuTimeLimit` twice on an Old 3DS and prints the result; Quake2CTR calls `osSetSpeedupEnable(true)` unconditionally. Neither tree records what the call returned or whether the result changed timing, so a paired run with the call on and off is open work ([SRB2](case-studies/case-study-srb2-3ds.md), [Quake2CTR](case-studies/case-study-quake2ctr.md)).
+- **Log which model and settings a run used.** The ports that expose settings (SRB2's stereo, wide mode and colour format; sm64ds-enhanced's 60 fps and dry-frame modes) change cost a lot with them; a benchmark record needs them listed.
+
 ## Technical details
 
 - Timing uses `svcGetSystemTick()` (268,111,856 Hz on all models) and `CPU_TICKS_PER_USEC` from `os.h`.

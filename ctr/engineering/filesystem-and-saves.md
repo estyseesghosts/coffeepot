@@ -304,6 +304,13 @@ Record the console model, firmware, card brand and size, and number of repetitio
 
 For an imported save format, test checksum implementations against known external vectors and saves produced by the original system, then test both directions of the round-trip. A self-consistent writer and reader can share the same wrong algorithm. In HGSS, a reflected CRC table was paired with a non-reflected update; the port accepted its own saves while rejecting retail saves [reported: project S17, November 2026; host investigation, hardware round-trip pending]. Any legacy migration should recognize only the known legacy format and still reject data matching neither checksum. [Case study](case-studies/case-study-hgss-port.md#audio-and-save-compatibility-failures).
 
+## Lessons from ported games
+
+- **Hard-coded save names break multi-slot play.** DXX's README lists "multiple save files don't work (currently hardcoded to `player.plr`)"; name every slot ([DXX](case-studies/case-study-dxx-3ds.md)).
+- **Autosave is a risk on a slow card.** Xash3DS compiles its autosave out on 3DS; a source comment calls it slow and crash-prone on the Old 3DS, and it leaves manual saves `[documented]` (`engine/server/sv_cmds.c` line 589; [Xash3DS](case-studies/case-study-xash3ds.md)). The cause (storage latency or heap exhaustion) is unresolved.
+- **Engines that match paths themselves.** Xash3DS turns its own case-insensitive matching off and rejects double slashes in built paths, so content must ship with exact-case names even though the SD card's FAT filesystem is case-insensitive `[documented]` (`engine/common/filesystem.c`). Test with the exact case your game files use; the Sonic CD port builds with `FORCE_CASE_INSENSITIVE` for Windows-authored mod paths.
+- **Keep configuration and saves next to the program.** SRB2 3DS and the Sonic CD port keep `config.cfg`/`settings.ini` and saves under their own SD folder `[reported]` (READMEs).
+
 ## Technical details
 
 | Item | Value | Source |

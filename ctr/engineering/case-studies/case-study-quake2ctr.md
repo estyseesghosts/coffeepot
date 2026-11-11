@@ -4,7 +4,7 @@ A Nintendo 3DS port of Quake 2 based on q2dos by MasterFeizz. It renders through
 
 ## Before you start
 
-- Evidence: all behaviour is `[reported]` by the [port Readme](https://github.com/MasterFeizz/Quake2CTR) or `[documented]` in a named file. No timing figure is stated in the repo.
+- Evidence: all behaviour is `[reported]` by the [port Readme](https://github.com/masterfeizz/Quake2CTR) or `[documented]` in a named file, at commit `993114e` (2022-10-30; see [source versions](../source-versions.md)). No timing figure is stated in the repo.
 - Build: `-march=armv6k -mtune=mpcore -O2`, hard-linked game/refresh, `-lpicaGL -lvorbisidec -logg` (`[documented]`).
 - Old 3DS is the default model. `osSetSpeedupEnable(true)` requests the higher clock where allowed; C-Stick-only bindings are the explicit model split.
 - Companion pages: [porting](../porting.md), [performance](../performance.md), [GPU rendering](../PICA200/gpu-rendering.md), [threading](../threading.md), [audio](../audio.md), [local wireless](../local-wireless.md).
@@ -29,7 +29,7 @@ Jargon used here: the **[ARM11](../../glossary.md#arm11)** is the 3DS CPU; the *
 
 **ARM11 vs PICA200 split.** Transform, lighting setup, and BSP traversal stay on the ARM11; rasterisation, texturing, fog, and stencil shadows go to the PICA200. Unused fixed-function entries (accum, bitmaps, evaluators) are commented out of the binding table rather than emulated (`[documented]` in `ctr/qgl_ctr.c`). Shadows are a menu toggle — the first knob when fill-bound.
 
-**Memory budget.** `ctr/heap_ctr.c` splits remaining memory ~5:1 application-to-linear and caps linear at 24 MB (`[documented]`). The hunk allocator then takes one big `malloc` — simple but fragmentation-prone. Main-thread stack is 3 MB.
+**Memory budget.** `ctr/heap_ctr.c` gives the linear heap one sixth of the remaining memory (`remaining / 6`, line 42), capped at 24 MB (`LINEAR_HEAP_SIZE_CAP`, line 7) (`[documented]`). The hunk allocator then takes one big `malloc` — simple but fragmentation-prone. Main-thread stack is 3 MB.
 
 **Fill and frame pacing.** The main loop spins on `Qcommon_Frame` with 1 ms granularity and no frame skip; each `GLimp_EndFrame` swaps via picaGL. Stereo 3D is not wired up, so no second-eye cost exists.
 
@@ -66,5 +66,4 @@ Each rule is a `[hypothesis]` generalised from this port until measured on your 
 
 ## Sources
 
-- [Quake2CTR Readme](https://github.com/MasterFeizz/Quake2CTR) — keybinds, baseq2/music install (read November 2026).
-- Port tree `ctr/` (`sys_ctr.c`, `vid_ctr.c`, `glimp_ctr.c`, `qgl_ctr.c`, `snddma_ctr.c`, `net_ctr.c`, `heap_ctr.c`, `in_ctr.c`, `touch_ctr.c`, `swimp_ctr.c`, `cd_ctr.c`), `Makefile`, `ref_gl/` — backend choice, memory, audio, network, input.
+[masterfeizz/Quake2CTR](https://github.com/masterfeizz/Quake2CTR) commit `993114e`: `Readme.md` (keybinds, `baseq2/music` install); `Makefile`; `ctr/sys_ctr.c` (stack 3 MB at line 37, `pglInitEx(0x040000, 0x100000)` at line 400, `Sys_Sleep` empty at line 373), `vid_ctr.c`, `glimp_ctr.c`, `qgl_ctr.c`, `snddma_ctr.c` (44.1 kHz, 4,096 samples), `net_ctr.c` (1 MB SOC buffer at line 462), `heap_ctr.c`, `in_ctr.c`, `touch_ctr.c`, `swimp_ctr.c`, `cd_ctr.c`; `ref_gl/`.
