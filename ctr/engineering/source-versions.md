@@ -70,7 +70,7 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | ndsp streaming setup | [audio](audio.md#setting-up-a-channel) | yes | not run | not run | not run |
 | Sprite demo (procedural sheet, animation, touch) | [2D rendering](rendering-2d.md#5-a-complete-example-animated-sprite-with-touch) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`, devkitARM r68, citro2d 1.7.0-1) | not run | not run | not run |
 | citro2d render-target, stereo-eye and text fragments | [2D rendering](rendering-2d.md) | yes (inside a stub `main`, linked) | not run | not run | not run |
-| 2D tile renderer (direct, `USE_TILE_CACHE=1`, and with `CACHE_FLIP_V=1`) | [2D tile renderer](2d-tile-renderer.md#verification-status) | yes (`-Wall -Wextra`, linked to ELF) | not run | not run | not run |
+| 2D tile renderer (four tile strategies, texture/shape/bottom-screen/edit modes, scripted CSV mode; 30 configurations) | [2D tile renderer](2d-tile-renderer.md#verification-status) | yes (`-Wall -Wextra`, linked to ELF; strategies 1 and 2 with picasso-assembled shader) | not run | not run | not run |
 | Texture swizzle function | [2D rendering](rendering-2d.md#generating-a-texture-in-code) | yes; algorithm matches `tex3ds -r` output for a 16x16 RGBA8 image (host check) | not run | not run | not run |
 | Frame and render-target fragments | [GPU rendering](gpu-rendering.md#anatomy-of-a-frame) | taken from `3ds-examples/graphics/gpu/simple_tri`, which builds | — | — | — |
 

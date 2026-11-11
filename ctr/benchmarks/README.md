@@ -182,3 +182,7 @@ Run each benchmark at least three times after a fresh boot and report the spread
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — application template Makefile.
 - [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (frame timing, the linear-heap flush), `source/base.c` (state updates per draw).
 - [libctru](https://github.com/devkitPro/libctru) — `svc.h`, `services/gspgpu.h`, `os.h`, `allocator/linear.h`.
+
+## tilerenderer (in the engineering pages)
+
+The scripted mode of the [2D tile renderer](../engineering/2d-tile-renderer.md#experiments) writes `sdmc:/coffeepot-tilerenderer.csv` in the same `meta`/`result`/`note`/`error` layout as above. Differences: the file is opened for append; `result,tilerenderer,<phase>,<variant>,<visible_tiles>,<frames>,<min_us>,<med_us>,<max_us>` has one line per phase (period, update, build, record, framebegin, frameend, c3d_proc, c3d_gpu); a `summary,tilerenderer,<variant>,<key>,<value>` line kind carries means, p99, missed frames, rebuilds, dropped objects, command-buffer peak and end-of-run memory. Status: builds; not run on hardware or an emulator. Experiments E1 to E6 are specified on the tile renderer page.
