@@ -15,7 +15,7 @@ A program that works in an emulator, or on a New 3DS alone, can still crash, stu
 | Old 3DS | Old 3DS speed and memory limits — the slowest target | — |
 | New 3DS | Correctness on hardware, New 3DS speed, head-tracking behaviour | Old 3DS speed (even in 268 MHz mode, the cache, cores and memory mode differ) |
 
-If you claim a program runs on "3DS", test on an Old 3DS. If you only have a New 3DS, say so in your release notes. The 2DS and 2DS XL count as Old 3DS for speed; the 2DS has no stereoscopic 3D, so test the 3D-off path there too. The [models page](../hardware/models.md) lists what each model has; for software the differences that matter most are the CPU and memory ([CPU](../hardware/cpu.md)), wide mode (not on the 2DS — libctru `gfx.h`), and, **New 3DS:** head tracking, extra buttons and built-in NFC.
+If you claim a program runs on "3DS", test on an Old 3DS. If you only have a New 3DS, say so in your release notes. The 2DS is the same as the 3DS (minus the 3D), and the 2DS XL is the same as the New 3DS (again, minus the 3D, and also the head tracking); The [models page](../hardware/models.md) lists what each model has; for software the differences that matter most are the CPU and memory ([CPU](../hardware/cpu.md)), wide mode (not on the 2DS — libctru `gfx.h`), and, **New 3DS:** head tracking, extra buttons and built-in NFC.
 
 ## A fast edit–run loop
 
