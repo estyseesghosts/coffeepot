@@ -1,21 +1,21 @@
 # Testing 3DS homebrew on hardware
 
-A program that works in an emulator, or on your own New 3DS, can still crash, stutter or run out of memory on the console your players own. This page describes which devices to test on and why, how to set up a fast test loop on a real console, how to run a performance experiment whose result you can trust, and the wiki's benchmark programs for measuring memory, cache and draw-call costs yourself. Its companion pages are [debugging](debugging.md) and [performance](performance.md).
+A program that works in an emulator, or on a New 3DS alone, can still crash, stutter or run out of memory on the console your players own. This page describes which devices to test on and why, how to set up a fast test loop on a real console, how to run a performance experiment whose result you can trust, and the wiki's benchmark programs for measuring memory, cache and draw-call costs yourself. Its companion pages are [debugging](debugging.md) and [performance](performance.md).
 
 ## Before you start
 
 - A console with [Luma3DS](../homebrew/luma3ds.md) and the Homebrew Menu, on the same network as your PC.
-- The [benchmark suite](../benchmarks/README.md) builds without warnings with devkitARM r68 and libctru 2.7.1. It has **not** been run on hardware; no results are recorded yet.
+- The [benchmark suite](../benchmarks/README.md) builds without warnings with devkitARM r68 and libctru 2.7.1. It has **not** been run on hardware (Old 3DS: not run; New 3DS: not run); no results are recorded yet.
 
 ## Test tiers
 
 | Tier | Good for | Not evidence of |
 | ---- | -------- | --------------- |
 | Emulator ([Azahar](debugging.md#emulators)) | Fast iteration, logic bugs, rendering bugs, catching crashes | Speed, timing, memory limits; that a GPU configuration is safe on hardware |
-| New 3DS / New 2DS XL | Correctness on hardware, stereo and head-tracking behaviour, New 3DS speed | Old 3DS speed (even in 268 MHz mode, the cache, cores and memory mode differ) |
-| Old 3DS / 3DS XL / 2DS | Old 3DS speed and memory limits — the slowest target | — |
+| Old 3DS | Old 3DS speed and memory limits — the slowest target | — |
+| New 3DS | Correctness on hardware, New 3DS speed, head-tracking behaviour | Old 3DS speed (even in 268 MHz mode, the cache, cores and memory mode differ) |
 
-If you claim a program runs on "3DS", test on an Old 3DS. If you only have a New 3DS, say so in your release notes. The [models page](../hardware/models.md) lists what each model has; for software the differences that matter most are the CPU and memory ([CPU](../hardware/cpu.md)), wide mode (not on the original 2DS — libctru `gfx.h`), and the New-only head tracking, extra buttons and built-in NFC.
+If you claim a program runs on "3DS", test on an Old 3DS. If you only have a New 3DS, say so in your release notes. The 2DS and 2DS XL count as Old 3DS for speed; the 2DS has no stereoscopic 3D, so test the 3D-off path there too. The [models page](../hardware/models.md) lists what each model has; for software the differences that matter most are the CPU and memory ([CPU](../hardware/cpu.md)), wide mode (not on the 2DS — libctru `gfx.h`), and, **New 3DS:** head tracking, extra buttons and built-in NFC.
 
 ## A fast edit–run loop
 
@@ -45,7 +45,7 @@ A result is only useful if someone else could repeat it. Record:
 
 ```text
 Hypothesis:   e.g. "Flushing only the dirty vertex range instead of the whole linear heap cuts frame time."
-Console:      model (e.g. Old 3DS XL), system version, Luma3DS version, SD card
+Console:      model (e.g. Old 3DS XL, or New 3DS), system version, Luma3DS version, SD card
 Build:        commit hash, toolchain/library versions, compiler flags, .3dsx hash
 Scene:        exact save file / input script / camera position; warm-up time
 Change:       the one variable changed between A and B
@@ -71,7 +71,7 @@ The wiki has no measured numbers yet for the costs below; they are the questions
 - The cost of flushing a range with the kernel call versus the GSP service, as a function of size.
 - The cost of `C3D_FrameEnd(0)`'s whole-linear-heap flush.
 - Whether the ARM11 performance counters work from a `.3dsx` under Luma3DS, and how the cycle counter relates to the system tick ([CPU optimisation: open questions](cpu-optimization.md#open-questions)); no benchmark program for this exists yet.
-- How these change on a New 3DS with and without `osSetSpeedupEnable(true)`, and with an `APT_SetAppCpuTimeLimit` share active.
+- How these change with an `APT_SetAppCpuTimeLimit` share active on an Old 3DS, and **New 3DS:** with and without `osSetSpeedupEnable(true)`.
 
 ### The benchmark suite
 
@@ -81,7 +81,7 @@ Three ready-to-build programs live in [`ctr/benchmarks/`](../benchmarks/README.m
 - **`flushbench`** — flush cost at 1–32 MiB, dirty versus clean ranges, GSP flush versus kernel flush versus clean-only, and `C3D_FrameEnd(0)` versus `C3D_FrameEnd(GX_CMDLIST_FLUSH)`.
 - **`drawbench`** — CPU and GPU time per frame for N quads drawn as one batch, one draw each, and one draw each with a uniform update, a redundant texture bind, a combiner change or a texture swap.
 
-Build with `make` in each folder (or `tools/build_benchmarks.sh` for all), run with 3dslink, and record results as described in the [suite's README](../benchmarks/README.md#recording-results). For `membench`, add `osSetSpeedupEnable(true);` after `gfxInitDefault()` for the New 3DS fast-mode variant, or `APT_SetAppCpuTimeLimit(80);` to see the effect of a core-1 share on the GSP flush.
+Build with `make` in each folder (or `tools/build_benchmarks.sh` for all), run with 3dslink, and record results as described in the [suite's README](../benchmarks/README.md#recording-results). For `membench`, add `APT_SetAppCpuTimeLimit(80);` to see the effect of a core-1 share on the GSP flush. **New 3DS:** add `osSetSpeedupEnable(true);` after `gfxInitDefault()` for the fast-mode variant (or build with `-DBENCH_SPEEDUP=1`); it is not needed, and does nothing, on an Old 3DS.
 
 How to read `membench`'s output:
 
@@ -93,7 +93,7 @@ When you have results, add them to the relevant page with the console model, sys
 
 ## Technical details
 
-- Timing uses `svcGetSystemTick()` (268,111,856 Hz on every model) and `CPU_TICKS_PER_USEC` from `os.h`.
+- Timing uses `svcGetSystemTick()` (268,111,856 Hz on all models) and `CPU_TICKS_PER_USEC` from `os.h`.
 - `__ctru_linear_heap` and `__ctru_linear_heap_size` are the linear heap's start address and size as set up by libctru at start-up ([memory and cache](memory-and-cache.md#how-libctru-splits-it)).
 - The benchmark runs on the main thread (core 0); system activity can add outliers, which is why it reports the median and the maximum.
 

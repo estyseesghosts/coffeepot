@@ -54,16 +54,16 @@ At start-up (`ctru_init`, `appInit`) libctru:
 | `SYSCLOCK_SDMMC` | SYS × 2 | 67,027,964 Hz |
 | `SYSCLOCK_ARM9` | SYS × 4 | 134,055,928 Hz |
 | `SYSCLOCK_ARM11` | ARM9 × 2 | 268,111,856 Hz |
-| `SYSCLOCK_ARM11_LGR1` | ARM11 × 2 | 536,223,712 Hz (New 3DS, 2×) |
-| `SYSCLOCK_ARM11_LGR2` / `_NEW` | ARM11 × 3 | 804,335,568 Hz (New 3DS, 3×) |
+| `SYSCLOCK_ARM11_LGR1` | ARM11 × 2 | 536,223,712 Hz (**New 3DS:** 2×) |
+| `SYSCLOCK_ARM11_LGR2` / `_NEW` | ARM11 × 3 | 804,335,568 Hz (**New 3DS:** 3×) |
 
-`osSetSpeedupEnable(true)` calls `PTMSYSM_ConfigureNew3DSCPU(3)` — a value with the clock bit and the L2-cache bit both set; with `false` it passes 0. This is the call that corresponds to the "New 3DS faster mode" described in [CPU](../hardware/cpu.md).
+**New 3DS:** `osSetSpeedupEnable(true)` calls `PTMSYSM_ConfigureNew3DSCPU(3)` — a value with the clock bit and the L2-cache bit both set; with `false` it passes 0. This is the call that corresponds to the "New 3DS faster mode" described in [CPU](../hardware/cpu.md).
 
 ### Kernel and shared pages
 
 `os.h` also describes the read-only **kernel configuration page** (`0x1FF80000`) and the **shared system configuration page** (`0x1FF81000`) from the [memory map](../hardware/memory.md): kernel version, update flag, NS title ID, environment and unit info, boot environment, firmlaunch flags, `app_memtype`, the three memory-region sizes, FIRM version, and for the shared page the time reference (value in ms, tick, measured `sysclock_hz`, drift), Wi-Fi MAC address and strength, network state, 3D slider value, 3D and battery LED state, menu title IDs and headset status.
 
-Virtual-address constants in `os.h`: heap area `0x08000000–0x0E000000`, mappable area `0x10000000–0x14000000`, old (pre-8.x) linear FCRAM mapping at `0x14000000` (physical `0x20000000`, 128 MiB), New 3DS QTM memory at `0x1E800000` (4 MiB, last 128 KiB reserved), MMIO `0x1EC00000` (4 MiB), VRAM `0x1F000000` (6 MiB), DSP RAM `0x1FF00000` (512 KiB), and the current linear FCRAM mapping at `0x30000000` (256 MiB).
+Virtual-address constants in `os.h`: heap area `0x08000000–0x0E000000`, mappable area `0x10000000–0x14000000`, old (pre-8.x) linear FCRAM mapping at `0x14000000` (physical `0x20000000`, 128 MiB), MMIO `0x1EC00000` (4 MiB), VRAM `0x1F000000` (6 MiB), DSP RAM `0x1FF00000` (512 KiB), and the current linear FCRAM mapping at `0x30000000` (`OS_FCRAM_SIZE` is a 256 MiB window; the Old 3DS has 128 MiB of FCRAM behind it. **New 3DS:** 256 MiB, per the [memory map](../hardware/memory.md)). **New 3DS:** QTM memory at `0x1E800000` (4 MiB, last 128 KiB reserved).
 
 ## Technical details
 
@@ -84,7 +84,7 @@ Later releases (from the git history; the `Changelog.md` file stops at 2.4.0): *
 ## Limits and risks
 
 - libctru exposes what the OS exposes: without kernel privileges many hardware blocks are unreachable.
-- Some services are not available to every process (the exheader decides), and some only exist on a New 3DS.
+- Some services are not available to every process (the exheader decides), and **New 3DS:** some services (`mvd`, `qtm`) exist only there.
 - Breaking changes occur between major versions (for example `__3DS__`, QTM API changes in 2.4.0); pin the toolchain version used to build a project.
 - Using libctru well — heap sizing, cache flushing, timing, threads on the second core — is covered on the engineering pages: [memory and cache](../engineering/memory-and-cache.md), [performance](../engineering/performance.md), [debugging](../engineering/debugging.md) (3dslink, GDB file I/O, exception handlers).
 

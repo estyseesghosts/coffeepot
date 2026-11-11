@@ -66,7 +66,7 @@ Result CFGU_GetSystemModel(u8* model)
 }
 ```
 
-Model values (reply word 2) [documented: libctru `cfgu.h` `CFG_SystemModel`; reverse-engineered: 3dbrew]:
+Model values (reply word 2; values 0, 1 and 3 are Old 3DS family models and 2, 4 and 5 are New 3DS family models; the Model column keeps libctru's `CFG_SystemModel` names) [documented: libctru `cfgu.h` `CFG_SystemModel`; reverse-engineered: 3dbrew]:
 
 | Value | Model | Codename |
 | ----- | ----- | -------- |

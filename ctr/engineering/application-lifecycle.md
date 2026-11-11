@@ -20,7 +20,9 @@ The short answer: call `aptMainLoop()` once per frame from one thread, treat it 
 ## Before you start
 
 - Checked against libctru 2.7.1 at the commit pinned on [source versions](source-versions.md) (`62b7c42c88b1ee837f513358409d2e5c8f9001a9`), devkitARM r68. Source links below are at that commit.
-- Applies to Old and New 3DS. Nothing here was run on hardware or an emulator; see [Verification status](#verification-status).
+- Written for the Old 3DS; **New 3DS:** the sources show no difference in the lifecycle model.
+
+> Unknown: which console model the cited libctru and 3dbrew behaviour was checked on, and whether HOME/sleep behaviour differs on the New 3DS. Running the verification examples on an Old 3DS and a New 3DS would settle it. Nothing here was run on hardware or an emulator; see [Verification status](#verification-status).
 - The service that tracks all this is the **Applet manager** (**[APT](../glossary.md#apt)**), a system [service](../software/services.md) that tells each running program whether it is in front, suspended or ordered to close. The library layer is [libctru](../homebrew/libctru.md); the graphics service is [GSP](../glossary.md#gsp).
 
 ## The model in one picture

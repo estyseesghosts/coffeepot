@@ -18,16 +18,18 @@ The top panel is physically 800×240 pixels, but each pixel is half-width. A **p
 - **2D mode:** pairs of columns are treated as single pixels, showing one 400×240 image.
 - The panel can in principle show a true 800×240 image; no commercial game used it.
 
-The barrier needs extra brightness (shorter battery life), and the effect only works if the player holds the console square to their face. A slider ("3D depth slider") scales how different the two views are. Starting with the New 3DS, a front camera and infrared LED track the player's head to keep the image aligned (this takes one CPU core; see [CPU](cpu.md) and the next section).
+The barrier needs extra brightness (shorter battery life), and the effect only works if the player holds the console square to their face. A slider ("3D depth slider") scales how different the two views are. **New 3DS:** a front camera and infrared LED track the player's head to keep the image aligned (this takes one CPU core; see [CPU](cpu.md) and the next section). The 2DS and New 2DS XL have no 3D screen at all.
 
 ### Head tracking and "Super Stable 3D" (New 3DS)
 
-On New models a system service called **[QTM](../glossary.md#qtm)** moves the parallax barrier to follow the viewer. `libctru` documents it (QTM services `qtm:u`, `qtm:s`, `qtm:c`):
+> **New 3DS:** this section applies only to the New 3DS (and not to the New 2DS XL, which has no 3D screen).
+
+A system service called **[QTM](../glossary.md#qtm)** moves the parallax barrier to follow the viewer. `libctru` documents it (QTM services `qtm:u`, `qtm:s`, `qtm:c`):
 
 - The inner camera samples at 320×240 and 30 frames per second; the gyroscope predicts the eye positions between camera samples, effectively doubling the tracking rate. An infrared LED lights the scene in low light.
 - The barrier is a pattern of 12 positions per interocular-distance unit, set through a TI TCA6416A I²C-to-parallel expander; its pattern and polarity are dithered by software roughly every 10 ms (one gyroscope sample).
 - Nintendo's "Super Stable 3D" works out the midpoint of the viewer's eyes in camera pixels, rotates it by a calibrated angle, converts it to millimetres of horizontal deviation using the camera's field of view and the calibrated eye-to-screen distance, and shifts the barrier by that amount (rounded with a ±0.01 bias to avoid flicker). All calculations assume a 62 mm eye separation. It is not applied in 2D mode.
-- QTM is absent on the Old 3DS and may be unavailable on the New 2DS XL (no 3D screen), so programs must check that the services exist.
+- QTM is absent on the Old 3DS and may be unavailable on the New 2DS XL (no 3D screen), so programs must check that the services exist before calling them.
 
 ### Framebuffers and swapping
 
@@ -43,10 +45,10 @@ The DS/GBA picture-processing units live in the SoC. Their scanlines go to the *
 
 | Screen | Native size | Notes |
 | ------ | ----------- | ----- |
-| Top | 800×240 physical; 400×240 usable per eye | Parallax barrier on 3DS / 3DS XL / New 3DS / New 3DS XL; 2DS and New 2DS XL have a non-3D top panel |
+| Top | 800×240 physical; 400×240 usable per eye | Parallax barrier on the Nintendo 3DS and 3DS XL. **New 3DS:** also on the New Nintendo 3DS and 3DS XL. The 2DS and New 2DS XL have a non-3D top panel |
 | Bottom | 320×240 | Resistive touch overlay |
 
-Panel sizes: 3DS 3.53 in top / 3.00 in bottom; 3DS XL 4.88 / 4.18; 2DS 3.53 and 3.00 cropped from a single panel; New 3DS 3.88 / 3.33; New 3DS XL 4.88 / 4.18. See [models](models.md).
+Panel sizes (top / bottom): Nintendo 3DS 3.53 in / 3.00 in; 3DS XL 4.88 / 4.18; 2DS 3.53 and 3.00 cropped from a single panel. **New 3DS:** New Nintendo 3DS 3.88 / 3.33; New Nintendo 3DS XL 4.88 / 4.18. See [models](models.md).
 
 Frame timing: the 3DS refresh is derived from the pixel clock; one documented timing is (268111856 ÷ 24) ÷ (450+1) ÷ (494+1) ≈ 50.04 Hz when `VTotal` is set to 494.
 

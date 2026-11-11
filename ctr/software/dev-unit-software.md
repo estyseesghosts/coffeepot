@@ -12,7 +12,7 @@ Studios could rent a "CTR-BOX" (a metal box with the 3DS electronics and a dummy
 
 ### System updaters
 
-Two **system updaters** exist: the CTR System Updater (CSU) for original-3DS-based units and the SNAKE System Updater for New 3DS-based units. They install the whole system software (all system titles plus Dev Menu and Config) from a RomFS.
+Two **system updaters** exist: the CTR System Updater (CSU) for Old 3DS-based units; **New 3DS:** the SNAKE System Updater is used for New 3DS-based units. They install the whole system software (all system titles plus Dev Menu and Config) from a RomFS.
 
 ### Dev Home Menu
 
@@ -35,7 +35,7 @@ A NAND application (title `00040000-0ff40002`) that shows firmware/revision, fre
 
 ### Config
 
-A text-mode NAND application (`00040000-0ff40102`) with settings that retail units lack: choose between Home Menu and Test Menu; set the **system mode** (memory allowance): `Prod` 64 MB (default; Home Menu normally runs only in this mode), `Dev1` 96 MB (no browser or Miiverse), `Dev2` 80 MB, `Dev3` 72 MB, `Dev4` 32 MB, and on New 3DS `snake Prod` 124 MB, `snake dev1` 178 MB (no browser/Miiverse), `snake dev2` 124 MB; exception-handler and break-stop behavior; debug mode (always disabled on retail); Download Play debug/force-import; filesystem latency emulation (0–2550 ms in 10 ms steps); country/region/user-name settings; touch-screen and circle-pad calibration; screen flicker bias, backlight and brightness; and hardware RTC setting (which can change the clock without a game detecting the change via `GetUserTimeOffset()`).
+A text-mode NAND application (`00040000-0ff40102`) with settings that retail units lack: choose between Home Menu and Test Menu; set the **system mode** (memory allowance): `Prod` 64 MB (default; Home Menu normally runs only in this mode), `Dev1` 96 MB (no browser or Miiverse), `Dev2` 80 MB, `Dev3` 72 MB, `Dev4` 32 MB (**New 3DS:** `snake Prod` 124 MB, `snake dev1` 178 MB (no browser/Miiverse), `snake dev2` 124 MB); exception-handler and break-stop behavior; debug mode (always disabled on retail); Download Play debug/force-import; filesystem latency emulation (0–2550 ms in 10 ms steps); country/region/user-name settings; touch-screen and circle-pad calibration; screen flicker bias, backlight and brightness; and hardware RTC setting (which can change the clock without a game detecting the change via `GetUserTimeOffset()`).
 
 Which units may change the mode differs: all CTR debuggers and prototype units can, while on Developer Test Units the ability depends on the unit (most retail-looking units cannot leave `Prod`). Outside `Prod`, memory-hungry software such as the web browser cannot be launched from the Home Menu. Config also has an EULA "Agree Version" setting (two bytes, `00.00` means not accepted; commonly set to `ff.ff` to skip the agreement) [documented: 3dbrew Dev Unit Software].
 

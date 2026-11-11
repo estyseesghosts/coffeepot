@@ -1,6 +1,6 @@
 # Performance engineering for 3DS homebrew
 
-Making a 3DS program fast is mostly about finding out *which* part is slow before changing anything. The console has a slow CPU (268 MHz on the original models), a capable but unusual GPU, and a small amount of fast memory; a frame can be late because the CPU ran out of time, because the GPU did, because one waited for the other, or because something stalled on a file or a system service. This page shows how to measure each of those with the libraries homebrew already uses, how to pace frames, how to use the second CPU core, and which CPU-side habits pay off on this processor.
+Making a 3DS program fast is mostly about finding out *which* part is slow before changing anything. The console has a slow CPU (268 MHz on an Old 3DS; **New 3DS:** up to 804 MHz), a capable but unusual GPU, and a small amount of fast memory; a frame can be late because the CPU ran out of time, because the GPU did, because one waited for the other, or because something stalled on a file or a system service. This page shows how to measure each of those with the libraries homebrew already uses, how to pace frames, how to use the second CPU core, and which CPU-side habits pay off on this processor.
 
 Related pages: [memory and cache](memory-and-cache.md) (where buffers live and what flushing costs), [GPU rendering](gpu-rendering.md) (draw-call and state costs), [testing on hardware](testing-on-hardware.md) (how to run a benchmark you can trust).
 
@@ -8,11 +8,13 @@ Related pages: [memory and cache](memory-and-cache.md) (where buffers live and w
 
 - Checked against libctru 2.7.1, citro3d 1.7.1, devkitARM r68 and Luma3DS v13.5 source.
 - Claims carry the [evidence labels](../../AGENTS.md#evidence-labels) used across the wiki. Nothing on this page is `[measured]` by the wiki itself yet; where a number comes from someone else's measurement, it is labelled with its origin.
-- Decide your target hardware first. An [Old 3DS](../glossary.md#old-new-3ds) (3DS, 3DS XL, 2DS) has two slow cores and no L2 cache; a New 3DS can run 3× faster with an L2 cache. A program tuned on a New 3DS tells you nothing about an Old 3DS.
+- Decide your target hardware first. An [Old 3DS](../glossary.md#old-new-3ds) has two slow cores and no L2 cache. **New 3DS:** the CPU can run 3× faster with a 2 MB L2 cache, and a third core is open to `.3dsx` homebrew. A program tuned on a New 3DS tells you nothing about an Old 3DS.
 
 ## The budget
 
-At 60 frames per second a frame lasts 16.7 ms. The ARM11 application core on an Old 3DS runs at 268,111,856 Hz ([CPU](../hardware/cpu.md#clocks-and-core-counts)), so one frame is about 4.47 million clock cycles — before the operating system, cache misses, waiting for the GPU and interrupt handling take their share. On a New 3DS with the fast mode enabled the core runs at 804 MHz (3×) with a 2 MB L2 cache.
+At 60 frames per second a frame lasts 16.7 ms. The ARM11 application core on an Old 3DS runs at 268,111,856 Hz ([CPU](../hardware/cpu.md#clocks-and-core-counts)), so one frame is about 4.47 million clock cycles — before the operating system, cache misses, waiting for the GPU and interrupt handling take their share.
+
+> **New 3DS:** with the fast mode enabled the core runs at 804 MHz (3×) with a 2 MB L2 cache, so a frame is about 13.4 million cycles at 60 fps.
 
 | Target | Frame time | Old 3DS core-0 cycles per frame |
 | ------ | ---------- | ------------------------------- |
@@ -22,7 +24,9 @@ At 60 frames per second a frame lasts 16.7 ms. The ARM11 application core on an 
 
 Commercial games treated these budgets as design constraints from the start; homebrew ports of games written for faster machines usually have to do the same (reduce work, not just optimise it).
 
-### Turn on the New 3DS fast mode yourself
+### New 3DS: turn on the fast mode yourself
+
+> **New 3DS:** this section applies only to a New 3DS; an Old 3DS has no fast mode.
 
 A `.3dsx` started by Luma3DS gets a generated **[extended header](../glossary.md#exheader)** (exheader) in which the 804 MHz and L2-cache flags are **off** [documented: Luma3DS `sysmodules/loader/source/hbldr.c`, `hbldrPatchExHeaderInfo`]. Call `osSetSpeedupEnable(true)` at start-up; it asks the system (`PTMSYSM_ConfigureNew3DSCPU(3)`) for both the higher clock and the L2 cache and does nothing harmful on an Old 3DS ([libctru](../homebrew/libctru.md#clocks-and-the-new-3ds-speed-up)). An installed `.cia` can instead request them in its exheader. The user's Luma3DS setting `app_launch_new_3ds_cpu` can also force them per title.
 
@@ -30,7 +34,7 @@ A `.3dsx` started by Luma3DS gets a generated **[extended header](../glossary.md
 
 ### CPU time: the system tick
 
-`svcGetSystemTick()` returns a 64-bit counter running at the base ARM11 clock, `SYSCLOCK_ARM11` = 268,111,856 Hz, on every model and in every New 3DS clock mode [documented: libctru `os.h` defines `CPU_TICKS_PER_MSEC` from `SYSCLOCK_ARM11`]. Reading it is a system call, so it is cheap but not free; time blocks of work, not individual pixels.
+`svcGetSystemTick()` returns a 64-bit counter running at the base ARM11 clock, `SYSCLOCK_ARM11` = 268,111,856 Hz, on all models and in every New 3DS clock mode [documented: libctru `os.h` defines `CPU_TICKS_PER_MSEC` from `SYSCLOCK_ARM11`]. Reading it is a system call, so it is cheap but not free; time blocks of work, not individual pixels.
 
 `TickCounter` wraps it: `osTickCounterStart(&c)` records a reference, `osTickCounterUpdate(&c)` stores the elapsed ticks, `osTickCounterRead(&c)` returns milliseconds as a `double` [documented: `os.h`, `source/os.c`]. Keep raw `u64` ticks in hot code and convert once per report: on the ARM11, 64-bit division and `double` arithmetic are comparatively expensive (see [CPU-side habits](#cpu-side-habits)).
 
@@ -109,7 +113,7 @@ Structure the loop so game logic runs *before* `C3D_FrameBegin` (overlapping the
 
 ## Using the second core
 
-On an Old 3DS a program can borrow a time slice of the system core for one thread after `APT_SetAppCpuTimeLimit`; on a New 3DS a third core is fully available to `.3dsx` homebrew. Large core-1 shares slow down the system modules your program calls (a third party measured `DSP_FlushDataCache` at 1–5 ms with an 80% share). Placement, priorities, synchronisation and a worker pattern: [threading](threading.md).
+On an Old 3DS a program can borrow a time slice of the system core for one thread after `APT_SetAppCpuTimeLimit`. **New 3DS:** a third core is fully available to `.3dsx` homebrew. Large core-1 shares slow down the system modules your program calls (a third party measured `DSP_FlushDataCache` at 1–5 ms with an 80% share). Placement, priorities, synchronisation and a worker pattern: [threading](threading.md).
 
 ## Audio deadlines
 
@@ -121,7 +125,7 @@ The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate 
 
 ## Technical details
 
-- `SYSCLOCK_ARM11` = 268,111,856 Hz; `CPU_TICKS_PER_MSEC` = `SYSCLOCK_ARM11 / 1000.0`; New 3DS clocks are 2× and 3× that ([libctru](../homebrew/libctru.md#clocks-and-the-new-3ds-speed-up)). The system tick does not change rate with the New 3DS clock (libctru defines it from `SYSCLOCK_ARM11`; the claim is read from the headers, not measured on a New 3DS in 804 MHz mode).
+- `SYSCLOCK_ARM11` = 268,111,856 Hz; `CPU_TICKS_PER_MSEC` = `SYSCLOCK_ARM11 / 1000.0`; **New 3DS:** its clocks are 2× and 3× that ([libctru](../homebrew/libctru.md#clocks-and-the-new-3ds-speed-up)). The system tick does not change rate with the New 3DS clock (libctru defines it from `SYSCLOCK_ARM11`; the claim is read from the headers, not measured on a New 3DS in 804 MHz mode).
 - `C3D_FrameBegin(flags)`: `C3D_FRAME_SYNCDRAW` = bit 0, `C3D_FRAME_NONBLOCK` = bit 1. Returns `false` if already in a frame or (non-blocking) if the GPU is busy.
 - `C3D_FrameRate(fps)` accepts `0 < fps ≤ 60`; implemented as a per-screen accumulator decremented by `fps` on each V-blank, incrementing the frame counter whenever it crosses zero.
 - `GSPGPU_PerfLogEntry` = `{ u32 lastDurationUs; u32 totalDurationUs; }`, one per `GSPGPU_Event` (`PSC0`, `PSC1`, `VBlank0`, `VBlank1`, `PPF`, `P3D`, `DMA`).
@@ -138,8 +142,8 @@ The ARM11 is an ARMv6K core with no NEON, no hardware integer divide, half-rate 
 
 ## Open questions
 
-- No wiki-run measurements yet of: CPU write bandwidth to heap vs linear memory vs VRAM on each model; cost of `C3D_FrameEnd`'s full linear-heap flush as a function of heap size; `GSPGPU_FlushDataCache` latency versus core-1 time limit; benefit of LTO. The [benchmark suite](../benchmarks/README.md) contains programs for these; none has been run on hardware yet.
-- Whether the CP15 cycle counter and the system tick advance 1:1 on an Old 3DS and 3:1 in New 3DS 804 MHz mode (see [CPU optimisation](cpu-optimization.md#counters-versus-the-system-tick)); the tick is the only one this page relies on.
+- No wiki-run measurements yet of: CPU write bandwidth to heap vs linear memory vs VRAM on Old 3DS and New 3DS; cost of `C3D_FrameEnd`'s full linear-heap flush as a function of heap size; `GSPGPU_FlushDataCache` latency versus core-1 time limit; benefit of LTO. The [benchmark suite](../benchmarks/README.md) contains programs for these; none has been run on hardware yet.
+- Whether the CP15 cycle counter and the system tick advance 1:1 on an Old 3DS (and 3:1 in New 3DS 804 MHz mode) (see [CPU optimisation](cpu-optimization.md#counters-versus-the-system-tick)); the tick is the only one this page relies on.
 - The 25 ms slice model of core-1 scheduling comes from untested notes; a hardware measurement (a core-1 thread recording `svcGetSystemTick` gaps at several percentages) would settle it.
 
 ## Sources

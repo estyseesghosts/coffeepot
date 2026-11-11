@@ -8,11 +8,11 @@ Nintendo's internal codename for the Nintendo 3DS family, used here as this plat
 
 ### Old 3DS and New 3DS {#old-new-3ds}
 
-Community shorthand. **Old 3DS** means the 2011–2013 models (3DS, 3DS XL, 2DS); **New 3DS** means the 2014+ models (New 3DS, New 3DS XL, New 2DS XL), which have more cores, more memory and a faster mode. See [CTR models](hardware/models.md).
+Community shorthand used throughout this wiki. **Old 3DS** means the Nintendo 3DS, 3DS XL and 2DS (2011–2013); **New 3DS** means the New Nintendo 3DS, New Nintendo 3DS XL and New Nintendo 2DS XL (2014–2017), which have more cores, more memory and a faster mode. Unmarked statements describe the Old 3DS; New 3DS facts appear as **New 3DS:** notes. See [CTR models](hardware/models.md).
 
 ### ARM11 {#arm11}
 
-The 32-bit [ARM](../glossary.md#arm) processor architecture running 3DS games and apps (a dual-core MPCore in the Old 3DS, quad-core in the New 3DS). See [CTR CPU](hardware/cpu.md).
+The 32-bit [ARM](../glossary.md#arm) processor architecture running 3DS games and apps (a dual-core MPCore; **New 3DS:** quad-core). See [CTR CPU](hardware/cpu.md).
 
 ### MPCore {#mpcore}
 
@@ -36,7 +36,7 @@ The graphics chip family used by the 3DS (a DMP design). Fixed-function hardware
 
 ### FCRAM {#fcram}
 
-"Fast Cycle RAM": the 3DS's main memory (128 MB on Old 3DS, 256 MB on New 3DS). See [CTR memory](hardware/memory.md).
+"Fast Cycle RAM": the 3DS's main memory (128 MB; **New 3DS:** 256 MB). See [CTR memory](hardware/memory.md).
 
 ### VRAM {#vram}
 
@@ -148,7 +148,7 @@ The system module that carries StreetPass messages between consoles through per-
 
 ### QTM {#qtm}
 
-The New 3DS service that tracks the viewer's head and positions the 3D screen's parallax barrier. See [CTR displays](hardware/display.md).
+**New 3DS only:** the service that tracks the viewer's head and positions the 3D screen's parallax barrier. See [CTR displays](hardware/display.md).
 
 ### Linear heap {#linear-heap}
 
@@ -257,7 +257,7 @@ The configuration that maps shader output registers to position, colour, texture
 
 ### MVD {#mvd}
 
-The New 3DS hardware video decoder block (H.264 and MJPEG, plus YUV-to-RGB conversion), reached through the MVD services. See [I/O and peripherals](hardware/io-and-peripherals.md).
+**New 3DS only:** the hardware video decoder block (H.264 and MJPEG, plus YUV-to-RGB conversion), reached through the MVD services. See [I/O and peripherals](hardware/io-and-peripherals.md).
 
 ### Stubbed SVC {#stubbed-svc}
 

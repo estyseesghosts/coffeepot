@@ -61,7 +61,8 @@ static inline void bench_report(const char *program, const char *test, const cha
 }
 
 // Opens the sdmc output file and prints the metadata header. Call after
-// consoleInit(). Returns the New 3DS flag through *isNew. A failure to open
+// consoleInit(). Returns the New 3DS flag through *isNew (false on an Old 3DS,
+// which is the default target; nothing here needs a New 3DS). A failure to open
 // the file is reported but not fatal (stdout still works).
 //
 // Not available from the libraries at run time, so recorded as "not-readable":
@@ -69,11 +70,11 @@ static inline void bench_report(const char *program, const char *test, const cha
 //     record them from ctr/engineering/source-versions.md),
 //   - New 3DS 804 MHz speed-up and L2 cache state (libctru has only a setter,
 //     osSetSpeedupEnable). Define BENCH_SPEEDUP=0 or 1 at build time to have
-//     the program set it (New 3DS only) and record the requested value.
+//     the program set it (New 3DS only; skipped on an Old 3DS) and record the requested value.
 static inline void bench_begin(const char *program, bool *isNew)
 {
     static const char *const model_names[] = {
-        "3DS", "3DS XL", "New 3DS", "2DS", "New 3DS XL", "New 2DS XL"
+        "Old 3DS", "Old 3DS XL", "New 3DS", "2DS", "New 3DS XL", "New 2DS XL"
     };
     char path[96];
     snprintf(path, sizeof(path), "sdmc:/coffeepot-%s.csv", program);

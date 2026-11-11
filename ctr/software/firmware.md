@@ -41,7 +41,7 @@ The full NAND layout is on the [NAND filesystem page](nand-filesystem.md).
 - The header begins with the magic `FIRM`; a priority field (offset `+4`) lets the boot ROM skip a partition if an equal-or-higher-priority FIRM has already been found.
 - The image is split into sections, each with a load address, size and SHA-256 hash; the boot ROM refuses sections that hit its memory-range blacklist.
 - The header is signed with RSA-2048 (verified with the key stored in Boot9 data for NAND FIRM).
-- A FIRM image contains separate binaries for the ARM9 and ARM11 (and ARM7 for TWL/AGB images). New 3DS firmware adds an extra loader stage, **arm9loader**, that decrypts the ARM9 binary using keys derived from the console's OTP — a design that was found vulnerable in 2015 ([history](../homebrew/history.md)).
+- A FIRM image contains separate binaries for the ARM9 and ARM11 (and ARM7 for TWL/AGB images). Old 3DS has no arm9loader keysector officially (3dbrew, System Flaws). **New 3DS:** firmware adds an extra loader stage, **arm9loader**, that decrypts the ARM9 binary using keys derived from the console's OTP — a design that was found vulnerable in 2015 ([history](../homebrew/history.md)).
 
 ### Other boot sources
 

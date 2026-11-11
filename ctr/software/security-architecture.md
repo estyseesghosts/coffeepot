@@ -28,7 +28,7 @@ This page explains the design; the individual attacks are in the [exploit catalo
 
 > Conflict/unverified: this paragraph follows Copetti. Only the "OTP readable on firmware before 3.0.0" point was confirmed in 3dbrew's System Flaws page (OTP dumping "required a boot of < 3.0.0-X"). The 7.0.0 RSA-engine and 11.0.0 anti-downgrade statements were not found there and should be read as [hypothesis] until checked against the flaw tables.
 
-Nintendo reworked the chain over time: system version 7.0.0 added the RSA engine to the NCCH decryption path (keys cleared after Kernel9 loads, so earlier exploits could not read newer games); 3.0.0 hid the OTP after boot; the New 3DS added a loader stage (**arm9loader**) with OTP-derived keys (fixed in 9.5.0/9.6.0 after flaws); title downgrade protection was added later (11.0.0 closed the anti-downgrade list gap).
+Nintendo reworked the chain over time: system version 7.0.0 added the RSA engine to the NCCH decryption path (keys cleared after Kernel9 loads, so earlier exploits could not read newer games); 3.0.0 hid the OTP after boot; **New 3DS:** a loader stage (**arm9loader**) with OTP-derived keys was added (fixed in 9.5.0/9.6.0 after flaws); title downgrade protection was added later (11.0.0 closed the anti-downgrade list gap).
 
 ## Technical details
 

@@ -5,7 +5,7 @@ When a homebrew program calls `C3D_DrawArrays` or `C3D_DrawElements`, nothing is
 ## Before you start
 
 - Source read: citro3d `9f21cf7` (v1.7.1) and libctru `62b7c42` (v2.7.1), the commits pinned on [source versions](source-versions.md). Register names come from libctru `include/3ds/gpu/registers.h` and [3dbrew GPU/Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers).
-- Applies to both [Old and New 3DS](../glossary.md#old-new-3ds) as far as the sources show; nothing here was run on hardware or an emulator.
+- Describes the Old 3DS GPU. **New 3DS:** the sources do not mention a difference ([glossary](../glossary.md#old-new-3ds)); nothing here was run on hardware or an emulator.
 - Hardware background is on [CTR GPU](../hardware/gpu.md); the library workflow on [picasso and citro3d](../homebrew/picasso-and-citro3d.md) and [GPU rendering](gpu-rendering.md).
 
 ## The path in one picture
@@ -155,6 +155,8 @@ The decoder is [`tools/pica_cmdlist_decode.py`](../../tools/pica_cmdlist_decode.
 
 - Real captures: dump a frame's list with the hook above, decode it, and compare against the tables here; this would also validate the decoder.
 - What the GSP does with a ProcessCommandList command, and whether the P3D registers are written as listed in `gpu.md`.
+> Unknown: which console model 3dbrew's PICA200 register findings were observed on, and whether any differ on the New 3DS. Running the register tests on an Old 3DS and a New 3DS would settle it.
+
 - Whether an overfull stride always hangs or sometimes draws nothing; needs an Old/New 3DS experiment.
 
 ## Sources

@@ -16,7 +16,7 @@ Many services come in access levels, written as suffixes: `:USER`/`:u` for ordin
 
 ## Technical details
 
-Services grouped by the process that provides them, following 3dbrew's *Services API* list. 3dbrew marks every group below as present on Old 3DS except `mvd` and `qtm` (New 3DS only); `cam:q` is also New 3DS only.
+Services grouped by the process that provides them, following 3dbrew's *Services API* list. 3dbrew marks every group below as present on Old 3DS except `mvd` and `qtm`; **New 3DS:** `mvd`, `qtm` and `cam:q` exist only there.
 
 | Process / area | Service names | Notes |
 | -------------- | ------------- | ----- |
@@ -31,7 +31,7 @@ Services grouped by the process that provides them, following 3dbrew's *Services
 | RO | `ldr:ro` | Dynamic library loading ([CRO modules](cro-modules.md)) |
 | Network | `ndm:u`, `nwm::CEC/EXT/INF/SAP/SOC/TST/UDS`, `http:C`, `ssl:C`, `soc:P`, `soc:U` | StreetPass, infrastructure, local wireless, HTTP, TLS, sockets |
 | Sound | `csnd:SND`, `dsp::DSP`, `cdc:HID/MIC/CSN/DSP/LGY/CHK` | See [audio](../hardware/audio.md) |
-| Camera | `cam:u`, `y2r:u`, `cam:s`, `cam:c`, `cam:q` (New 3DS only) | |
+| Camera | `cam:u`, `y2r:u`, `cam:s`, `cam:c`, `cam:q` (**New 3DS:** only) | |
 | GPU/LCD | `gsp::Lcd`, `gsp::Gpu` | See [GPU](../hardware/gpu.md) and [displays](../hardware/display.md) |
 | Other groups from 3dbrew | `ac:i/u` (Wi-Fi connection), `act:a/u` (Nintendo Network accounts), `frd:a/n/u` (friends), `news:s/u` (notifications), `pdn:s/d/i/g/c`, `SPI::NOR/CD2/CS2/CS3/DEF`, `Loader`, `mcu::CAM/GPU/HID/RTC/SND/NWM/HWC/PLS/CDC`, `mic:u`, `mp:u`, `nfc:dev/m/p/r/s/u`, `mvd:STD` and `qtm:*` (New 3DS only) | `nfc:m` is the amiibo-capable path used by libctru's `nfc`; `qtm` is head tracking |
 | Misc | `boss:U/P/M` (SpotPass), `cecd:u/s/ndm` (StreetPass; see [StreetPass (CEC)](streetpass-cec.md)), `ir:u/USER/rst`, `dlp:CLNT/FKCL/SRVR` (Download Play), `ptm:*` (power/play history), `hid:USER/SPVR/NFC/QTM`, `i2c::MCU/CAM/LCD/DEB/HID/IR/EEP/NFC/QTM`, `gpio:*` | |

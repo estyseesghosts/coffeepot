@@ -224,6 +224,19 @@ What has not been measured or verified, and what experiment would settle it.
 - [Title](URL) — what this source covers
 ```
 
+## Console models: Old 3DS is the default
+
+For `ctr/`, every statement, number, example and recommendation describes the **Old 3DS** unless it says otherwise. Never assume a New 3DS. Anything that applies only to the New 3DS, or that differs on it, goes in an explicit **New 3DS** disclaimer after the Old 3DS statement.
+
+- **Terminology.** Use exactly "Old 3DS" and "New 3DS" (capitalised, with the space). "All models" means both. Do not use "O3DS", "N3DS", "original 3DS", "3DS XL" or "New Nintendo 3DS" as model labels. Mention the 2DS, 2DS XL or other variants only where they differ in a way that matters, and then name them in the disclaimer.
+- **Disclaimer format.** Inline: end the sentence or bullet with `**New 3DS:** <what differs>.` Block: a blockquote starting `> **New 3DS:**`. In tables with a New 3DS column or row, label it `New 3DS` and keep the Old 3DS column first.
+- **Not a default.** Never write a New 3DS value as the plain statement ("the CPU runs at 804 MHz", "up to 124 MB"). Write the Old 3DS value, then the disclaimer.
+- **Claims true on both models** may say "on all models" once, where a reader might doubt it. Otherwise they stay unmarked, and unmarked means Old 3DS.
+- **Unknown applicability.** If a source does not say which model a fact was checked on, say so with `> Unknown:` instead of assuming Old 3DS.
+- **Evidence and verification.** A `[measured]` result names its model. A code example's verification status lists Old 3DS and New 3DS separately, and an example that uses New 3DS-only features says so up front.
+- **Code.** Examples must work on an Old 3DS. New 3DS-only calls are guarded by a model check and described in a disclaimer.
+- Hardware pages describing a New 3DS-only component (for example the extra CPU cores, the C-Stick or MVD) say so in the first paragraph.
+
 ## Evidence labels
 
 Engineering pages, and any performance or behaviour claim elsewhere, must say what supports each non-obvious claim. Tag it inline with one of:

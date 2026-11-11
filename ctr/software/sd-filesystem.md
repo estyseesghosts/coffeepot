@@ -1,6 +1,6 @@
 # CTR SD filesystem
 
-The 3DS uses its SD card (microSD on the New 3DS) for photos, music, videos and — above all — downloaded games and their save data. The card is formatted normally ([FAT](../../glossary.md#fat)), but the folder the 3DS uses for software is encrypted with keys derived from the console, so a card's games only work on the console that installed them.
+The 3DS uses its SD card (**New 3DS:** microSD) for photos, music, videos and — above all — downloaded games and their save data. The card is formatted normally ([FAT](../../glossary.md#fat)), but the folder the 3DS uses for software is encrypted with keys derived from the console, so a card's games only work on the console that installed them.
 
 ## Behavior
 

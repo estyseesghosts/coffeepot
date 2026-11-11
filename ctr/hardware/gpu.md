@@ -63,7 +63,7 @@ The GPU has two register spaces.
 
 | Offset | Block |
 | ------ | ----- |
-| `0x000` | Hardware ID (bit 2: new model) |
+| `0x000` | Hardware ID (bit 2: "new model" per 3dbrew; the source does not say which models set it) |
 | `0x010`, `0x020` | Memory fill units PSC0/PSC1 (start/end address ≫ 3, fill value, control: bit 0 start/busy, 1 finished, 8–9 width 16/24/32-bit); VRAM only |
 | `0x030` | VRAM bank control |
 | `0x034` | GPU busy flags (bit 26 PSC0, 27 PSC1, 30 PPF, 31 P3D) |

@@ -103,7 +103,7 @@ The DSP's native output rate is about 32,728 Hz ([audio](../hardware/audio.md));
 
 libctru can decompress the same formats tex3ds writes, so you can compress your own data files with standard Nintendo-style headers: `decompress()` and `decompressV()` (`<3ds/util/decompress.h>`) handle LZSS (LZ10), LZ11, Huffman and RLE, from memory, a file descriptor or a `FILE*` via callbacks. The header is one type byte (`0x10` LZSS, `0x11` LZ11, `0x28` Huffman, `0x30` RLE, `0x00` uncompressed) followed by the 24-bit uncompressed size (or a 32-bit size plus padding when the type byte's top bit is set) [documented: `tex3ds --help`, libctru `decompress.h`].
 
-Whether compression speeds up loading depends on SD-card read speed versus decompression CPU time, and differs between Old and New 3DS [hypothesis — measure both].
+Whether compression speeds up loading depends on SD-card read speed versus decompression CPU time, and may differ between Old 3DS and New 3DS [hypothesis — measure Old 3DS first, then New 3DS].
 
 ## Technical details
 

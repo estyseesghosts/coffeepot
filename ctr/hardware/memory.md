@@ -1,6 +1,6 @@
 # CTR memory
 
-The 3DS has several separate pools of memory, not one big one. The main pool is 128 MB of slow-but-large RAM (256 MB on the New 3DS); next to it sit a few small, fast on-chip memories that hold the kernels and video data. About half of the main RAM is reserved for the operating system, so games get roughly 64 MB on an Old 3DS.
+The 3DS has several separate pools of memory, not one big one. The main pool is 128 MB of slow-but-large RAM (**New 3DS:** 256 MB); next to it sit a few small, fast on-chip memories that hold the kernels and video data. About half of the main RAM is reserved for the operating system, so games get roughly 64 MB on an Old 3DS (**New 3DS:** up to 124 MB by default).
 
 This page explains the pools and the address maps of the two big processors. How the OS hands out memory to programs is covered on the [kernel page](../software/kernel.md).
 
@@ -10,12 +10,12 @@ Both the [ARM11 and ARM9](cpu.md) see the main RAM, but each has its own private
 
 ## How it works
 
-| Pool | Size | Who uses it | Notes |
+| Pool | Size (Old 3DS) | Who uses it | Notes |
 | ---- | ---- | ----------- | ----- |
-| **[FCRAM](../glossary.md#fcram)** (main memory) | 128 MB Old 3DS; 256 MB New 3DS | Everything | A Fujitsu "Fast Cycle" DRAM variant with low random-access latency, wired to behave like DDR memory |
+| **[FCRAM](../glossary.md#fcram)** (main memory) | 128 MB | Everything | A Fujitsu "Fast Cycle" DRAM variant with low random-access latency, wired to behave like DDR memory. **New 3DS:** 256 MB |
 | **[VRAM](../glossary.md#vram)** | 6 MB, inside the SoC | GPU first; framebuffers and fast textures | Split into two areas (VRAM A and B), four banks total |
 | **[AXI WRAM](../glossary.md#axi-wram)** | 512 KB | ARM11 kernel | Fast on-chip RAM reached over the AXI bus |
-| **ARM9 internal RAM** | 1 MB Old 3DS; 1.5 MB New 3DS | ARM9 kernel and Process9 | Visible only to the ARM9 |
+| **ARM9 internal RAM** | 1 MB | ARM9 kernel and Process9 | Visible only to the ARM9. **New 3DS:** 1.5 MB |
 | **ARM9 TCM** | 32 KB code + 16 KB data | ARM9 | Tightly-coupled memory, a DS-era feature |
 | **DSP memory** | 512 KB | DSP and ARM11 | Double-buffered 256 KB halves so both sides can work at once |
 
@@ -42,7 +42,7 @@ The GPU also does not display from its render target directly: games reserve sep
 | no | `0x28000000` | `0x8000000` | New 3DS FCRAM extension |
 | yes | `0xFFFF0000` | `0x10000` | Boot ROM mirror |
 
-L2 cache control: on a New 3DS, bit 0 of the 32-bit register at `0x17E10000+0x100` is set when the L2 cache is enabled via the `PTMSYSM:ConfigureNew3DSCPU` service call. The kernel enables it by setting that bit; it disables it by writing `0xFFFF` to `+0x77C`, waiting for bit 0 of `+0x730` to clear, writing 0 to `+0x0` and clearing bit 0 of `+0x100`.
+> **New 3DS:** L2 cache control: bit 0 of the 32-bit register at `0x17E10000+0x100` is set when the L2 cache is enabled via the `PTMSYSM:ConfigureNew3DSCPU` service call. The kernel enables it by setting that bit; it disables it by writing `0xFFFF` to `+0x77C`, waiting for bit 0 of `+0x730` to clear, writing 0 to `+0x0` and clearing bit 0 of `+0x100`.
 
 ### ARM9 physical memory map
 
@@ -64,6 +64,8 @@ L2 cache control: on a New 3DS, bit 0 of the 32-bit register at `0x17E10000+0x10
 
 The ARM9 [MPU](../../glossary.md#mpu) regions programmed by `NATIVE_FIRM`/`SAFE_MODE_FIRM`'s Kernel9 include: `0xFFFF0000` (32 KB, read-only code), `0x01FF8000` (32 KB, RW), `0x08000000` (1 MB, 2 MB from firmware 8.0.0), `0x10000000` (128 KB, no execute), `0x10100000` (512 KB, no execute) and `0x20000000` (128 MB, 256 MB from 8.0.0, covering FCRAM). Different regions are used for `TWL_FIRM`/`AGB_FIRM`.
 
+> Unknown: the source gives the "from 8.0.0" sizes as firmware changes and does not say whether they apply to the Old 3DS, the New 3DS or both; the 256 MB figure matches the New 3DS FCRAM size.
+
 ### FCRAM regions (`APPMEMTYPE`)
 
 APPLICATION always starts at FCRAM offset 0. SYSTEM follows it; BASE is at the end. SYSTEM size = total − (APPLICATION + BASE).
@@ -75,7 +77,7 @@ APPLICATION always starts at FCRAM offset 0. SYSTEM follows it; BASE is at the e
 | 3 | 80 MB | `0x1C00000` (28 MB) | 20 MB | |
 | 4 | 72 MB | `0x2400000` (36 MB) | 20 MB | |
 | 5 | 32 MB | `0x4C00000` (76 MB) | 20 MB | |
-| 6 and 8 (New 3DS default) | 124 MB | `0x6400000` (100 MB) | `0x2000000` (32 MB) | New 3DS kernel only |
+| 6 and 8 (**New 3DS** default) | 124 MB | `0x6400000` (100 MB) | `0x2000000` (32 MB) | New 3DS kernel only |
 | 7 | 178 MB | `0x2E00000` (46 MB) | 32 MB | New 3DS kernel only; per the 3dbrew table (Copetti quotes "up to 176 MB") |
 
 Types 6–8 were added in system version 8.0.0-18 and exist only on the New 3DS ARM11 kernel. All kernel-allocated memory lives in BASE. On firmware 4.5.0-10 with the Home Menu running, the SYSTEM region was about 0x1488000 bytes used and BASE about 0x1202000 used.
@@ -99,7 +101,7 @@ Each process sees its own address space up to `0x40000000` (`0x20000000` before 
 | `0x1FF80000` | kernel page | `0x1000` | Configuration memory, read-only for all processes |
 | `0x1FF81000` | kernel page | `0x1000` | Shared page |
 | `0x1FF82000` | BASE region | threads × `0x1000` ÷ 8 | Thread-local storage |
-| `0x30000000` | FCRAM+0 | `0x08000000` Old / `0x10000000` New | New LINEAR mapping (from 8.0.0-18) |
+| `0x30000000` | FCRAM+0 | `0x08000000` (**New 3DS:** `0x10000000`) | New LINEAR mapping (from 8.0.0-18) |
 
 Executable pages are read-only; data pages are execute-never. The kernel's virtual map (valid for the earliest firmware sampled) puts mapped VRAM at `0xE8000000`, internal memory at `0xEFF00000`, main memory at `0xF0000000` and the IRQ block at `0xFFFEE000`. I/O registers map into userland at `physical = virtual − 0x1EC00000 + 0x10100000`.
 
@@ -107,7 +109,7 @@ Executable pages are read-only; data pages are execute-never. The kernel's virtu
 
 ### Constants used by libctru
 
-Verified against libctru `os.h` `[documented]` (all constants below match the clone) and `allocateHeaps.c` (linear heap gets half of the remaining memory rounded down to a page, application heap the rest; the application heap is capped at 24 MiB, preferring to grow the linear heap, and the linear heap has its own cap). `libctru`'s `os.h` names the virtual regions programs use: heap area `0x08000000–0x0E000000` (96 MiB), mappable area `0x10000000–0x14000000`, old (pre-8.x) linear FCRAM mapping at `0x14000000` → physical `0x20000000` (128 MiB), New 3DS QTM memory at `0x1E800000` → `0x1F000000` (4 MiB, the last 128 KiB reserved by the kernel), MMIO at `0x1EC00000` → `0x10100000` (4 MiB), VRAM at `0x1F000000` → `0x18000000` (6 MiB), DSP RAM `0x1FF00000` (512 KiB), kernel configuration page `0x1FF80000`, shared configuration page `0x1FF81000`, and the current linear FCRAM mapping at `0x30000000` → `0x20000000` (256 MiB). The kernel configuration page (read-only) starts with the kernel version, an update flag, the NS title ID and holds `app_memtype`, the three memory-region sizes and the FIRM version; field layouts are on the [libctru page](../homebrew/libctru.md).
+Verified against libctru `os.h` `[documented]` (all constants below match the clone) and `allocateHeaps.c` (linear heap gets half of the remaining memory rounded down to a page, application heap the rest; the application heap is capped at 24 MiB, preferring to grow the linear heap, and the linear heap has its own cap). `libctru`'s `os.h` names the virtual regions programs use: heap area `0x08000000–0x0E000000` (96 MiB), mappable area `0x10000000–0x14000000`, old (pre-8.x) linear FCRAM mapping at `0x14000000` → physical `0x20000000` (128 MiB), **New 3DS:** QTM memory at `0x1E800000` → `0x1F000000` (4 MiB, the last 128 KiB reserved by the kernel), MMIO at `0x1EC00000` → `0x10100000` (4 MiB), VRAM at `0x1F000000` → `0x18000000` (6 MiB), DSP RAM `0x1FF00000` (512 KiB), kernel configuration page `0x1FF80000`, shared configuration page `0x1FF81000`, and the current linear FCRAM mapping at `0x30000000` → `0x20000000` (256 MiB on the New 3DS; the Old 3DS has 128 MiB of FCRAM, see the virtual map above). The kernel configuration page (read-only) starts with the kernel version, an update flag, the NS title ID and holds `app_memtype`, the three memory-region sizes and the FIRM version; field layouts are on the [libctru page](../homebrew/libctru.md).
 
 On start-up `libctru` allocates an application heap and a linear heap from the process's memory allowance (default: half each, with the application heap capped at 24 MiB and the linear heap at 32 MiB unless the other side has room); VRAM allocations (`vramAlloc`) never cross the A/B bank boundary.
 
@@ -117,7 +119,7 @@ The system applets place their LCD framebuffers in VRAM: top-screen left/right 3
 
 ## Homebrew notes
 
-Buffers shared with the GPU live in the "LINEAR"/GSP heap, which maps straight onto the start of FCRAM (see the virtual map above). Copetti notes that early [userland homebrew](../homebrew/exploits.md) could use only 64 MB of RAM, the default application region size. Today a `.3dsx` under Luma3DS inherits the current memory mode, while an installed `.cia` can request a larger one. Which pool to use for which buffer, how libctru splits the heaps, and when to flush the CPU cache are covered on [memory and cache](../engineering/memory-and-cache.md).
+Buffers shared with the GPU live in the "LINEAR"/GSP heap, which maps straight onto the start of FCRAM (see the virtual map above). Copetti notes that early [userland homebrew](../homebrew/exploits.md) could use only 64 MB of RAM, the default application region size on the Old 3DS. Today a `.3dsx` under Luma3DS inherits the current memory mode, while an installed `.cia` can request a larger one (**New 3DS:** up to the larger regions in the `APPMEMTYPE` table). Which pool to use for which buffer, how libctru splits the heaps, and when to flush the CPU cache are covered on [memory and cache](../engineering/memory-and-cache.md).
 
 ## Open questions
 

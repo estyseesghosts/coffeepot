@@ -7,7 +7,7 @@ Small, self-contained 3DS programs that measure costs the wiki's engineering pag
 ## Before you start
 
 - Build environment: devkitPro with the `3ds-dev` group. Verified to build without warnings with devkitARM r68, libctru 2.7.1, citro3d 1.7.1 and picasso 2.7.2 (the versions on [source versions](../engineering/source-versions.md)), using `tools/build_benchmarks.sh`, which fails on any warning.
-- A console with [Luma3DS](../homebrew/luma3ds.md); run each `.3dsx` from the Homebrew Menu or with `3dslink` ([testing on hardware](../engineering/testing-on-hardware.md#a-fast-editrun-loop)).
+- An Old 3DS (the primary target; a New 3DS gives a second data set and must be recorded separately) with [Luma3DS](../homebrew/luma3ds.md); run each `.3dsx` from the Homebrew Menu or with `3dslink` ([testing on hardware](../engineering/testing-on-hardware.md#a-fast-editrun-loop)).
 - Insert an SD card (results are written to it). Close other homebrew, detach the debugger and disable game plugins while measuring.
 
 ## Verification status
@@ -42,13 +42,13 @@ note,<text>
 error,<where>,<detail>
 ```
 
-`meta` lines carry: program, build date and compiler, model (`CFGU_GetSystemModel`), New 3DS flag (`APT_CheckNew3DS`), firmware and kernel version, requested speed-up setting, ticks per microsecond, free linear memory. Two things cannot be read at run time and are recorded as `not-readable`: the libctru and citro3d versions (the installed headers have no version macro; take them from [source versions](../engineering/source-versions.md)) and the New 3DS 804 MHz / extra-L2 state (libctru only has the setter `osSetSpeedupEnable`; build with `-DBENCH_SPEEDUP=1` or `=0` added to `CFLAGS` if you want the program to set it, otherwise note the state yourself). Failed API calls and a failed SD-card open produce `error,` lines; the program carries on where it can, and the final `note,done errors=N` line tells you whether to trust the run. A run with any error line is not a result.
+`meta` lines carry: program, build date and compiler, model (`CFGU_GetSystemModel`), New 3DS flag (`APT_CheckNew3DS`), firmware and kernel version, requested speed-up setting, ticks per microsecond, free linear memory. Two things cannot be read at run time and are recorded as `not-readable`: the libctru and citro3d versions (the installed headers have no version macro; take them from [source versions](../engineering/source-versions.md)) and, **New 3DS:** the 804 MHz / extra-L2 state (libctru only has the setter `osSetSpeedupEnable`; build with `-DBENCH_SPEEDUP=1` or `=0` added to `CFLAGS` if you want the program to set it on a New 3DS, otherwise note the state yourself; on an Old 3DS the option does nothing). Failed API calls and a failed SD-card open produce `error,` lines; the program carries on where it can, and the final `note,done errors=N` line tells you whether to trust the run. A run with any error line is not a result.
 
 ## membench
 
 **Question:** how fast can the CPU write to the ordinary heap versus the linear heap, and what does a cache flush cost for a given range and cache state?
 
-**Method:** for 16 KiB, 256 KiB and 1 MiB buffers, 31 runs each of: `memset` into heap memory, `memset` into linear memory, `memcpy` heap→linear, `svcFlushProcessDataCache` after rewriting the range, `GSPGPU_FlushDataCache` after rewriting the range (the rewrite is not timed). Timing with `svcGetSystemTick` (268,111,856 Hz); min / median / max in microseconds.
+**Method:** for 16 KiB, 256 KiB and 1 MiB buffers, 31 runs each of: `memset` into heap memory, `memset` into linear memory, `memcpy` heap→linear, `svcFlushProcessDataCache` after rewriting the range, `GSPGPU_FlushDataCache` after rewriting the range (the rewrite is not timed). Timing with `svcGetSystemTick` (268,111,856 Hz on all models); min / median / max in microseconds.
 
 Whole-linear-heap flush (what `C3D_FrameEnd(0)` does) is reported as three separate rows, because they measure different things:
 
@@ -60,7 +60,7 @@ Whole-linear-heap flush (what `C3D_FrameEnd(0)` does) is reported as three separ
 
 The `*_written` flush rows (`svc_flush_written`, `gsp_flush_written`) have the same limitation for 256 KiB and 1 MiB: they time a flush after a sequential rewrite, not after a dirty-resident state. Use [flushbench](#flushbench) to separate those.
 
-**Variants to run:** default; with `-DBENCH_SPEEDUP=1` (New 3DS); with `APT_SetAppCpuTimeLimit(80)` added before the run.
+**Variants to run:** default (works on an Old 3DS, which is the primary target); with `APT_SetAppCpuTimeLimit(80)` added before the run; and, **New 3DS:** with `-DBENCH_SPEEDUP=1`.
 
 **Results:** not run on hardware. One row per console and variant (min / med / max in microseconds):
 

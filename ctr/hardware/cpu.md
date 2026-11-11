@@ -1,8 +1,8 @@
 # CTR CPU
 
-The 3DS has more processors than most people expect, but games only ever use one group of them. Games run on a dual-core processor (four cores on the New 3DS). Two older processors, inherited from the Nintendo DS and Game Boy Advance, work behind the scenes on security, input/output and backwards compatibility.
+The 3DS has more processors than most people expect, but games only ever use one group of them. Games run on a dual-core processor. **New 3DS:** four cores, two of them mostly off-limits to games. Two older processors, inherited from the Nintendo DS and Game Boy Advance, work behind the scenes on security, input/output and backwards compatibility.
 
-All of them sit inside one chip, a **system-on-a-chip** (**[SoC](../../glossary.md#soc)**) that Nintendo's boards label "CPU CTR" (Old 3DS) or "CPU LGR" (New 3DS). Which processor is "in charge" depends on the mode the console is running in: normal 3DS, DS/DSi, or Game Boy Advance.
+All of them sit inside one chip, a **system-on-a-chip** (**[SoC](../../glossary.md#soc)**) that Nintendo's boards label "CPU CTR" (Old 3DS); **New 3DS:** "CPU LGR". Which processor is "in charge" depends on the mode the console is running in: normal 3DS, DS/DSi, or Game Boy Advance.
 
 ## Where it fits
 
@@ -22,17 +22,19 @@ The three modes correspond to the [firmware images](../software/firmware.md) `NA
 
 ### What a game developer sees
 
-Developers only target the ARM11. They write multi-threaded code and let the OS place [threads](../../glossary.md#thread) on cores. Policies are strict, though: the [kernel](../software/kernel.md) schedules the first core ("appcore") for the game and the second ("syscore") mostly for system work, and on the New 3DS two extra cores are mostly off-limits (see [Technical details](#technical-details)).
+Developers only target the ARM11. They write multi-threaded code and let the OS place [threads](../../glossary.md#thread) on cores. Policies are strict, though: the [kernel](../software/kernel.md) schedules the first core ("appcore") for the game and the second ("syscore") mostly for system work. **New 3DS:** two extra cores are mostly off-limits (see [Technical details](#technical-details)).
 
 ### New 3DS compatibility layer
 
-On a New 3DS, a game's metadata says whether it targets the new hardware. If it does, the OS enables the faster clock, extra memory and level-2 [cache](../../glossary.md#cache) for that game. If not, those features stay off so old games see the hardware they expect. Luma3DS lets users override this per game with its `app_launch_new_3ds_cpu` setting (`off`, `clock`, `l2`, `clock+l2`; see [Luma3DS](../homebrew/luma3ds.md)).
+> **New 3DS:** this section applies only to the New 3DS; the Old 3DS has no such features to switch.
+
+A game's metadata says whether it targets the new hardware. If it does, the OS enables the faster clock, extra memory and level-2 [cache](../../glossary.md#cache) for that game. If not, those features stay off so old games see the hardware they expect. Luma3DS lets users override this per game with its `app_launch_new_3ds_cpu` setting (`off`, `clock`, `l2`, `clock+l2`; see [Luma3DS](../homebrew/luma3ds.md)).
 
 ## Technical details
 
 ### Clocks and core counts
 
-| Item | Old 3DS / 2DS | New 3DS / New 3DS XL / New 2DS XL |
+| Item | Old 3DS | New 3DS |
 | ---- | ------------- | --------------------------------- |
 | ARM11 cores | 2 × MP11 | 4 × MP11 |
 | ARM11 clock | 268 MHz (268,111,856 Hz ± small drift; exactly twice the ARM9 clock) | 268 MHz normally; up to 804 MHz (3×) for software that asks for it. The Home Menu runs at 804 MHz. |
@@ -44,15 +46,15 @@ On a New 3DS, a game's metadata says whether it targets the new hardware. If it 
 
 The ARM9 has a [memory protection unit](../../glossary.md#mpu), 32 KB instruction and 16 KB data tightly-coupled memory (TCM). The ARM11 has an [MMU](../../glossary.md#mmu) instead. Memory sizes and maps are on the [memory page](memory.md).
 
-Only one multiplier other than 1× exists in the official New 3DS kernel: 3×. Other multipliers exist in hardware but no official code uses them.
+**New 3DS:** only one multiplier other than 1× exists in the official kernel: 3×. Other multipliers exist in hardware but no official code uses them.
 
-**Clock tree.** `libctru` defines every clock from one base value, which pins down the exact figures: `SYSCLOCK_SOC` = 16,756,991 Hz; the system clock is 2× that (33,513,982 Hz); the SD/MMC clock is 2× the system clock; the ARM9 clock is 4× the system clock (134,055,928 Hz); the ARM11 clock is 2× the ARM9 clock (268,111,856 Hz); on the New 3DS the ARM11 can also run at 2× (536,223,712 Hz) or 3× (804,335,568 Hz) its base clock. The same constants set the CPU tick rate (`CPU_TICKS_PER_MSEC`). A program asks for the New 3DS fast mode with `osSetSpeedupEnable`, which calls `PTMSYSM_ConfigureNew3DSCPU(3)` (clock and L2-cache bits both set; see [libctru](../homebrew/libctru.md)).
+**Clock tree.** `libctru` defines every clock from one base value, which pins down the exact figures: `SYSCLOCK_SOC` = 16,756,991 Hz; the system clock is 2× that (33,513,982 Hz); the SD/MMC clock is 2× the system clock; the ARM9 clock is 4× the system clock (134,055,928 Hz); the ARM11 clock is 2× the ARM9 clock (268,111,856 Hz); **New 3DS:** the ARM11 can also run at 2× (536,223,712 Hz) or 3× (804,335,568 Hz) its base clock. The same constants set the CPU tick rate (`CPU_TICKS_PER_MSEC`). A program asks for the New 3DS fast mode with `osSetSpeedupEnable`, which calls `PTMSYSM_ConfigureNew3DSCPU(3)` (clock and L2-cache bits both set; see [libctru](../homebrew/libctru.md)); guard it with a model check so the code still works on an Old 3DS.
 
-> Timing note: the faster clock was measured by reading `svcGetSystemTick` around an idle loop; that counter keeps ticking at 268 MHz in the fast mode, so elapsed time can be derived. It appears to apply only to the running application's cores.
+> **New 3DS:** timing note: the faster clock was measured by reading `svcGetSystemTick` around an idle loop; that counter keeps ticking at 268 MHz in the fast mode, so elapsed time can be derived. It appears to apply only to the running application's cores.
 
 ### The MP11 core (from ARM's manual)
 
-The ARM11 MPCore is documented in ARM's technical reference manual DDI 0360E (r1p0). The 3DS uses a two- or four-core instance of it. Checked against DDI0360E `[documented]`: eight-stage pipeline (section 1.7), 128-entry BTAC and static prediction (6.2), three-entry return stack (6.3), 64-entry two-way unified main TLB with eight lockable entries (7.4 and CP15 TLB Type Register), 8-word cache lines (CP15 Cache Type Register), duplicated tag RAMs and migratory lines in the SCU. The manual describes a configurable design (1–4 cores, 16/32/64 KB caches); the sizes above are what the 3DS actually uses.
+The ARM11 MPCore is documented in ARM's technical reference manual DDI 0360E (r1p0). The Old 3DS uses a two-core instance of it. **New 3DS:** four cores. Checked against DDI0360E `[documented]`: eight-stage pipeline (section 1.7), 128-entry BTAC and static prediction (6.2), three-entry return stack (6.3), 64-entry two-way unified main TLB with eight lockable entries (7.4 and CP15 TLB Type Register), 8-word cache lines (CP15 Cache Type Register), duplicated tag RAMs and migratory lines in the SCU. The manual describes a configurable design (1–4 cores, 16/32/64 KB caches); the sizes above are what the 3DS actually uses.
 
 | Feature | Detail (ARM11 MPCore r1p0) |
 | ------- | -------------------------- |
@@ -95,13 +97,15 @@ Each core's **timer** and **watchdog** have a 32-bit down-counter, an 8-bit pres
 
 ### DMA engines
 
-ARM CoreLink DMA-330 controllers act as bus masters: **XDMA** next to the ARM9 (two channels at `0x1000C000`, 32-bit bus width, DMA-330 r0p0) and **CDMA** next to the ARM11 (eight channels, `0x10200000`). On the New 3DS another DMA-330 revision (`0x10206000`) is used by the ARM11 kernel; the original CDMA is used only by the boot ROM there. There is also a simple AHB "NDMA" on the ARM9 side (`0x10002000`).
+ARM CoreLink DMA-330 controllers act as bus masters: **XDMA** next to the ARM9 (two channels at `0x1000C000`, 32-bit bus width, DMA-330 r0p0) and **CDMA** next to the ARM11 (eight channels, `0x10200000`). **New 3DS:** another DMA-330 revision (`0x10206000`) is used by the ARM11 kernel; the original CDMA is used only by the boot ROM there. There is also a simple AHB "NDMA" on the ARM9 side (`0x10002000`).
 
 > Conflict: XDMA channel count. 3dbrew's IO Registers page says XDMA has two channels and a 32-bit bus width; Copetti's article lists four. This page follows 3dbrew because it gives a register block, revision (r0p0) and bus width that match the hardware description, whereas the Copetti figure is unreferenced. Unresolved: no hardware read-out of the channel count was found in the sources.
 
 ### New 3DS extra cores
 
-On the New 3DS, core 3 is idle unless a title's metadata sets a flag that enables scheduling on it (confirmed in use by *Xenoblade Chronicles 3D* only, per Copetti). Core 4 is reserved for the software head-tracking that stabilises the 3D screen. Details of the scheduler are on the [kernel page](../software/kernel.md).
+> **New 3DS:** the Old 3DS has only two cores, so this section does not apply to it.
+
+Core 3 is idle unless a title's metadata sets a flag that enables scheduling on it (confirmed in use by *Xenoblade Chronicles 3D* only, per Copetti). Core 4 is reserved for the software head-tracking that stabilises the 3D screen. Details of the scheduler are on the [kernel page](../software/kernel.md).
 
 ## Homebrew notes
 
@@ -110,7 +114,7 @@ Homebrew code is ordinary ARMv6K code built with `devkitARM` (see [development w
 ## Open questions
 
 - The ARM11 distributor/timer behaviour above is from ARM's generic manual; which interrupt IDs the 3DS wires to which devices is not covered by the sources used here.
-- Exact clock-multiplier registers for the New 3DS are not documented in the sources used.
+- Exact clock-multiplier registers (**New 3DS:** only) are not documented in the sources used.
 
 ## Sources
 

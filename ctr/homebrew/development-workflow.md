@@ -341,7 +341,7 @@ The Lua route mentioned by WikiTemp (Lua Player Plus) is not covered here; its s
 ### Debugging and release builds
 
 - Keep the unstripped **`.elf`** with symbols. Match it to the exact build that crashed.
-- Test on an **Old 3DS** if you support one; New 3DS and emulators can hide CPU or memory problems.
+- Test on an **Old 3DS** first; **New 3DS:** its faster CPU and extra memory, like emulators, can hide CPU or memory problems.
 - Enable useful diagnostics in development builds, then compare performance with diagnostics disabled.
 - Save a record of compiler/library versions and Docker image tags for reproducibility:
 

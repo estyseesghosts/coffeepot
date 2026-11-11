@@ -6,7 +6,7 @@ Measuring where frame time goes is on [performance](performance.md); buffer owne
 
 ## Before you start
 
-- Checked against citro3d 1.7.1 and libctru 2.7.1 source. The loop structures below use real API names but are fragments; nothing on this page has been timed on hardware.
+- Checked against citro3d 1.7.1 and libctru 2.7.1 source. The loop structures below use real API names but are fragments; nothing on this page has been timed on hardware (Old 3DS: not run; New 3DS: not run).
 
 ## The timing model
 
@@ -27,7 +27,7 @@ So with `C3D_FRAME_SYNCDRAW`, at most one frame is in flight and the CPU never g
 
 ## How many images the GPU draws
 
-The GPU draws one image per render target per frame, not a fixed three. With the 3D slider off, a typical frame is a top image plus a bottom image (two); with 3D on, a left-eye and a right-eye top image plus the bottom (three) ([GPU](../hardware/gpu.md)). A screen whose contents did not change needs no image at all: citro3d swaps a screen's framebuffer only if a target for it was drawn that frame (see Technical details), so a mostly static bottom screen can be skipped by not drawing its target [documented: citro3d `renderqueue.c`; the saving is unmeasured]. Check `gfxIs3D()` or the slider and skip the right-eye target when it is off.
+The GPU draws one image per render target per frame, not a fixed three. With the 3D slider off, a typical frame is a top image plus a bottom image (two); with 3D on, a left-eye and a right-eye top image plus the bottom (three) ([GPU](../hardware/gpu.md)). A screen whose contents did not change needs no image at all: citro3d swaps a screen's framebuffer only if a target for it was drawn that frame (see Technical details), so a mostly static bottom screen can be skipped by not drawing its target [documented: citro3d `renderqueue.c`; the saving is unmeasured]. Check `gfxIs3D()` or the slider and skip the right-eye target when it is off. The 2DS family has no stereoscopic 3D, so this path is always the two-image case there.
 
 ## Overlapping CPU and GPU
 
@@ -84,7 +84,7 @@ while (aptMainLoop()) {
 }
 ```
 
-- `svcGetSystemTick` runs at 268,111,856 Hz on all models ([performance](performance.md#cpu-time-the-system-tick)).
+- `svcGetSystemTick` runs at 268,111,856 Hz on all models, including New 3DS fast mode ([performance](performance.md#cpu-time-the-system-tick)).
 - Cap the catch-up (here 8 steps) so a long stall — loading, the HOME Menu, a debugger break — does not cause a burst of fast-forwarded steps.
 - For games ported from a console with its own refresh rate (the DS refreshes at about 59.83 Hz, not 60), decide explicitly whether to run the logic at the original rate or at 60; small differences accumulate in music and timers.
 - Report two numbers separately: logic ticks per second and distinct frames shown per second.

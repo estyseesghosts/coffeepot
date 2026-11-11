@@ -1,12 +1,12 @@
 # Threads and multiple cores on the 3DS
 
-A 3DS program starts with one thread on the application core, and most homebrew never needs more. Extra threads help when work can run *beside* the main loop — audio decoding, asset loading, geometry preparation — but the 3DS's cores are not equal: on an [Old 3DS](../glossary.md#old-new-3ds) the second core (the **[syscore](../glossary.md#appcore-syscore)**) is shared with the operating system and only lends your program a time slice, and on a New 3DS a third core is fully usable while the fourth is not. This page explains which cores you can use and how, how the scheduler treats priorities, which synchronisation primitives libctru offers, and a worker-thread pattern that avoids the usual stalls and shutdown hangs.
+A 3DS program starts with one thread on the application core, and most homebrew never needs more. Extra threads help when work can run *beside* the main loop — audio decoding, asset loading, geometry preparation — but the 3DS's cores are not equal: on an [Old 3DS](../glossary.md#old-new-3ds) the second core (the **[syscore](../glossary.md#appcore-syscore)**) is shared with the operating system and only lends your program a time slice, and **New 3DS:** a third core is fully usable while the fourth is not. This page explains which cores you can use and how, how the scheduler treats priorities, which synchronisation primitives libctru offers, and a worker-thread pattern that avoids the usual stalls and shutdown hangs.
 
 Background: [kernel scheduling](../software/kernel.md#scheduling), [CPU](../hardware/cpu.md). Measuring the effect: [performance](performance.md).
 
 ## Before you start
 
-- Checked against libctru 2.7.1 and Luma3DS v13.5 source. Code fragments use real API names; they have not been run on hardware for this page.
+- Checked against libctru 2.7.1 and Luma3DS v13.5 source. Code fragments use real API names; they have not been run on hardware for this page (Old 3DS: not run; New 3DS: not run).
 - The scheduling details marked `[reverse-engineered]` come from comments by TuxSH in Luma3DS's process-manager reimplementation, which their author describes as untested.
 
 ## Which cores you can use
@@ -20,7 +20,7 @@ Background: [kernel scheduling](../software/kernel.md#scheduling), [CPU](../hard
 
 [documented: libctru `thread.h`; Luma3DS `hbldr.c`]
 
-`threadCreate(entry, arg, stack_size, prio, core_id, detached)` takes `core_id` 0–1 (Old 3DS) or 0–3 (New 3DS), `-1` for "any core in the process's affinity" or `-2` for the exheader's default; it returns `NULL` on failure — always check. Detect the model at run time with `APT_CheckNew3DS(&isNew)`.
+`threadCreate(entry, arg, stack_size, prio, core_id, detached)` takes `core_id` 0–1 on an Old 3DS (**New 3DS:** 0–3), `-1` for "any core in the process's affinity" or `-2` for the exheader's default; it returns `NULL` on failure — always check. Detect the model at run time with `APT_CheckNew3DS(&isNew)`.
 
 ### Core 1: borrowing the system core
 
@@ -35,9 +35,11 @@ For a `.3dsx` under Luma3DS the maximum is 89% [documented: `hbldr.c`]. How the 
 
 Two well-known ports illustrate a common placement: the Super Mario 64 3DS port runs its audio thread on core 1 on Old 3DS and core 2 on New 3DS [documented: its README]. That is a design choice for that program, not a rule; measure your own.
 
-### Core 2 on New 3DS
+### Core 2 (New 3DS only)
 
-A `.3dsx` may create threads on core 2 because Luma3DS's generated exheader sets the "access core 2" flag (`0x2000`) [documented: `hbldr.c`, `thread.h`]. Use it for your main worker on New 3DS, with a core-1 or core-0 fallback on Old 3DS.
+> **New 3DS:** this section applies only to a New 3DS; an Old 3DS has no core 2.
+
+A `.3dsx` may create threads on core 2 because Luma3DS's generated exheader sets the "access core 2" flag (`0x2000`) [documented: `hbldr.c`, `thread.h`]. The portable plan is a core-1 worker on an Old 3DS; **New 3DS:** you may use core 2 for the main worker instead, with the core-1 or core-0 fallback elsewhere.
 
 ## Priorities and scheduling
 
@@ -183,7 +185,7 @@ Design notes:
 
 - **Creating the core-1 thread before `APT_SetAppCpuTimeLimit`**: `threadCreate` returns `NULL`.
 - **Two application threads on core 1**: the second creation fails.
-- **Assuming core 2 exists**: always check the model and the return value.
+- **Assuming core 2 exists** (it exists only on a New 3DS): always check the model and the return value.
 - **A worker at higher priority than the main thread that polls**: the main loop stalls.
 - **Sharing a cache line between threads on different cores** that both write it: slow, because the line moves between the cores' caches.
 - **Freeing a thread after a timed-out join**: use-after-free of its stack.

@@ -122,7 +122,7 @@ citro2d sits on citro3d and batches sprites, images, text and shapes: `C2D_Init(
 - Enable with `gfxSet3D(true)`, create a second top render target for `GFX_RIGHT`, and render the scene once per eye with opposite camera offsets (`Mtx_PerspStereoTilt` takes the interocular distance). Read the slider each frame with `osGet3DSliderState()`.
 - When the slider is at zero, **skip the right eye**: the `composite_scene` example does exactly this, and citro3d then presents the top screen in 2D (it only swaps in stereo when a right-eye target was used that frame) [documented: example, `renderqueue.c`]. That halves top-screen GPU work for players who play in 2D.
 - Stereo doubles the top screen's fill cost and VRAM for render targets. Budget it from the start.
-- **Wide mode** (`gfxSetWide(true)`) drives the top LCD at 800×240 with non-square pixels — sharper 2D, at twice the fill. It is mutually exclusive with stereo and **does not work on the original 2DS** [documented: libctru `gfx.h`]. See the `wide_mode_3d` example.
+- **Wide mode** (`gfxSetWide(true)`) drives the top LCD at 800×240 with non-square pixels — sharper 2D, at twice the fill. It is mutually exclusive with stereo and **does not work on the 2DS** [documented: libctru `gfx.h`]. See the `wide_mode_3d` example.
 
 ## What the PICA200 cannot do
 
@@ -144,6 +144,8 @@ Work out the VRAM bill before choosing resolutions. The numbers below are plain 
 | Top, both eyes | 768,000 B | 768,000 B | 1,536,000 B |
 | Bottom, 320x240 | 307,200 B | 307,200 B | 614,400 B |
 | Top 2x2 supersampled (800x480), one eye | 1,536,000 B | 1,536,000 B | 3,072,000 B |
+
+> Unknown: whether the stereo and render-target budget figures below were checked on an Old 3DS or a New 3DS; they come from libctru/citro3d source and format sizes, not a run. A VRAM allocation test on each model would settle it.
 
 VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.15 MB) leaves room for textures, while a supersampled top plus bottom (about 3.7 MB) leaves much less, and both eyes supersampled do not fit with a bottom target. A 16-bit colour format (`GPU_RB_RGB565`, `GPU_RB_RGBA5551`, `GPU_RB_RGBA4`) halves the colour column. Whether 6 MiB is split in two banks that constrain placement is covered on [memory](../hardware/memory.md); how `C3D_RenderTargetCreate` places the buffers is in Technical details below.
 
@@ -169,7 +171,7 @@ VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.1
 
 ## Open questions
 
-- Draw-call CPU cost in citro3d per state change on Old and New 3DS — [`drawbench`](../benchmarks/README.md#drawbench) measures exactly this; no results yet.
+- Draw-call CPU cost in citro3d per state change on Old 3DS, then New 3DS — [`drawbench`](../benchmarks/README.md#drawbench) measures exactly this; no results yet.
 - Fill-rate figures for RGBA8 vs RGB565 targets and for each texture format, with and without the texture cache warm.
 - Whether placing static textures in VRAM gives a measurable speed-up over linear FCRAM for typical scenes.
 

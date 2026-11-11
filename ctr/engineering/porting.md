@@ -8,7 +8,7 @@ Porting an existing program to the 3DS means fitting it into a machine with a 26
 
 ## Plan the port
 
-1. **Set the target.** Old 3DS or New 3DS only? The difference is roughly 3× CPU speed, an L2 cache, a third usable core and twice the default application memory ([CPU](../hardware/cpu.md), [memory and cache](memory-and-cache.md#how-much-memory-you-get)). Deciding "New 3DS only" early is legitimate; deciding it late is expensive.
+1. **Set the target.** Old 3DS (the baseline) or New 3DS only? **New 3DS:** roughly 3× the CPU speed, an L2 cache, a third usable core and twice the default application memory compared with the Old 3DS ([CPU](../hardware/cpu.md), [memory and cache](memory-and-cache.md#how-much-memory-you-get)). Deciding "New 3DS only" early is legitimate; deciding it late is expensive.
 2. **Measure the original.** Peak memory, CPU time per frame on a known machine, draw calls and triangles per frame, texture memory, audio voices. Scale CPU expectations down a lot: the ARM11 has no SIMD unit, no hardware divide and small caches ([CPU optimisation](cpu-optimization.md)).
 3. **Budget memory first.** Code size, assets resident at once, the linear heap for GPU/audio buffers (32 MiB by default), and 6 MB of VRAM for render targets. Builds for the 3DS often need smaller textures, fewer resident assets and streaming ([asset pipeline](asset-pipeline.md)).
 4. **Decide the renderer strategy** (next section) before porting game code; it shapes everything else.
@@ -53,7 +53,7 @@ Porting an existing program to the 3DS means fitting it into a machine with a 26
 These are the porters' own statements, useful as examples of decisions rather than as measurements.
 
 - **Super Mario 64 (3DS port by Gericom, maintained in community forks):** runs its audio thread on core 1 on Old 3DS and core 2 on New 3DS; uses a "naïve frame-skip if frame takes longer than 33.3 ms"; offers stereoscopic 3D, an 800-pixel wide mode and an anti-aliasing toggle; requires Luma3DS 10.1.1 or later for its threading [documented: the port's README].
-- **DevilutionX (Diablo engine):** its 3DS guide notes that New 3DS models are "significantly" faster, recommends the original 640×480 resolution for a "significant performance improvement", and warns that the Chinese, Korean and Japanese translations can run an Old 3DS out of memory and crash the game [documented: DevilutionX 3DS documentation].
+- **DevilutionX (Diablo engine):** its 3DS guide notes that the New 3DS is "significantly" faster, recommends the original 640×480 resolution for a "significant performance improvement", and warns that the Chinese, Korean and Japanese translations can run an Old 3DS out of memory and crash the game [documented: DevilutionX 3DS documentation].
 
 The common thread: both expose presentation options (resolution, wide mode, anti-aliasing, stereo) rather than one fixed configuration, put audio on a separate core, and treat Old 3DS memory as a hard limit.
 

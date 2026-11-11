@@ -1,12 +1,12 @@
 # CPU optimisation on the ARM11
 
-The 3DS runs games on an **[ARM11](../glossary.md#arm11) [MPCore](../glossary.md#mpcore)** at 268 MHz (Old 3DS) or up to 804 MHz (New 3DS) — a processor design from 2005 with small caches, no vector unit and, on the original models, no second-level cache. Code written for a desktop or phone CPU usually runs several times slower than its authors expect. This page explains how the core executes code, which constructs are expensive, how to see what the compiler produced, and how to read the processor's own **[hardware performance counters](../../glossary.md#performance-counters)** to find cache misses and branch mispredictions instead of guessing.
+The 3DS runs games on an **[ARM11](../glossary.md#arm11) [MPCore](../glossary.md#mpcore)** at 268 MHz on an Old 3DS — a processor design from 2005 with small caches, no vector unit and no second-level cache. **New 3DS:** up to 804 MHz and an optional 2 MB L2 cache. Code written for a desktop or phone CPU usually runs several times slower than its authors expect. This page explains how the core executes code, which constructs are expensive, how to see what the compiler produced, and how to read the processor's own **[hardware performance counters](../../glossary.md#performance-counters)** to find cache misses and branch mispredictions instead of guessing.
 
 Hardware reference: [CPU](../hardware/cpu.md). Measuring whole frames: [performance](performance.md). Threads and the second core: [threading](threading.md).
 
 ## Before you start
 
-- Checked against ARM's *ARM11 MPCore Processor Technical Reference Manual* (DDI 0360E), libctru 2.7.1 and devkitARM r68 (GCC 16.1). The performance-counter helper below compiles without warnings with those versions; it has **not** been run on hardware for this page.
+- Checked against ARM's *ARM11 MPCore Processor Technical Reference Manual* (DDI 0360E), libctru 2.7.1 and devkitARM r68 (GCC 16.1). The performance-counter helper below compiles without warnings with those versions; it has **not** been run on hardware for this page (Old 3DS: not run; New 3DS: not run).
 - Measure before and after every change ([testing on hardware](testing-on-hardware.md#running-a-performance-experiment)). The rules of thumb here say where to look, not what you will find.
 
 ## How the core executes code
@@ -138,7 +138,7 @@ Interpreting the numbers:
 
 ### Counters versus the system tick
 
-The two clocks are different things. `svcGetSystemTick()` counts at the fixed base rate of 268,111,856 Hz on every model and clock mode ([performance](performance.md#cpu-time-the-system-tick)); 3dbrew describes it as the CPU ticks elapsed since power-on [documented: 3dbrew SVC page]. The CP15 cycle counter (`CCNT`) counts core cycles, or every 64th cycle with `PERFCOUNTEREVT_CORE_CYCLE_COUNT_64` [documented: libctru `svc.h`; DDI 0360E §3.4.27]. So on a New 3DS in 804 MHz mode you would expect `CCNT` to advance about 3 times faster than the tick, and on an Old 3DS about 1:1. That ratio is `[hypothesis]` until a run records both over the same interval; never mix the two units in one table, and convert with the measured ratio, not an assumed one.
+The two clocks are different things. `svcGetSystemTick()` counts at the fixed base rate of 268,111,856 Hz on all models and clock modes ([performance](performance.md#cpu-time-the-system-tick)); 3dbrew describes it as the CPU ticks elapsed since power-on [documented: 3dbrew SVC page]. The CP15 cycle counter (`CCNT`) counts core cycles, or every 64th cycle with `PERFCOUNTEREVT_CORE_CYCLE_COUNT_64` [documented: libctru `svc.h`; DDI 0360E §3.4.27]. So on an Old 3DS you would expect `CCNT` to advance about 1:1 with the tick. **New 3DS:** in 804 MHz mode, about 3 times faster than the tick. That ratio is `[hypothesis]` until a run records both over the same interval; never mix the two units in one table, and convert with the measured ratio, not an assumed one.
 
 ### Availability under Luma3DS (not yet verified)
 
@@ -149,7 +149,7 @@ Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a c
 ## Technical details
 
 - `svcControlPerformanceCounter(u64 *out, PerfCounterOperation op, u32 param1, u64 param2)`; operations `ENABLE` (claim and lock), `DISABLE` (release, forcibly), `GET_VALUE`/`SET_VALUE` (per `PerfCounterRegister`), `GET_OVERFLOW_FLAGS`, `RESET` (two bitmasks of `BIT(register)`: values, overflow flags), `GET_EVENT`/`SET_EVENT`, `SET_VIRTUAL_COUNTER_ENABLED` (kernel tracks overflows to provide 64-bit values).
-- Registers: core `PMN0`, `PMN1`, `CCNT` (`PERFCOUNTERREG_CORE_*` 0–2); SCU `MN0`–`MN3` (`0x10`–`0x13`), plus `MN4`–`MN7` on production New 3DS only (without an interrupt line).
+- Registers: core `PMN0`, `PMN1`, `CCNT` (`PERFCOUNTERREG_CORE_*` 0–2); SCU `MN0`–`MN3` (`0x10`–`0x13`), plus, **New 3DS:** `MN4`–`MN7` on production units only (without an interrupt line).
 - Event IDs: core events `0x00`–`0x14` follow the CP15 PMNC event numbering in DDI 0360E; `0xFF` counts cycles and `0xFFF` counts every 64 cycles; SCU events start at `0x1000`.
 - The CP15 cycle counter can count every cycle or every 64th (PMNC bit 3); with the kernel's virtual counters enabled you get 64-bit values instead of wrapping 32-bit ones.
 - Memory barriers on ARMv6K are CP15 operations, not instructions: libctru's `__dmb()`, `__dsb()` and `__isb()` emit `mcr p15, 0, r, c7, c10, 5`, `c7, c10, 4` and `c7, c5, 4` [documented: `synchronization.h`].
@@ -163,10 +163,10 @@ Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a c
 
 ## Open questions
 
-- Real per-event numbers for common workloads on Old and New 3DS (sprite update, vertex generation, decompression).
+- Real per-event numbers for common workloads on Old 3DS first, then New 3DS (sprite update, vertex generation, decompression).
 - Whether the 3DS kernel enables the MPCore's unaligned-access support for user processes.
 - Whether counter values read from one core can be affected by threads on another.
-- Whether `svcControlPerformanceCounter` works from a `.3dsx` under Luma3DS v13.5 on Old and New 3DS. Experiment: call `PERFCOUNTEROP_ENABLE`, print the result code, then run a loop of known size (for example 1,000,000 `nop`-like register adds, and a sequential versus a random walk over 256 KiB) and compare `CCNT`, `svcGetSystemTick` and the data-cache-miss event over the same interval. Expected if it works: cycles per add near 1, miss counts near zero for the sequential walk. Record the result code and the `CCNT`/tick ratio on both models, with and without `osSetSpeedupEnable(true)`.
+- Whether `svcControlPerformanceCounter` works from a `.3dsx` under Luma3DS v13.5 on Old 3DS and New 3DS. Experiment: call `PERFCOUNTEROP_ENABLE`, print the result code, then run a loop of known size (for example 1,000,000 `nop`-like register adds, and a sequential versus a random walk over 256 KiB) and compare `CCNT`, `svcGetSystemTick` and the data-cache-miss event over the same interval. Expected if it works: cycles per add near 1, miss counts near zero for the sequential walk. Record the result code and the `CCNT`/tick ratio on an Old 3DS, and on a New 3DS with and without `osSetSpeedupEnable(true)`.
 
 ## Sources
 

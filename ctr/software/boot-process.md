@@ -10,7 +10,7 @@ The two programs are the console's [boot ROM](../../glossary.md#boot-rom): they 
 2. Boot9 sets up its [memory protection](../../glossary.md#mpu), loads RSA/AES keys into the crypto engines (see [security hardware](../hardware/security-hardware.md)) and decrypts the one-time-programmable (OTP) data.
 3. Boot9 looks for a firmware to run: normally the NAND (every FIRM partition in NCSD order), then the Wi-Fi SPI flash as a fallback. If the shell is closed and a special key combination is held, it tries a DS cartridge before NAND.
 4. It verifies the NCSD header and FIRM header (SHA-256 + RSA-2048), copies the sections to their load addresses and hides part of itself so FCRAM becomes accessible.
-5. Both processors jump to the firmware's entry points. In the ARM11, extra cores park themselves in Boot11 (anything above core 2 hangs there) until the OS releases them; on the New 3DS Kernel11 uses a `CFG11_BOOTROM_OVERLAY_CNT` register to redirect cores 3 and 4 into Kernel11 code.
+5. Both processors jump to the firmware's entry points. In the ARM11, extra cores park themselves in Boot11 (anything above core 2 hangs there) until the OS releases them. **New 3DS:** Kernel11 uses a `CFG11_BOOTROM_OVERLAY_CNT` register to redirect cores 3 and 4 into Kernel11 code.
 6. On the ARM9, Kernel9 starts, hides the OTP, and starts Process9. On the ARM11, Kernel11 starts and launches system processes, including `PM` (process manager), which starts `NS` (the shell). `NS` either auto-boots a title or launches the Home Menu.
 
 Approximate timeline: LCDs initialised at ~4 s; Home Menu fully loaded at ~7 s; boot ROM and firmware load in under ~1 s.

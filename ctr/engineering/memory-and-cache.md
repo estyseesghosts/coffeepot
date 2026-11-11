@@ -11,7 +11,7 @@ Hardware facts (physical map, region sizes, VRAM banks) live on [memory](../hard
 
 ## How much memory you get
 
-The kernel gives the running application one **APPLICATION memory region** whose size depends on the system's memory mode, `APPMEMTYPE` ([memory: FCRAM regions](../hardware/memory.md#fcram-regions-appmemtype)): normally 64 MB on an Old 3DS and 124 MB on a New 3DS. Your code, data and every heap come out of that region; VRAM does not.
+The kernel gives the running application one **APPLICATION memory region** whose size depends on the system's memory mode, `APPMEMTYPE` ([memory: FCRAM regions](../hardware/memory.md#fcram-regions-appmemtype)): normally 64 MB on an Old 3DS. **New 3DS:** normally 124 MB. Your code, data and every heap come out of that region; VRAM does not.
 
 **A `.3dsx` inherits the memory mode of whatever was running.** Luma3DS's homebrew loader generates the 3DSX's **[extended header](../glossary.md#exheader)** so that its Old 3DS and New 3DS system modes equal the current `app_memtype` [documented: Luma3DS `hbldr.c`]. In practice:
 
@@ -150,13 +150,13 @@ With citro3d's standard frame loop, "GPU finished" for everything drawn in frame
 - **Flushing before writing.** The flush must come after the last CPU write and before the device starts.
 - **Rewriting a vertex buffer the GPU is still reading** (written before `C3D_FrameBegin` without double-buffering): flickering or torn geometry.
 - **Allocating in the frame loop.** `linearAlloc`/`linearFree` every frame fragments the linear heap; allocate pools at start-up.
-- **Assuming the New 3DS's 124 MB.** A program developed on a New 3DS may not even start on an Old 3DS. Test the smallest mode.
+- **Assuming the New 3DS's 124 MB (a New 3DS-only figure).** A program developed on a New 3DS may not even start on an Old 3DS. Test the smallest mode.
 
 ## Open questions
 
-- Measured cost of the full linear-heap flush in `C3D_FrameEnd` at 16 and 32 MiB, Old vs New 3DS — [`flushbench`](../benchmarks/README.md#flushbench) measures it; no results yet.
+- Measured cost of the full linear-heap flush in `C3D_FrameEnd` at 16 and 32 MiB, Old 3DS first, then New 3DS — [`flushbench`](../benchmarks/README.md#flushbench) measures it; no results yet.
 - Whether the kernel switches to a whole-cache clean above some range size (which would bound the cost of large flushes) is not documented in the sources used.
-- CPU write and read bandwidth to the application heap versus linear heap on each model.
+- CPU write and read bandwidth to the application heap versus linear heap on Old 3DS first, then New 3DS.
 
 ## Sources
 

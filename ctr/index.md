@@ -2,9 +2,9 @@
 
 The Nintendo 3DS is a handheld console sold from 2011, the successor to the Nintendo DS. Its signature feature is a glasses-free stereoscopic 3D upper screen, paired with a touchscreen lower screen.
 
-It plays 3DS cartridges and (mostly) DS cartridges, and runs a Nintendo operating system the company calls [Horizon](../glossary.md#horizon). The family includes the 3DS, 3DS XL, 2DS (the "Old 3DS" group) and the faster New 3DS / New 3DS XL / New 2DS XL models (the "New 3DS" group). This wiki uses **CTR** ([glossary](glossary.md#ctr)) as the platform name for the whole family. Online play ended on 8 April 2024; the eShop closed in March 2023.
+It plays 3DS cartridges and (mostly) DS cartridges, and runs a Nintendo operating system the company calls [Horizon](../glossary.md#horizon). The family has two groups. This wiki treats the **Old 3DS** (3DS, 3DS XL, 2DS) as the default; the faster **New 3DS** group (New 3DS, New 3DS XL, New 2DS XL) is covered in explicit **New 3DS:** notes. This wiki uses **CTR** ([glossary](glossary.md#ctr)) as the platform name for the whole family. Online play ended on 8 April 2024; the eShop closed in March 2023.
 
-Unusually for a console, it contains **three** generations of ARM processor: a dual- or quad-core ARM11 that runs games, an ARM9 that acts as a security and storage processor, and an ARM7 kept only for Game Boy Advance/DS compatibility. A single boot ROM, unchanged across all models, is the root of its security — and, once found flawed, the root of its homebrew scene.
+Unusually for a console, it contains **three** generations of ARM processor: a dual-core ARM11 that runs games (**New 3DS:** quad-core), an ARM9 that acts as a security and storage processor, and an ARM7 kept only for Game Boy Advance/DS compatibility. A single boot ROM, unchanged across all models, is the root of its security — and, once found flawed, the root of its homebrew scene.
 
 ## At a glance
 

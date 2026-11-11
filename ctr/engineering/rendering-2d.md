@@ -109,7 +109,7 @@ Verify such a path by comparing both renderers on the same captured state, then 
 
 - The top screen is 400×240, the bottom 320×240. Original art designed for 256×192 (DS) or 320×240 can be shown 1:1, centred, or scaled by the GPU with filtering.
 - For crisp scaling, render the game at its native resolution into a texture, then draw that texture to the screen with nearest-neighbour filtering at an integer factor, or with linear filtering for a smoother non-integer fit.
-- **Wide mode** (800×240 on the top screen, not on the original 2DS) doubles horizontal resolution for sharper 2D at twice the fill cost; it cannot be combined with stereoscopic 3D ([GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode)).
+- **Wide mode** (800×240 on the top screen, not on the 2DS) doubles horizontal resolution for sharper 2D at twice the fill cost; it cannot be combined with stereoscopic 3D ([GPU rendering](gpu-rendering.md#stereoscopic-3d-and-wide-mode)).
 
 ## Technical details
 
