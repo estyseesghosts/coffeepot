@@ -262,3 +262,99 @@ The configuration that maps shader output registers to position, colour, texture
 ### Stubbed SVC {#stubbed-svc}
 
 A system call that exists in the kernel's call table but only returns an error code (for example `0xF8C007F4`) instead of doing anything. Several ARM11 kernel calls are stubs, some since a given firmware version. See [kernel](software/kernel.md).
+
+### Snoop Control Unit (SCU) {#scu}
+
+The MPCore block that keeps the cores' data caches coherent. See [ARM11 MPCore internals](hardware/arm11-mpcore.md#snoop-control-unit-scu).
+
+### BTAC {#btac}
+
+Branch target address cache, the ARM11's 128-entry dynamic branch predictor. See [ARM11 MPCore internals](hardware/arm11-mpcore.md#branch-prediction).
+
+### RunFast mode {#runfast}
+
+The VFP11 mode with flush-to-zero, default NaN and all exception enables off, so every operation finishes in hardware. libctru sets it. See [ARM11 MPCore internals](hardware/arm11-mpcore.md#vfp11-floating-point-unit).
+
+### Card cipher (SNOW 2.0 / RC4) {#card-cipher}
+
+The stream ciphers used on 3DS game card command traffic. See [game cards](hardware/gamecard.md).
+
+### Kernel object {#kernel-object}
+
+A structure the kernel keeps for something it manages (process, thread, event, session). Programs hold handles that refer to it. See [kernel objects](software/kernel-objects.md).
+
+### Class token {#class-token}
+
+A one-byte code the kernel gives each kernel object class, marking for example whether the object can be waited on. See [kernel objects](software/kernel-objects.md).
+
+### APPMEMTYPE {#appmemtype}
+
+The number that picks how FCRAM is split between the application, system and base regions. See [CTR memory](hardware/memory.md).
+
+### cetk {#cetk}
+
+The common ticket shared by every console, for titles not sold in the eShop. See [title metadata and tickets](software/title-metadata-and-tickets.md).
+
+### Gspwn {#gspwn}
+
+Using the GPU's DMA to read and write physical memory from a userland exploit. See [system flaws](software/system-flaws.md).
+
+### Seedminer {#seedminer}
+
+Brute force of the `movable.sed` key Y. See [system flaws](software/system-flaws.md).
+
+### NVer / CVer {#nver-cver}
+
+System data archives that hold the installed system version. See [titles](software/titles.md).
+
+### 3GX {#3gx}
+
+Luma3DS's game-plugin file format (magic `3GX$0002`), loaded from `/luma/plugins`. See [Luma3DS](homebrew/luma3ds.md).
+
+### *hax payload {#hax-payload}
+
+The second-stage payload that most old userland exploits boot to start the Homebrew Launcher. No longer needed since Luma3DS 8.0. See [exploits](homebrew/exploits.md).
+
+### InputRedirection {#inputredirection}
+
+A Rosalina feature that receives controller input from a PC over UDP port 4950. See [Luma3DS](homebrew/luma3ds.md).
+
+### Human interface device service (HID) {#hid}
+
+The system service (`hid:USER`) that delivers buttons, Circle Pad, touch and motion-sensor data through shared memory. See [input and sensors](engineering/input-and-sensors.md).
+
+### IRRST {#irrst}
+
+`ir:rst`, the service for the C-Stick and ZL/ZR on a New 3DS; libctru starts it from HID. See [input and sensors](engineering/input-and-sensors.md).
+
+### CAM / Y2R {#cam-y2r}
+
+The camera service and the hardware YUV-to-RGB converter. See [cameras and Y2R](engineering/camera-and-y2r.md).
+
+### MIC {#mic}
+
+The microphone service. See [microphone](engineering/microphone.md).
+
+### NFC {#nfc}
+
+The contactless reader service used for amiibo. Built in on a New 3DS; an Old 3DS needs an accessory. See [NFC and infrared](engineering/nfc-and-infrared.md).
+
+### UDS {#uds}
+
+`nwm::UDS`, local-wireless communication between 3DS consoles. It is not DS Wireless. See [local wireless](engineering/local-wireless.md).
+
+### NDM exclusive state {#ndm}
+
+A mode of the network daemon manager that UDS enters. See [local wireless](engineering/local-wireless.md).
+
+### CFG {#cfg}
+
+The configuration service (model, language, region). See [system information and power](engineering/system-info-and-power.md).
+
+### PTM {#ptm}
+
+The power and play-time service (battery, lid, steps, play history). See [system information and power](engineering/system-info-and-power.md).
+
+### Service group {#service-group}
+
+libctru's one-header, one-init/exit-pair wrapper around a system service. See [libctru service groups](engineering/service-groups.md).

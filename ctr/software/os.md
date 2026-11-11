@@ -44,11 +44,13 @@ Boot ROMs live in the SoC; per-console secrets live in OTP; system data in the i
 | Dynamic modules | [CRO modules](cro-modules.md) |
 | StreetPass | [StreetPass (CEC)](streetpass-cec.md) |
 | Region data | [Country/region archive](country-region-data.md) |
-| Installed software, tickets, metadata | [Titles](titles.md) |
+| Installed software, tickets, metadata | [Titles](titles.md), [title metadata and tickets](title-metadata-and-tickets.md), [title list](title-list.md), [update data](update-data.md) |
 | Containers (NCSD, NCCH, CIA, DISA) | [File formats](file-formats.md) |
 | Filesystem layout | [NAND](nand-filesystem.md), [SD](sd-filesystem.md), [saves](savegames.md) |
 | Boot chain | [Boot process](boot-process.md), [firmware](firmware.md) |
-| Signature and encryption chain | [Security architecture](security-architecture.md) |
+| Signature and encryption chain | [Security architecture](security-architecture.md), [system flaws](system-flaws.md) |
+| Dev units | [Dev unit software](dev-unit-software.md) |
+| Board test points | [TP nets](../hardware/tp-nets.md) |
 
 ### Startup of system processes
 

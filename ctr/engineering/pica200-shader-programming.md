@@ -336,6 +336,46 @@ Limits: "not more than 512 instructions and 128 operand descriptors" comes from 
 
 > Conflict: the 512-instruction limit. 3dbrew says debug text in the *Ironfall: Invasion* `code.bin` "suggests" at most 512 instructions and 128 operand descriptors. The local sources split the claim: picasso defines `MAX_VSH_SIZE 512` and rejects a *vertex* shader above it ("instruction outside vertex shader code memory"; geometry shaders skip that check), and `MAX_OPDESC 128` for every shader ("too many operand descriptors") (`picasso.h`, `picasso_assembler.cpp`). Against that, `GPUREG_SH_CODETRANSFER_INDEX` and `OPDESCS_INDEX` are 12-bit fields (bits 0-11, 3dbrew Internal Registers), which could address 4096 words. Resolution: 512 / 128 are real toolchain limits and match the game's own assertion, so stay inside them; that they are hardware limits is shown by no local source, and the wider index field only shows the register is wider than the limit. Unresolved without a hardware test of a 513-word shader.
 
+### Instruction semantics (3dbrew GPU/Shader Instruction Set)
+
+SRC1/SRC2 are the swizzled 4-component sources, DST is masked by the operand descriptor's destination mask. `[reverse-engineered: 3dbrew; the page says it is written as the instruction set is reverse engineered and may contain mistakes]`.
+
+| Opcode | Name | Meaning |
+| ------ | ---- | ------- |
+| `0x00` | `ADD` | `DST[i] = SRC1[i] + SRC2[i]` |
+| `0x01` / `0x02` | `DP3` / `DP4` | 3- or 4-component dot product |
+| `0x03` | `DPH` | dot product of SRC1 with 1.0 appended (homogeneous) and a 4-component SRC2 |
+| `0x04` | `DST` | Microsoft `dst`: `{1, SRC1[1]*SRC2[1], SRC1[2], SRC2[3]}` |
+| `0x05` / `0x06` | `EX2` / `LG2` | base-2 exponent / logarithm of SRC1's first component, replicated to every component |
+| `0x07` | `LITP` | partial lighting term, for use with `EX2`/`LG2`: `{max(x,0), clamp(y, ±127.9961), 0, max(w,0)}`; also sets `cmp.x`/`cmp.y` from whether src.x and src.w are >= 0 |
+| `0x08` | `MUL` | component-wise product |
+| `0x09` / `0x0A` | `SGE` / `SLT` | 1.0 where SRC1 >= SRC2 / SRC1 < SRC2, else 0.0 |
+| `0x0B` | `FLR` | component-wise floor |
+| `0x0C` / `0x0D` | `MAX` / `MIN` | component-wise maximum / minimum |
+| `0x0E` / `0x0F` | `RCP` / `RSQ` | reciprocal / reciprocal square root of the first component, replicated |
+| `0x12` | `MOVA` | truncate SRC1 to integers and write them to `(a0.x, a0.y)`, honouring the destination mask |
+| `0x13` | `MOV` | `DST = SRC1` |
+| `0x18-0x1B` | `DPHI`, `DSTI`, `SGEI`, `SLTI` | the `DPH`, `DST` (with sources swapped), `SGE`, `SLT` forms with the inverted format (7 bits for SRC2, so SRC2 can be a uniform) |
+| `0x20` | `BREAK` | leave the current `LOOP` block; do not use inside a nested `IF`/`CALL` within a loop |
+| `0x21` / `0x22` | `NOP` / `END` | nothing / finish this vertex or primitive |
+| `0x23` | `BREAKC` | `BREAK` if the condition holds |
+| `0x24-0x26` | `CALL`, `CALLC`, `CALLU` | run `NUM` instructions starting at `DST`, always / if condition / if boolean uniform |
+| `0x27`, `0x28` | `IFU`, `IFC` | if true, run up to `DST` then jump to `DST + NUM`; else jump to `DST` (boolean uniform / condition) |
+| `0x29` | `LOOP` | run the code up to `DST` inclusive `INT.x + 1` times; `aL` starts at `INT.y` and grows by `INT.z` per iteration |
+| `0x2A` | `EMIT` | (geometry shader) emit a vertex, and a primitive if the earlier `SETEMIT` had `FLAG_PRIMEMIT`; `SETEMIT` must come first |
+| `0x2B` | `SETEMIT` | (geometry shader) set `VTXID`, `FLAG_WINDING`, `FLAG_PRIMEMIT` for the next `EMIT`. The 4-vertex output buffer is not cleared when a primitive is emitted, so vertices of the previous primitive can be reused (3dbrew: "a working hypothesis and unconfirmed") |
+| `0x2C` / `0x2D` | `JMPC` / `JMPU` | jump to `DST` if the condition / boolean uniform holds; for `JMPU`, bit 0 of `NUM` = 1 inverts the test |
+| `0x2E-0x2F` | `CMP` | set `cmp.x`, `cmp.y` by comparing the x and y components with `CMPX`/`CMPY`; it is unknown whether `CMP` respects the destination mask |
+| `0x30-0x37`, `0x38-0x3F` | `MADI`, `MAD` | `DST = SRC3 + SRC2 * SRC1`, not fused (the product is rounded) |
+
+Opcodes `0x10`, `0x11`, `0x14-0x17`, `0x1C-0x1F` are unknown. Notation: a suffix `I` means the inverted format (7 bits for SRC2, 5 for SRC1, giving access to constant registers as SRC2), `U` means conditional on a boolean uniform, `C` conditional on the `cmp` flags. Source components are disabled implicitly by the destination mask for most instructions (`ADD o0.xy, r0.xyzw, r1.xyzw` ignores z/w of the sources), but `DP4 o0.xy, ...` still uses all four input components.
+
+Relative addressing (IDX field): 0 none, 1 `a0.x`, 2 `a0.y`, 3 `aL`. For format 1 the selected address register is added to SRC1 (for the `I` forms, SRC2); e.g. IDX 2 with `a0.y = 3` and `c8` reads `c11`. Address registers only apply to constant registers; used on inputs or temporaries they read as zero. `aL` can only be set by `LOOP` but stays readable after the block.
+
+Condition operators for `CMP` (3 bits): 0 `==`, 1 `!=`, 2 `<`, 3 `<=`, 4 `>`, 5 `>=`; 6 and 7 appear to always be true. Flow conditions test `cmp.x` against `REFX` and `cmp.y` against `REFY`: `CONDOP` 0 = OR of both tests, 1 = AND, 2 = X only, 3 = Y only.
+
+Register summary (3dbrew): inputs `v0-v15` (read-only), outputs `o0-o15` (write-only; `o7-o15` vertex shaders only; writing the same output component more than once seems to cause GPU hangs), temporaries `r0-r15`, float constants `c0-c95`, integer constants `i0-i3`, booleans `b0-b15` (see the conflict above), address registers `a0.x`, `a0.y`, `aL`. Most float instructions can take a full 7-bit constant-register operand for only one source; the others reach inputs or temporaries only. Destination field: `0x00-0x0F` = `o0-o15`, `0x10-0x1F` = `r0-r15`; source field: `0x00-0x0F` = `v0-v15`, `0x10-0x1F` = `r0-r15`, `0x20-0x7F` = `c0-c95`. Both instructions and descriptors are stored little-endian, and a descriptor id is the offset in words into the descriptor table. 3dbrew says the instruction set "seems to have been heavily inspired by" Microsoft's `vs_3_0` and Direct3D shader code (see the vs_2_0 / vs_3_0 conflict on [GPU](../hardware/gpu.md#summary)); it does not say which console model the encoding was checked on.
+
 ### Float24 behaviour
 
 Shader numbers are 24-bit floats: 1 sign, 7 exponent, 16 mantissa bits (3dbrew; libctru `f32tof24` in `gpu.c` builds the same layout, truncating the mantissa, flushing exponent underflow to zero and saturating overflow to infinity [documented: libctru `gpu.c`]). 3dbrew's results "from some tests done on hardware" (the page text does not name who ran them):
@@ -386,6 +426,7 @@ Consequence: 1.0 can be halved 63 times before reaching zero. `mad` is not a fus
 
 - [3dbrew: GPU/Shader Instruction Set](https://www.3dbrew.org/wiki/GPU/Shader_Instruction_Set) — formats, opcodes, descriptors, addressing, float tests, control flow.
 - [3dbrew: GPU/Pitfalls](https://www.3dbrew.org/wiki/GPU/Pitfalls) — output mapping, `mova`, output-write rule.
+- [aemstro (smealum)](https://github.com/smealum/aemstro) — the first shader (dis)assembler; its README says the assembler's instruction-format handling is out of date, so it is not used as a reference here.
 - [picasso](https://github.com/devkitPro/picasso/blob/d522455ea59cd5cb9219c699b93eb7750039233c/Manual.md) at `d522455`, and the installed picasso 2.7.2 — syntax, directives, error messages, assembly of every example.
 - libctru `source/gpu/shbin.c`, `shaderProgram.c`, `gpu.c` at `62b7c42` — shbin parsing, outmap, float24 conversion.
 - [3ds-examples](https://github.com/devkitPro/3ds-examples/tree/be2001fee08cf8ec7d3366e095e83f6f75da8942/graphics/gpu) at `be2001f` — `geoshader`, `fragment_light`, `simple_tri`.

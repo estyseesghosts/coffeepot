@@ -57,6 +57,18 @@ These are the porters' own statements, useful as examples of decisions rather th
 
 The common thread: both expose presentation options (resolution, wide mode, anti-aliasing, stereo) rather than one fixed configuration, put audio on a separate core, and treat Old 3DS memory as a hard limit.
 
+## What retail developers said about budgets
+
+Nintendo's "Iwata Asks" interviews record three commercial 3DS projects choosing a frame-rate budget first and fitting content to it. These come from the unpublished Old 3DS notes this wiki's author keeps (`old-3ds-guide-revised.md`, section 13.1); the interviews themselves were not re-read for this page, so treat the details as `[hypothesis]` until the sources are checked:
+
+- **Mario Kart 7:** the developers described how hard 60 fps was with two top-screen eye views plus the bottom screen and up to eight players, set the goal early, and limited track and character content to fit.
+- **The Legend of Zelda: A Link Between Worlds:** 60 fps was chosen partly to keep the stereoscopic depth stable.
+- **Tekken 3D: Prime Edition:** 60 fps was a priority, and the interview notes 60 fps wireless play without stereoscopic 3D.
+
+What these support is the discipline (set a budget, profile the worst scene, make optional costs such as stereo conditional), not any technique: the interviews do not reveal command sequences, memory layouts or batching. Do not infer how those games were built.
+
+Two community ports document their own measurements, again via the same notes and again unverified here: an Ocarina of Time port's research notes report that per-draw API overhead and *writes to linear vertex buffers* were costly on an Old 3DS and suggest compact raw vertices; the P3P3DS notes describe a PICA backend with 8x8 Morton-order texture conversion and an explicit texture cache. Both are self-reported case studies; copy a technique only after reproducing it on your own scene `[hypothesis]`.
+
 ## Lessons reported by one large port
 
 An engineering-notes set for a Pokemon HeartGold/SoulSilver 3DS port (local, unpublished; the claims are the project's own and not reproduced here) records what cost it time. They fit the advice above, but treat them as `[hypothesis]` until you measure your own game:
@@ -67,6 +79,11 @@ An engineering-notes set for a Pokemon HeartGold/SoulSilver 3DS port (local, unp
 - A fast path that is rejected on most frames saves nothing; count how often it is actually taken before tuning it.
 - Use three oracles for a renderer rewrite: fixtures against a reference render, same-state replay of both renderers, and real Old plus New 3DS runs; the emulator is extra coverage only.
 - Plan stereo and supersampling as optional: never make them mandatory on Old 3DS ([render-target budget](gpu-rendering.md#render-target-memory-budget)).
+- Indexed drawing reportedly made a scene *slower* when each triangle's vertices had to be expanded separately, because index sharing then buys nothing; check how much sharing your meshes actually have ([GPU rendering](gpu-rendering.md)).
+- Time to first use mattered as much as steady state: a texture-cache that was nearly full turned 20 texture loads into several seconds of conversion, so test cold loads and scene transitions as well as scrolling ([asset pipeline](asset-pipeline.md#streaming-and-load-hitches)).
+- One "FPS" number hides which stage is slow: keep separate counters for logic ticks, scenes produced, pictures composed and pictures actually displayed ([frame pacing](frame-pacing.md)).
+
+> Conflict: the notes disagree with each other about how much of the system core an Old 3DS application gets. An earlier plan assumed a 30% share; a later hardware run reported 80% requested and granted. They also list two worker threads on core 1 while libctru allows one. This wiki follows libctru and tells you to read the granted share back with `APT_GetAppCpuTimeLimit` instead of assuming either number ([threading](threading.md#core-1-borrowing-the-system-core)).
 
 ## Porting checklist
 
@@ -102,3 +119,4 @@ An engineering-notes set for a Pokemon HeartGold/SoulSilver 3DS port (local, unp
 - [citro3d](https://github.com/devkitPro/citro3d) — `include/c3d/*.h` (draw, texture, effect APIs).
 - [sm64-port (3DS branch) README](https://github.com/thearst3rd/sm64-port/blob/3ds-port/README.md) — core placement, frame skip, presentation options.
 - [DevilutionX 3DS documentation](https://github.com/diasurgical/DevilutionX/blob/master/docs/manual/platforms/3ds.md) — Old/New 3DS performance and memory guidance.
+- Unpublished author notes `old-3ds-guide-revised.md`, `HGSS_3DS_ENGINEERING_GUIDE.md` and `HGSS_Old_3DS_Playability_Implementation_Plan.md` (not public) — the retail-interview summary and the port lessons above; every claim taken from them is labelled `[hypothesis]` here.

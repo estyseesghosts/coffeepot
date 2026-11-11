@@ -421,7 +421,7 @@ Treat the printed result codes as data to record in [source versions](source-ver
 
 ## Not covered yet
 
-This page covers the client side only. Writing a *server* (a `svcReplyAndReceive` loop), PXI buffers in practice, and the exact error values for malformed requests are not covered or measured. For service-specific walkthroughs see [networking](networking.md) (`soc:U`, `http:C`) and [application lifecycle](application-lifecycle.md) (`APT`). Local wireless over `nwm::UDS` (a service client like any other, needing shared memory handles and event handles) and input/sensor services (`hid:USER`, `ir`) have no engineering page yet; start from [CTR services](../software/services.md).
+This page covers the client side only. Writing a *server* (a `svcReplyAndReceive` loop), PXI buffers in practice, and the exact error values for malformed requests are not covered or measured. For service-specific walkthroughs see [networking](networking.md) (`soc:U`, `http:C`) and [application lifecycle](application-lifecycle.md) (`APT`). Service-specific walkthroughs of libctru's wrappers: [input and sensors](input-and-sensors.md) (`hid:USER`, `ir:rst`), [cameras and Y2R](camera-and-y2r.md), [microphone](microphone.md), [NFC and infrared](nfc-and-infrared.md), [system information](system-info-and-power.md) (`cfg`, `ptm`, `mcu`), [New 3DS extras](new-3ds-qtm-and-mvd.md) (`qtm`, `mvd`), [local wireless](local-wireless.md) (`nwm::UDS`), and the index of every other libctru service group with a probe for which ones your build can open, [service groups](service-groups.md).
 
 ## Technical details
 

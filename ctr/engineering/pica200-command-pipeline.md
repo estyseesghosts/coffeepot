@@ -80,6 +80,8 @@ libctru's `GPUCMD_AddInternal` (`source/gpu/gpu.c`) stores each logical write as
 > Conflict: header register-id width. 3dbrew's Internal Registers page gives header bits 0-15 as "Command ID" (its worked example `0x802F011C` is consecutive flag, mask `F`, id `011C`), while libctru's encoder masks the id with `0x3FF` (10 bits). No register in libctru's table exceeds `0x3FF`, so the two agree for every known register; whether bits 10-15 do anything on hardware is unknown. The decoder follows libctru and warns on header bits that should be zero.
 
 - 3dbrew: after the first `FINALIZE` the GPU ignores the rest of the buffer, and a buffer without one hangs the GPU [reverse-engineered: 3dbrew GPU/Internal Registers].
+- 3dbrew adds two warnings for hand-built lists `[reverse-engineered: 3dbrew GPU/Internal Registers]`: the buffer size must be 16-byte aligned (the low 3 bits of the size are cleared), and a `FINALIZE` that falls in the last 8 bytes of a buffer that is not 16-byte aligned is never executed, so the GPU hangs; this is why `GPUCMD_Split` writes a second `FINALIZE` when the word count is not a multiple of 4. Invalid parameters, including NaN floats, can also hang the GPU and then the GSP module with it.
+- The register tables with every field are on [GPU internal registers](../hardware/gpu-internal-registers.md); the byte-lane write mask above is what 3dbrew calls "parameter masking" (commands `0x00010107` and `0x00020107` address the same register but different bytes).
 
 Illustrative words (derived by hand from the rules above, not captured from a console): `GPUCMD_AddWrite(GPUREG_NUMVERTICES, 3)` is `0x00000003, 0x000F0228`. `GPUCMD_AddMaskedWrite(GPUREG_PRIMITIVE_CONFIG, 2, 0x100)` is `0x00000100, 0x0002025E`.
 
@@ -163,4 +165,4 @@ The decoder is [`tools/pica_cmdlist_decode.py`](../../tools/pica_cmdlist_decode.
 
 - citro3d `source/base.c`, `attribs.c`, `buffers.c`, `drawArrays.c`, `drawElements.c`, `renderqueue.c` at `9f21cf7` — state binding, draw sequences, frame end.
 - libctru `source/gpu/gpu.c`, `gx.c`, `gxqueue.c`, `source/services/gspgpu.c`, `include/3ds/gpu/gpu.h`, `registers.h` at `62b7c42` — encoding, split, GX queue, register names.
-- [3dbrew: GPU/Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers), [GPU/Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide), [GPU/Pitfalls](https://www.3dbrew.org/wiki/GPU/Pitfalls) — header layout, register meanings, pitfalls.
+- [3dbrew: GPU/Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers) (field tables: [GPU internal registers](../hardware/gpu-internal-registers.md)), [GPU/Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide), [GPU/Pitfalls](https://www.3dbrew.org/wiki/GPU/Pitfalls) — header layout, register meanings, pitfalls.

@@ -2,7 +2,7 @@
 
 This page is a cookbook for drawing with the 3DS's **[PICA200](../glossary.md#pica200)** GPU through **citro3d**, the standard homebrew GPU library: how a frame is put together, what each draw call really costs, how to batch, how to set up textures and the colour combiners, how to handle the stereoscopic and wide screen modes, and what the hardware simply cannot do. It assumes you have built one of the `3ds-examples` GPU samples.
 
-Background lives elsewhere: the pipeline and registers on [GPU](../hardware/gpu.md), lighting/procedural textures on [GPU shading features](../hardware/gpu-shading-features.md), the shader assembler and library overview on [picasso and citro3d](../homebrew/picasso-and-citro3d.md), and buffer placement and flushing on [memory and cache](memory-and-cache.md).
+Per-call details for lighting, fog, procedural textures, gas and render state are on [citro3d fixed-function API](citro3d-fixed-function-api.md). Background lives elsewhere: the pipeline and registers on [GPU](../hardware/gpu.md), lighting/procedural textures on [GPU shading features](../hardware/gpu-shading-features.md), the shader assembler and library overview on [picasso and citro3d](../homebrew/picasso-and-citro3d.md), and buffer placement and flushing on [memory and cache](memory-and-cache.md).
 
 ## Before you start
 
@@ -160,6 +160,9 @@ VRAM is 6 MiB = 6,291,456 bytes, so a stereo top plus a bottom target (about 2.1
 - `C3D_FrameEnd` presents targets in index order 2, 1, 0 (bottom, top-right, top-left) and only those drawn to during the frame.
 - Texture unit configuration writes set bit 16 of `GPUREG_TEXUNIT_CONFIG` to clear the texture cache whenever any texture binding was marked dirty.
 - `C3D_RenderTargetClear` → `C3D_FrameBufClear` → `GX_MemoryFill` on colour and depth buffers (the PSC0/PSC1 fill units).
+
+- Colour-buffer pixel sizes written by `C3Di_FrameBufBind`: 4 bytes for RGBA8, 3 for RGB8, 2 for the 16-bit formats; depth buffers 2, 3 or 4 bytes (`framebuffer.c`). The register encoding is on [GPU internal registers](../hardware/gpu-internal-registers.md#framebuffer-gas-and-shadow-registers-0x100-0x130).
+- Indexed drawing only saves vertex bytes when many triangles share *identical* post-transform vertices (same position, texture coordinates, colour and material). A port that had to expand each triangle with per-corner data found `C3D_DrawElements` copied as many vertex bytes as `C3D_DrawArrays` plus the index bytes `[hypothesis]`: one observation from the user's unpublished HG/SS port notes (source: `hgss_pica200_implementers_guide`), not independently measured; settle it with `drawbench` on an Old 3DS and a New 3DS.
 
 ## Pitfalls
 

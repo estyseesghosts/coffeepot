@@ -296,7 +296,7 @@ All files are under `https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837
 
 ## Not covered yet
 
-Interrupting the program during a GPU transfer, a file write or an audio refill (the experiment listed for this guide) has not been done; see [Open questions](#open-questions). Continuous audio is covered only by pointer to [audio](audio.md). Local wireless (UDS) and input/sensor behaviour across sleep are not covered yet: see the service catalogue entry in [CTR services](../software/services.md) and [networking](networking.md#not-covered-yet).
+Interrupting the program during a GPU transfer, a file write or an audio refill (the experiment listed for this guide) has not been done; see [Open questions](#open-questions). Continuous audio is covered only by pointer to [audio](audio.md). Local wireless (UDS), camera, microphone, NFC and input behaviour across sleep and HOME are unmeasured: their pages ([local wireless](local-wireless.md#sleep-home-and-failure), [cameras and Y2R](camera-and-y2r.md#open-questions), [microphone](microphone.md#open-questions), [NFC and infrared](nfc-and-infrared.md#open-questions), [input and sensors](input-and-sensors.md#sleep-home-and-input)) list the experiments.
 
 ## Pitfalls
 

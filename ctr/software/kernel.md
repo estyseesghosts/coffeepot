@@ -2,48 +2,85 @@
 
 A **[kernel](../../glossary.md#kernel)** is the privileged heart of the operating system. The 3DS actually has two: **Kernel11** on the [ARM11](../hardware/cpu.md) (which runs games and apps) and **Kernel9** on the ARM9 (which does security and storage). Both are small and follow the **[microkernel](../../glossary.md#microkernel)** idea: they only manage memory, schedule [threads](../../glossary.md#thread), and pass messages; everything else is done by ordinary processes.
 
-This page describes the ARM11 kernel as programs see it: processes, threads, synchronization objects and the system call list. The surrounding system is on the [OS page](os.md); the way programs request things from other processes is on the [services page](services.md).
+This page describes the ARM11 kernel as programs see it: processes, threads, synchronization objects and a summary of the system calls. The full call table is the [SVC reference](svc-reference.md); the structures the kernel keeps for its objects are on [kernel objects](kernel-objects.md). The surrounding system is on the [OS page](os.md); the way programs request things from other processes is on the [services page](services.md).
 
 ## Behavior
 
 - Every program runs as a **[process](../../glossary.md#process)** with its own address space, handle table and system-call permissions. A process can only call the system calls its **kernel capability descriptors** allow (official software copies them from its title's metadata, the *exheader*). Calling a forbidden one panics the kernel; `svcBreak` on retail kills only the calling process (`BreakReason` values: 0 PANIC, 1 ASSERT, 2 USER) [documented: 3dbrew SVC].
 - Processes cannot touch each other's memory directly. When a service call passes a buffer, the kernel maps that memory into the receiving process.
-- Handles (object references) are per-process; `0xFFFF8001` always means "the current process".
+- Handles (object references) are per-process, and each process's handle table size comes from its kernel capability descriptors; a handle is meaningless in another process. `0xFFFF8001` always means "the current process" and `0xFFFF8000` "the currently running thread". The access check is done by the SVC handler against a mask stored on the process's supervisor-mode stack, initialised when the process starts. Ordinary applications normally only have SVCs up to `0x3D`, and not all of those; most of the ones they do have are never used by the application itself [documented: 3dbrew Multi-threading].
+- The kernel keeps no timeslices on the application core: see Scheduling below.
 - Low-level system information appears in a read-only **configuration memory** page mapped into every process (see [memory](../hardware/memory.md)).
 
 ### Scheduling
 
 Each core has its own `KScheduler`. 3dbrew states that little about it is confirmed; the Citra team's reverse engineering (below) adds detail. The first core (the *appcore*) is **mostly cooperative**: a thread loses the core when it blocks or makes certain system calls, but the scheduler may also preempt a lower-priority thread to let a higher-priority one run in specific cases. A game can still deadlock itself with careless threading. The *syscore* has been hypothesised to be preemptive but this is unconfirmed. The application's share of the syscore is set as a CPU-time percentage through the `APT` service (`APT_SetAppCpuTimeLimit`); Copetti describes it as roughly 30%, but the actual maximum comes from the title's exheader — up to 89%, the value Luma3DS gives `.3dsx` homebrew — and is 0 (no application threads on the syscore) until the application requests a share. Luma3DS's process-manager notes (TuxSH, marked as untested) describe two preemption modes: in the "single" mode used by applications, the syscore's time is cut into 25 ms slices, the one application thread allowed there gets its percentage of each slice, system modules share (90 − percentage)%, and 10% is left for other threads; CPU-time preemption exists only on the syscore. Practical consequences are on [performance](../engineering/threading.md). How the ARM9 and the two extra New 3DS cores are scheduled is unknown.
 
+> Conflict: 3dbrew's own pages disagree about the application core. Its *Kernel* page says appcore threads "seem to use cooperative multithreading" (a thread only loses the core by making a system call) and that syscore preemption is a hypothesis; its *Multi-threading* page says the appcore scheduler is a simple **preemptive priority** scheduler ("SCHED_FIFO"): the running thread is always the highest-priority runnable one, a thread is interrupted if and only if a higher-priority thread is woken (for example by an event or `svcSendSyncRequest`), and there is no timeslicing, so a thread that never blocks starves every thread of equal or lower priority on that core. The Citra notes (rescheduling cases below) and the `KScheduler` layout in [kernel objects](kernel-objects.md#thread-structures) (64 per-priority queues, no time quantum) fit the Multi-threading description. This page therefore says: priority-based and run-to-block on the appcore, with preemption only when a higher-priority thread becomes ready (including from an interrupt), and no round-robin between equal priorities; "cooperative" above is shorthand for the absence of timeslices. Unresolved by direct measurement.
+
 On Old 3DS there are two ARM11 cores. **New 3DS:** per Copetti, the fourth core is used solely for head tracking, and the third core is idle unless the title's metadata asks for it (see [CPU](../hardware/cpu.md#new-3ds-extra-cores)); the faster clock and extra memory are off unless requested, because the system cannot assume games are written for them.
 
 ## Technical details
 
-### Kernel objects (selected)
+### Kernel objects
 
-| Object | Size | Purpose (per 3dbrew) |
-| ------ | ---- | -------------------- |
-| `KCoreContext` | `0x9000` (effective `0x6000`) | One per core; the current core's is aliased at `0xFFFF1000` |
-| `KThread` / `KThreadContext` | page (`0x1000`) | Each thread gets a page at `0xFF4xx000` for its supervisor-mode stack and saved context; the page is in FCRAM on `NATIVE_FIRM`, AXI WRAM on `TWL_FIRM` |
-| `KProcess`, `KProcessHwInfo` | | `KProcessHwInfo` begins at `KProcess+0x1C` (`0x4C` bytes on New 3DS) |
-| `KSchedulableInterruptEventLinkedList` | `0x10` | One per core; interrupt events whose handlers need a thread get queued here |
-| `KInterruptEventMailbox` | `0x14` | Two instances; the first handles process-signalled events (thread priority 0) |
-| `KLinkedList`, `KObjectList`, `KObjectLink`, `KObjectMutex`, `KRecursiveLock` | | Helper structures (a recursive lock's unlock avoids triggering the reschedule SGI #8) |
-| `KEventInfo`, `KDebugThread` | `0x38`, `0x18` | Debug events |
-
-Per-core "current" pointers live at fixed kernel addresses: `0xFFFF9000` current thread, `0xFFFF9004` current process, `0xFFFF9008` scheduler, `0xFFFF900C` interrupt-event list; the ARM9 equivalents are at `0x08000040–0x08000048`.
+The field-level layouts (`KProcess`, `KThread`, `KThreadContext`, `KCoreContext`, the debug objects, class tokens and the helper list/lock structures) are on [kernel objects](kernel-objects.md). Two facts that other sections rely on: each thread gets a `0x1000`-byte page in the `0xFF4xx000` region for its supervisor-mode stack and saved context (in FCRAM on `NATIVE_FIRM`, in AXI WRAM on `TWL_FIRM`), and the current core's `KCoreContext` is aliased at `0xFFFF1000`, so the "current" pointers sit at fixed kernel addresses `0xFFFF9000` (thread), `0xFFFF9004` (process), `0xFFFF9008` (scheduler) and `0xFFFF900C` (interrupt-event list). The ARM9 equivalents are at `0x08000040–0x08000048`.
 
 ### Processes and threads
 
-`CreateCodeSet` copies the `.text`, `.rodata` and `.data/.bss` segments (the `CodeSetInfo` structure gives addresses and page counts) into freshly allocated memory; `CreateProcess` applies the exheader's capability descriptors (memory mappings, allowed SVCs, CPU clock and L2 configuration); `Run` creates the main thread. Core affinity is managed through `Get/SetThreadAffinityMask` and `Get/SetThreadIdealProcessor`.
+`CreateCodeSet` allocates memory according to a `CodeSetInfo` and copies the `.text`, `.rodata` and `.data/.bss` segment data from the given addresses into it; `CreateProcess` takes the code-set handle plus the exheader's capability descriptors and sets up virtual address mappings, the CPU clock and L2 cache configuration and more; `Run` creates the main thread and appends it to the scheduler queue (the `argc`/`argv`/`envp` fields of its `StartupInfo` are ignored). 3dbrew marks all three as "behavior unconfirmed".
+
+`CodeSetInfo` (addresses are virtual in the new process, sizes in `0x1000`-byte pages):
+
+| Offset | Type | Field |
+| ------ | ---- | ----- |
+| `0x00` | u8[8] | Code set name |
+| `0x08` | u16 | Unknown (written to field `0x5A` of `KCodeSet`) |
+| `0x0A` | u16 | Unknown / padding |
+| `0x0C` | u32 | Unknown / padding |
+| `0x10`, `0x14` | u32 | `.text` address, size |
+| `0x18`, `0x1C` | u32 | `.rodata` address, size |
+| `0x20`, `0x24` | u32 | Read-write (`.data` + `.bss`) address, size |
+| `0x28`, `0x2C`, `0x30` | u32 | Total `.text`, `.rodata` and read-write pages |
+| `0x34` | u32 | Unknown / padding |
+| `0x38` | u8[8] | Program ID |
+
+3dbrew lists these fields without offsets; the offsets here come from Luma3DS's packed `CodeSetInfo` declaration, which has the same field order [documented: Luma3DS `kernel.h`].
+
+#### Threads, priorities and cores
+
+- A lower priority number means a higher priority. Userland applications may use priorities `0x18` to `0x3F`; the main thread's priority seems to be `0x30`. `CreateThread` accepts `0x0..0x3F` and otherwise returns `0xE0E01BFD`. The stack top should be 8-byte aligned (the kernel clears the low 3 bits if it is not), and `r0` of the new thread is the `arg` parameter [documented: 3dbrew Multi-threading].
+- The `processorid` argument of `CreateThread`: a non-negative value selects a core (0 appcore, 1 syscore on the Old 3DS), `−1` means all cores and `−2` the process's default from the exheader (usually 0 for applications, 1 for system services); games usually pass `−2`. **New 3DS:** IDs 2 and 3 are also valid. The Old 3DS kernel only checks that the value is at most 2 (so 2 is accepted but there is no third core); the New 3DS kernel requires it to be at most the core count read from the MPCore "SCU Configuration Register", and for a process outside the BASE memory region ID 2 requires the exheader kernel-flag bitmask `0x2000` and ID 3 is always refused, both with `0xD9001BEA`. Those are the only checks. Under Luma3DS on the New 3DS, application threads created for the syscore can be redirected to core 2 ([SVC reference](svc-reference.md#luma3ds-additions-and-replacements)).
+- `GetThreadInfo` always fails (it only reports whether the handle is a thread); `GetThreadContext` is stubbed; `OpenThread`, `GetThreadId` and `GetProcessIdOfThread` convert between handles and IDs.
+- Calling `CloseHandle` on a thread handle only terminates the thread if the reference count reaches zero. When a thread exits, every mutex it owns is released.
+- Cores are numbered 0–1 on the Old 3DS and 0–3 on the New 3DS. One core is always dedicated to the OS, so an application never gets 100% of both cores by default: the syscore only becomes usable after `APT_SetAppCpuTimeLimit`, and once the limit is non-zero it cannot be set back to 0. A high limit can make an application slower if it depends heavily on system services, because the system then has less syscore time [documented: 3dbrew Multi-threading].
 
 ### Synchronization
 
-Mutexes, semaphores, events, timers, and **address arbiters** (futex-like waits on a memory word) are kernel objects. `WaitSynchronization1/N` and `SignalAndWait` wait on them. `libctru` adds user-space helpers (critical sections without priority inheritance) described on 3dbrew's *CTR API* page.
+Mutexes, semaphores, events, timers, and **address arbiters** (futex-like waits on a memory word) are kernel objects. `WaitSynchronization1/N` wait on them (`SignalAndWait` is a stub). `libctru` adds user-space helpers (critical sections without priority inheritance) described on 3dbrew's *CTR API* page. 3dbrew notes that most synchronization systems come in a normal and a "light-weight" variant.
+
+`WaitSynchronization` works on any handle whose class derives from `KSynchronizationObject`; what "ready" means depends on the class:
+
+| Object | Wakes (and what the wait consumes) |
+| ------ | ---------------------------------- |
+| `KEvent` | When signalled |
+| `KMutex` | Acquires the lock (blocks until it succeeds). 3dbrew warns the mutex may not stay available once the thread that created it is destroyed |
+| `KSemaphore` | Consumes one count if available |
+| `KTimer` | When the timer fires; a one-shot timer is cleared by the wait |
+| `KThread` | When the thread terminates |
+| `KProcess` | When the process exits or is terminated |
+| `KServerPort` | A new client connected; `AcceptSession` can now be called |
+| `KServerSession` | An IPC command was submitted to the server |
+| `KClientPort` | A session slot is free (the maximum was not reached) |
+| `KClientSession` | Always false(?) |
+| `KDebug` | A debug event is signalled; fetch it with `GetProcessDebugEvent` |
+| `KDmaObject` | Unknown (3dbrew has "???") |
+
+An address arbiter is a counter at a user-specified address: `ArbitrateAddress` with `SIGNAL` resumes up to `value` waiting threads (highest priority first; a negative value releases all), and the other modes put the caller to sleep depending on the word at the address (see the [SVC reference](svc-reference.md#types-and-enumerations) for the five types). Arbiters can implement process-local synchronization primitives.
 
 ### System call list
 
-System calls are numbered; `NF ARM11` marks calls on the normal ARM11 firmware. Highlights:
+System calls are numbered; `NF ARM11` marks calls on the normal ARM11 firmware. This is a summary of the groups; the full table with signatures, per-kernel availability, notes and the multi-purpose calls is the [SVC reference](svc-reference.md). Highlights:
 
 | Group | Calls (id) |
 | ----- | ---------- |
@@ -58,7 +95,7 @@ System calls are numbered; `NF ARM11` marks calls on the normal ARM11 firmware. 
 | Privileged | `Backdoor` (0x7B, runs a function in kernel mode; see the Conflict below), `KernelSetState` (0x7C), `QueryProcessMemory` (0x7D), `SetGpuProt` (0x59, added 11.3.0), `SetWifiEnabled` (0x5A, added 11.4.0) |
 | Stubs | A stubbed call only returns an error (`0xF8C007F4`). 3dbrew marks `SignalAndWait` (0x26), `SendSyncRequest1-4` (0x2E-0x31), `GetThreadContext` (0x3B), `ReplyAndReceive1-4` (0x4B-0x4E) and `RandomStub` (0x74) as stubbed; `Set{Thread}AffinityMask` (0x0E) and `SetThreadIdealProcessor` (0x10) became stubs on NATIVE_FIRM from 8.0.0-18; `AddCodeSegment` (0x7A) on NATIVE_FIRM from 2.0.0-2 |
 
-`0x3D OutputDebugString` does nothing on non-debug units, and `0x3E ControlPerformanceCounter` is listed without notes. `svc 0x59 SetGpuProt` enables/disables the GPU's memory protection.
+`0x3D OutputDebugString` does nothing on non-debug units, and `0x3E ControlPerformanceCounter` is listed without notes. `svc 0x59 SetGpuProt` (stock kernel) writes a value to a `PDN` register that 3dbrew describes as GPU memory protection; Luma3DS replaces it with a function that does nothing (see the [SVC reference](svc-reference.md#setgpuprot-and-setwifienabled)).
 
 ### Waiting, signalling and rescheduling (Citra reverse-engineering notes)
 
@@ -75,13 +112,13 @@ Resource limit types: 0 priority, 1 commit (allocatable memory), 2 threads, 3 ev
 
 ### Kernel errors
 
-Two kernel results quoted above: `0x09401BFE` is the timeout/not-ready result of the wait calls, `0xD920060D` the result for a thread marked for termination [reverse-engineered: Citra notes]. Kernel results use the standard 3DS error-code layout; see 3dbrew's SVC page for a table.
+Two kernel results quoted above: `0x09401BFE` is the timeout/not-ready result of the wait calls, `0xD920060D` the result for a thread marked for termination [reverse-engineered: Citra notes]. Kernel results use the standard 3DS error-code layout; the full table of kernel result codes is in the [SVC reference](svc-reference.md#kernel-error-codes).
 
 ## Homebrew notes
 
 > Conflict: 3dbrew's SVC table says `Backdoor` (0x7B) is used on ARM9, that ARM11 processes cannot call it without some form of kernelhax, and that it was removed from the ARM11 kernel in 11.0.0-33. Luma3DS's `k11_extension/source/svc.c` (`buildAlteredSvcTable`) nevertheless installs its own `Backdoor` at 0x7B. Both are consistent: stock ARM11 firmware from 11.0.0-33 has no userland Backdoor, but under Luma3DS the call exists again [documented: Luma3DS source at the pinned commit]. This page reports both and treats availability as "only under CFW" for current firmware.
 
-The `Backdoor` (0x7B) call and kernel exploits turn userland control into full ARM11 kernel access (see [exploits](../homebrew/exploits.md)). `libctru` wraps the system calls and `svcGetSystemTick` is used for precise timing. Luma's `buildAlteredSvcTable` replaces these official calls with hooks: 0x01 ControlMemory, 0x03 ExitProcess, 0x08 CreateThread (New 3DS only), 0x29-0x2D (GetHandleInfo, GetSystemInfo, GetProcessInfo, GetThreadInfo, ConnectToPort), 0x32 SendSyncRequest, 0x3C Break, 0x59 SetGpuProt, 0x5A SetWifiEnabled, 0x76 TerminateProcess, 0x7B Backdoor, 0x7C KernelSetState. It adds custom calls: 0x80 CustomBackdoor; 0x90-0x94 cache/address helpers (`convertVAToPA`, data-cache range/entire flush, instruction-cache range/entire invalidate); 0xA0-0xA3 (`MapProcessMemoryEx`, `UnmapProcessMemoryEx`, `ControlMemoryEx`, `ControlMemoryUnsafe`); 0xB0-0xB3 (`ControlService`, `CopyHandle`, `TranslateHandle`, `ControlProcess`) [documented: Luma3DS `k11_extension/source/svc.c`]. Custom firmware extends the kernel: Luma3DS injects `k11_extension` to hook and add supervisor calls ([Luma3DS](../homebrew/luma3ds.md)).
+The `Backdoor` (0x7B) call and kernel exploits turn userland control into full ARM11 kernel access (see [exploits](../homebrew/exploits.md)). `libctru` wraps the system calls and `svcGetSystemTick` is used for precise timing. Luma's `buildAlteredSvcTable` replaces these official calls with hooks: 0x01 ControlMemory, 0x03 ExitProcess, 0x08 CreateThread (New 3DS only), 0x29-0x2D (GetHandleInfo, GetSystemInfo, GetProcessInfo, GetThreadInfo, ConnectToPort), 0x32 SendSyncRequest, 0x3C Break, 0x59 SetGpuProt, 0x5A SetWifiEnabled, 0x76 TerminateProcess, 0x7B Backdoor, 0x7C KernelSetState. It adds custom calls: 0x80 CustomBackdoor; 0x90-0x94 cache/address helpers (`convertVAToPA`, data-cache range/entire flush, instruction-cache range/entire invalidate); 0xA0-0xA3 (`MapProcessMemoryEx`, `UnmapProcessMemoryEx`, `ControlMemoryEx`, `ControlMemoryUnsafe`); 0xB0-0xB3 (`ControlService`, `CopyHandle`, `TranslateHandle`, `ControlProcess`) [documented: Luma3DS `k11_extension/source/svc.c`]. What each hook and custom call does is in the [SVC reference](svc-reference.md#luma3ds-additions-and-replacements). Custom firmware extends the kernel: Luma3DS injects `k11_extension` to hook and add supervisor calls ([Luma3DS](../homebrew/luma3ds.md)).
 
 ## Open questions
 
@@ -92,9 +129,10 @@ The `Backdoor` (0x7B) call and kernel exploits turn userland control into full A
 
 - [3dbrew: Kernel](https://www.3dbrew.org/wiki/Kernel) and kernel object pages: [KThreadContext](https://www.3dbrew.org/wiki/KThreadContext), [KCoreContext](https://www.3dbrew.org/wiki/KCoreContext), [KProcessHwInfo](https://www.3dbrew.org/wiki/KProcessHwInfo), [KSchedulableInterruptEventLinkedList](https://www.3dbrew.org/wiki/KSchedulableInterruptEventLinkedList), [KInterruptEventMailbox](https://www.3dbrew.org/wiki/KInterruptEventMailbox), [KRecursiveLock](https://www.3dbrew.org/wiki/KRecursiveLock) — kernel structures.
 - [3dbrew: SVC](https://www.3dbrew.org/wiki/SVC) — system call list.
-- [3dbrew: Multi-threading](https://www.3dbrew.org/wiki/Multi-threading) — processes, threads, synchronization, capability descriptors.
+- [3dbrew: Multi-threading](https://www.3dbrew.org/wiki/Multi-threading) — processes, threads, priorities and processor IDs, `CodeSetInfo`, per-object wait semantics, address arbiters, capability descriptors.
 - [3dbrew: CTR API](https://www.3dbrew.org/wiki/CTR_API) — critical sections.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — thread context pages, kernel pointers.
+- Companion pages: [kernel objects](kernel-objects.md) and the [SVC reference](svc-reference.md) hold the field-level and call-level detail from the same 3dbrew pages and Luma3DS source.
 - Citra project wiki, "Kernel synchronization" (scheduler, waitlists, rescheduling cases) — the `citra-emu/citra` repository that hosted it has since been removed from GitHub, so no live link could be verified.
 - [libctru `svc.h`, `thread.h`, `apt.h`](https://github.com/devkitPro/libctru) — resource limit types, arbitration types, processor IDs, application CPU time limit calls.
 - [Luma3DS `k11_extension`](https://github.com/LumaTeam/Luma3DS) — the supervisor calls Luma adds or replaces ([Luma3DS](../homebrew/luma3ds.md)).

@@ -54,7 +54,7 @@ The ARM9 has a [memory protection unit](../../glossary.md#mpu), 32 KB instructio
 
 ### The MP11 core (from ARM's manual)
 
-The ARM11 MPCore is documented in ARM's technical reference manual DDI 0360E (r1p0). The Old 3DS uses a two-core instance of it. **New 3DS:** four cores. Checked against DDI0360E `[documented]`: eight-stage pipeline (section 1.7), 128-entry BTAC and static prediction (6.2), three-entry return stack (6.3), 64-entry two-way unified main TLB with eight lockable entries (7.4 and CP15 TLB Type Register), 8-word cache lines (CP15 Cache Type Register), duplicated tag RAMs and migratory lines in the SCU. The manual describes a configurable design (1–4 cores, 16/32/64 KB caches); the sizes above are what the 3DS actually uses.
+The ARM11 MPCore is documented in ARM's technical reference manual DDI 0360E (r1p0). The Old 3DS uses a two-core instance of it. **New 3DS:** four cores. Checked against DDI0360E `[documented]`: eight-stage pipeline (section 1.7), 128-entry BTAC and static prediction (6.2), three-entry return stack (6.3), 64-entry two-way unified main TLB with eight lockable entries (7.4 and CP15 TLB Type Register), 8-word cache lines (CP15 Cache Type Register), duplicated tag RAMs and migratory lines in the SCU. The manual describes a configurable design (1–4 cores, 16/32/64 KB caches); the sizes above are what the 3DS actually uses. Cache and TLB operations, page-table formats and memory types, the interrupt distributor and timer registers, the SCU and performance monitor registers, and the VFP11 modes and timings are all on [ARM11 MPCore internals](arm11-mpcore.md).
 
 | Feature | Detail (ARM11 MPCore r1p0) |
 | ------- | -------------------------- |
@@ -87,7 +87,7 @@ Verified against DDI0360E Table 9-1 (section 9.1), Software Interrupt Register (
 
 The **distributed interrupt controller** routes hardware interrupts to cores and lets one core interrupt another by writing the Software Interrupt Register at distributor offset `0xF00` (bits 9:0 interrupt ID, 23:16 target-core list, 25:24 target filter: `00` list, `01` all but requester, `10` requester only). This is the "inter-core interrupt" mechanism used by the 3DS kernel.
 
-Each core's **timer** and **watchdog** have a 32-bit down-counter, an 8-bit prescaler and single-shot or auto-reload modes. Period = (prescaler + 1) × (load + 1) × 2 ÷ CPU clock. Timer registers: load `0x00`, counter `0x04`, control `0x08`, interrupt status `0x0C`; watchdog registers start at `0x20`.
+Each core's **timer** and **watchdog** (interrupt IDs 29 and 30) have a 32-bit down-counter, an 8-bit prescaler and single-shot or auto-reload modes. Period = (prescaler + 1) × (load + 1) × 2 ÷ CPU clock. Timer registers: load `0x00`, counter `0x04`, control `0x08`, interrupt status `0x0C`; watchdog registers start at `0x20`.
 
 ### Inter-processor communication
 
@@ -113,12 +113,12 @@ Homebrew code is ordinary ARMv6K code built with `devkitARM` (see [development w
 
 ## Open questions
 
-- The ARM11 distributor/timer behaviour above is from ARM's generic manual; which interrupt IDs the 3DS wires to which devices is not covered by the sources used here.
+- The ARM11 distributor/timer behaviour above is from ARM's generic manual; which interrupt IDs the 3DS wires to which devices is not covered by the sources used here (see also [ARM11 MPCore internals](arm11-mpcore.md#open-questions)).
 - Exact clock-multiplier registers (**New 3DS:** only) are not documented in the sources used.
 
 ## Sources
 
-- [ARM11 MPCore Processor Technical Reference Manual (ARM DDI 0360E, r1p0)](https://developer.arm.com/documentation/ddi0360/e) — pipeline, caches, TLB, SCU/MESI coherency, private memory region, interrupt distributor, timers, VFP.
+- [ARM11 MPCore Processor Technical Reference Manual (ARM DDI 0360E, r1p0)](https://developer.arm.com/documentation/ddi0360/e) — pipeline, caches, TLB, SCU/MESI coherency, private memory region, interrupt distributor, timers, VFP (register-level detail on [ARM11 MPCore internals](arm11-mpcore.md)).
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — clock speeds, core counts, New 3DS 804 MHz behavior.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — L2 cache controller address, MPCore private region location.
 - [libctru `os.h` and `os.c`](https://github.com/devkitPro/libctru) — the clock tree constants and the New 3DS speed-up call.

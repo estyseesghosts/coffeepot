@@ -36,6 +36,8 @@ Services grouped by the process that provides them, following 3dbrew's *Services
 | Other groups from 3dbrew | `ac:i/u` (Wi-Fi connection), `act:a/u` (Nintendo Network accounts), `frd:a/n/u` (friends), `news:s/u` (notifications), `pdn:s/d/i/g/c`, `SPI::NOR/CD2/CS2/CS3/DEF`, `Loader`, `mcu::CAM/GPU/HID/RTC/SND/NWM/HWC/PLS/CDC`, `mic:u`, `mp:u`, `nfc:dev/m/p/r/s/u`, `mvd:STD` and `qtm:*` (New 3DS only) | `nfc:m` is the amiibo-capable path used by libctru's `nfc`; `qtm` is head tracking |
 | Misc | `boss:U/P/M` (SpotPass), `cecd:u/s/ndm` (StreetPass; see [StreetPass (CEC)](streetpass-cec.md)), `ir:u/USER/rst`, `dlp:CLNT/FKCL/SRVR` (Download Play), `ptm:*` (power/play history), `hid:USER/SPVR/NFC/QTM`, `i2c::MCU/CAM/LCD/DEB/HID/IR/EEP/NFC/QTM`, `gpio:*` | |
 
+Suffix meanings in 3dbrew's notes: `am` — `app` for applications, `net` network installation (`nim`), `u` local installation, `sys` system titles; `nim` — `aoc` DLC, `ndm`, `s` eShop, `u` updater; `ns:s` system, `ns:p` power (shutdown/reboot), `APT:A/S/U` application/system/user; `cdc:` — HID, MIC, CSN, DSP, LGY (legacy, some backward-compatibility role), CHK; `dlp:` — CLNT client, FKCL fake client, SRVR server; `boss:` U user, P privileged, M for `ndm`; `ptm:` — gets (get system time), play (play history), s, sets (set system time), sysm (Home Menu/Test Menu), u; `nwm::` — CEC (StreetPass), INF infrastructure, SOC socket, UDS local WLAN; `act:`/`frd:` — a admin; `hid:` — NFC, QTM, SPVR (system privileged?). The PXI service groups are filesystem, process, application manager, process manager, development, gamecard and the legacy FIRM (`TWL_FIRM`/`AGB_FIRM`) interfaces. The only named port is `ErrDisp`.
+
 ### Services and the ARM9
 
 `pxi:*` and `Pxi*` services are the ARM11 side of the [PXI](../glossary.md#pxi) channel to the ARM9. File access to NAND and cartridges goes `fs:USER` → `fs` process → PXI → [Process9](os.md).
@@ -85,6 +87,7 @@ Homebrew calls the same services through `libctru` wrappers. Some [exploits](../
 
 ## Open questions
 
+- 3dbrew's API page says light-weight critical sections exist but gives no API for the light semaphore and light event ([kernel](kernel.md)); error codes are on a separate 3dbrew page.
 - Several services are listed without notes (`?`), and `cdc:CHK`, `nwm::EXT/SAP/TST`, `ns:c` purposes are unknown.
 - Exact access-control (service-list) differences between retail titles, system modules and Luma3DS's patched `sm` are not catalogued here.
 - Exact open-session limits per service are not recorded; see the IPC page's open questions.

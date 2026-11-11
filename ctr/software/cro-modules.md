@@ -15,10 +15,10 @@ This page is a working description of that system; the Citra emulator team rever
 | **CRO** | `.cro` file: code, data and symbol information for a dynamic module |
 | **CRS** | `.crs` file, same format as CRO: symbol information for the static module |
 | **CRR** | `.crr` file: verification data for all modules; RO checks every dynamic module against it when loading |
-| **Symbol** | A function or variable location. *Named* (found by name, usually a mangled C++ name), *indexed* (found by index) or *anonymous* (neither; the importer keeps its own list) |
+| **Symbol** | A function or variable location, described by a segment tag. *Named* (found by name, usually a mangled C++ name), *indexed* (found by index) or *anonymous* (neither; the importer must keep its own list of them) |
 | **Importing / exporting** | A module declares which symbols it uses / makes available |
 | **Resolving / linking** | Looking up imports in the modules that export them and patching the importing code |
-| **Auto-link module** | A loaded module that is linked automatically with newly loaded modules. The static module is always one |
+| **Auto-link module** | A loaded module that is linked automatically with newly loaded modules. The static module is always one; the application chooses at load time whether a dynamic module is auto-link. Every newly loaded module links with the auto-link modules whether or not it is auto-link itself |
 | **Manual-link module** | Any other module |
 | **Rebasing** | Converting every offset in the file into a real virtual address on load (and back on unload) |
 
@@ -26,7 +26,7 @@ This page is a working description of that system; the Citra emulator team rever
 
 1. The application reads the CRS and CRO files from its [RomFS](file-formats.md) into memory buffers.
 2. It calls the RO service (`Initialize` a.k.a. "LoadCRS", `LoadCRO`, `LoadCRO_New`) with a target address. RO maps the buffer to that address and always reads and writes through that mapping.
-3. RO **rebases** the module, **registers** it in one of two doubly linked lists (auto-link or manual-link; the static module's `previous`/`next` fields head those lists) and **links** it by applying patches.
+3. RO **rebases** the module, **registers** it at the tail of one of two doubly linked lists (auto-link or manual-link, chosen by the application; the static module's `previous`/`next` fields head those lists) and **links** it by applying patches. RO and, probably, the application walk these lists to find modules when linking.
 4. When unloaded, RO unlinks it, resets the patched places to point at the module's "OnUnresolved" function and unrebases it.
 
 ### Fixing
@@ -53,18 +53,18 @@ Fixed modules change their header magic from `CRO0` to `FIXD`.
 | `0x84` | 4 | Name offset |
 | `0x88`, `0x8C` | 4 + 4 | Next / previous module (zero in the file; RO writes them) |
 | `0x90` | 4 | File size |
-| `0x94` | 4 | `.bss` size (RO doesn't touch it) |
+| `0x94` | 4 | `.bss` size (?) (RO doesn't touch it) |
 | `0x98` | 4 | Fixed size (zero in file; RO writes it) |
 | `0xA0`–`0xAC` | 4 each | Segment tags for the `nnroControlObject_` function, `OnLoad`, `OnExit` (`0xFFFFFFFF` if absent) and `OnUnresolved` |
 | `0xB0`, `0xB4` | 4 + 4 | Code offset, size |
 | `0xB8`, `0xBC` | 4 + 4 | Data offset, size |
-| `0xC0`, `0xC4` | 4 + 4 | Module name offset, size |
+| `0xC0`, `0xC4` | 4 + 4 | Module name offset (equals the name offset at `0x84`(?)), size |
 | `0xC8`, `0xCC` | 4 + 4 | Segment table offset, count |
-| `0xD0`–`0xEC` | | Exported named symbols, exported indexed symbols, exported strings, exported name tree (each offset + count/size) |
-| `0xF0`–`0x11C` | | Imported modules, external patches, imported named / indexed / anonymous symbols, imported strings |
-| `0x120`–`0x134` | | Static anonymous symbols, internal patches, static anonymous patches |
+| `0xD0`–`0xEC` | | Exported named symbols (offset, count at `0xD0`/`0xD4`), exported indexed symbols (`0xD8`/`0xDC`), exported strings (offset, size at `0xE0`/`0xE4`), exported name tree (offset, node count at `0xE8`/`0xEC`) |
+| `0xF0`–`0x11C` | | Imported modules (`0xF0`/`0xF4`), external patches (`0xF8`/`0xFC`), imported named symbols (`0x100`/`0x104`), imported indexed symbols (`0x108`/`0x10C`), imported anonymous symbols (`0x110`/`0x114`), imported strings (offset, size at `0x118`/`0x11C`) |
+| `0x120`–`0x134` | | Static anonymous symbols (`0x120`/`0x124`, the notes mark the name with (?)), internal patches (`0x128`/`0x12C`), static anonymous patches (`0x130`/`0x134`, also (?)) |
 
-All offsets are file-relative until the module is rebased. Typical layout order: header, `.text`, `.rodata`, tables, `.data`.
+All offsets are file-relative until the module is rebased, and then become virtual addresses (the load address is added to every offset). The table layouts for each symbol and patch table are defined by the `struct`s in the Citra code, which the source does not reproduce. Typical layout order: header, `.text`, `.rodata`, tables, `.data`.
 
 ### Segments and segment tags
 
@@ -72,7 +72,7 @@ Segment types: 0 `.text`, 1 `.rodata`, 2 `.data`, 3 `.bss`. A **segment tag** is
 
 ### Patches (relocations)
 
-Linking applies **patches**: a module that exports symbols stores their locations as segment tags; a module that imports them keeps patches saying where and how to write each address. All patches for one imported symbol form a *batch*. Types are defined by `PatchType`. There are also **internal patches** (a module exporting to itself; needed because segment addresses change on rebase, not organised in batches) and **static anonymous patches** (symbols exported from dynamic modules to the static module, applied on rebase and never reset; no game is known to use them).
+Linking applies **patches**: a module that exports symbols stores their locations as segment tags; a module that imports them keeps patches saying where and how to write each address. All patches for one imported symbol form a *batch*. Types are defined by `PatchType`; only `AbsoluteAddress` and `RelativeAddress` are known to be used by games and the others are unimplemented in Citra for lack of test cases. The patch types apparently match the ELF-for-ARM relocation types, and the notes remark that "relocation" would be a better name than "patch". There are also **internal patches** (a module exporting to itself; needed because segment addresses change on rebase, not organised in batches) and **static anonymous patches** (symbols exported from dynamic modules to the static module, applied on rebase and never reset; no game is known to use them).
 
 ### Registration lists and memory mapping
 
@@ -88,9 +88,19 @@ Two different operations exist. *Reset*: before linking, and when unlinking, pat
 
 > Unknown: the notes do not say whether RO verifies the four SHA-256 values in the header or relies on the CRR; the "does RO check them" question is open.
 
+### Importing and exporting tables
+
+A module records the symbols it exports in two tables: named symbols in the exported-named-symbol table and indexed symbols in the exported-indexed-symbol table. It keeps no record of exported anonymous symbols. A module records the symbols it imports in several tables: named imports go directly in the imported-named-symbol table, while indexed and anonymous imports are grouped by the module that exports them, and the imported-module table lists the referenced modules together with the indexed and anonymous symbols taken from each.
+
 ### Name lookup
 
-RO finds an exported named symbol through a trie-like **name tree** rather than scanning the table: a `bit_trie<symbol_name, symbol_index, string_tester>` whose nodes do not store keys and use absolute offsets in branches.
+RO finds an exported named symbol through a trie-like **name tree** rather than scanning the table: a `bit_trie<symbol_name, symbol_index, string_tester>` whose nodes do not store keys and use absolute offsets in branches, where the author's C++ reimplementation (a gist linked from the source) stores keys and uses relative offsets.
+
+### Debugger notification
+
+`svcBreak` has a second form, `Break(BreakReason, croInfo, croInfoSize)`, with user-break reasons `LOAD_RO` (3) and `UNLOAD_RO` (4) next to `PANIC`, `ASSERT` and `USER`; an attached debugger receives these as USER BREAK events carrying the module info (see the [SVC reference](svc-reference.md#debug-events) and the `usedSvcBreak` flag in [kernel objects](kernel-objects.md#debug-objects)). 3dbrew does not say which module issues the call.
+
+> Unknown: the Citra notes do not say which console model or system version they were checked on, nor whether the New 3DS RO service behaves differently. Nothing in the source distinguishes Old 3DS from New 3DS.
 
 ## Homebrew notes
 
@@ -106,3 +116,4 @@ Homebrew `.3dsx` files do not use CRO; the format matters for emulators, for rev
 
 - Citra project wiki, "3DS CRO Information" (reverse engineering by wwylele) — all of the above. The `citra-emu/citra` repository that hosted it has since been removed from GitHub, so no live link could be verified.
 - [3dbrew: Services API](https://www.3dbrew.org/wiki/Services_API) — `ldr:ro` service.
+- [3dbrew: SVC](https://www.3dbrew.org/wiki/SVC) — `Break` with CRO info, `LOAD_RO`/`UNLOAD_RO` break reasons.

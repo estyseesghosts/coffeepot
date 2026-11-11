@@ -1,10 +1,10 @@
 # CTR country and region data archive
 
-Title `0004009B00010402` is a **shared data archive** [title](titles.md) (the `0004009B` category holds data-only system titles). The research note this page is based on shows that it contains LZ-compressed tables of countries and regions, with names, sort order and map coordinates. The note is short and speculative: most fields are marked with a question mark, and nothing in the sources says which programs read the archive.
+Title `0004009B00010402` is a **shared data archive** [title](titles.md) (the `0004009B` category holds data-only system titles). The research note this page is based on shows that it contains LZ-compressed tables of countries and regions, with names, sort order and map coordinates. The note is short and speculative: most fields are marked with a question mark. 3dbrew's title list calls this title the **region manifest**, mounted as `area:` on every region (see the [title list](title-list.md)), so programs reach it through that mount point; which programs do is not stated.
 
 ## Behavior
 
-Not documented in the sources used. By the shape of the data (country and region IDs, names, a sort index and latitude/longitude) it appears to back the console's country/region selection, but that is an inference and is not confirmed.
+Beyond the `area:` mount name, behaviour is not documented. By the shape of the data (country and region IDs, names, a sort index and latitude/longitude) it appears to back the console's country/region selection, but that is an inference and is not confirmed.
 
 ## Technical details
 
@@ -58,4 +58,4 @@ None known.
 ## Sources
 
 - Research note `3ds-0004009B00010402.txt` (provided with the wiki's private source set, author and origin not recorded) — the structures above. No live link available.
-- [3dbrew: Title list](https://www.3dbrew.org/wiki/Title_list) — `0004009B` shared data archive category.
+- [3dbrew: Title list](https://www.3dbrew.org/wiki/Title_list) — `0004009B` shared data archive category; `00010402` named region manifest mounted as `area:`, versions v0 to v5122 (v2050 arrived in 3.0.0-5, v3072 in 4.0.0-7, TWN in 4.1.0-8). All regions use the same low ID.

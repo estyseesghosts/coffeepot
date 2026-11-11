@@ -10,7 +10,7 @@ Only one of the four lives in a raw NAND partition. The two `FIRM` partitions of
 
 | Image | Mode | Main processor | Notes |
 | ----- | ---- | -------------- | ----- |
-| `NATIVE_FIRM` | Normal 3DS | [ARM11](../hardware/cpu.md) | Runs [Horizon](os.md); the only image the boot ROM can start from a power cycle. Stored in the `firm0` and `firm1` NAND partitions |
+| `NATIVE_FIRM` | Normal 3DS | [ARM11](../hardware/cpu.md) | Runs [Horizon](os.md); the only image the boot ROM boots successfully from a power cycle (the boot ROM can launch `TWL_FIRM` and `AGB_FIRM` too, but 3dbrew says that ends in a Japanese error screen or a shutdown). Stored in the `firm0` and `firm1` NAND partitions |
 | `TWL_FIRM` | DS / DSi | ARM9 + ARM7 | Firmware title (not a `firm` partition). Disables 3DS-only features; ARM11 emulates relocated DS hardware. "TWL" is the DSi's codename |
 | `AGB_FIRM` | Game Boy Advance | ARM7 | Firmware title. ARM11 and ARM9 keep working in the background. "AGB" is the GBA's codename |
 | `SAFE_MODE_FIRM` | Maintenance | ARM11 | Firmware title. An early revision of `NATIVE_FIRM` (no newer than 3.0 on Old 3DS or 8.1 on New 3DS); mainly runs the System Updater |

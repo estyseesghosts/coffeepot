@@ -25,33 +25,25 @@ CSND has 32 channels (double the DS) and is also used by 3DS software as an exte
 | Output | Stereo, 16-bit, **32,728.5 Hz** (`libctru`: `NDSP_SAMPLE_RATE = SYSCLOCK_SOC / 512`); 24 voices | — |
 | Working RAM | 512 KB, double-buffered (2 × 256 KB) | — |
 | DMA | Dedicated | — |
-| Registers | `0x10203000` (DSP), `0x10103000` (CSND) | — |
+| Registers | `0x10203000` (DSP), `0x10103000` (CSND), `0x10145000` (I2S lines) | — |
 
 > Conflict: DSP origin. Copetti says the same DSP was previously bundled with the Nintendo DSi as an optional accelerator; 3dbrew's Hardware page only describes the 3DS DSP (CEVA TeakLite, 134 MHz) and says nothing about the DSi, though its IO Registers page refers to a "DSi XpertTeak" section in the no$gba documentation for the DSP registers. This page does not assert the DSi origin; the XpertTeak reference is weak support for it. Unresolved.
 
 Confirmed by 3dbrew IO Registers: the CSND register block is at `0x10103000` and the DSP register block at `0x10203000`.
 
-### DSP firmware (component binary)
+### DSP firmware, shared memory and services
 
-A DSP binary starts with a 0x100-byte RSA signature over bytes `0x100–0x300`, then:
+The firmware file format (`DSP1` header, up to 10 segments, signature), the two alternating 32 KB shared regions (24 input configurations, status, output and intermediate mix buffers, delay/reverb effects), the optional AAC decoder and the full `dsp::DSP` command list are on the [DSP firmware interface page](dsp.md). In short: the DSP firmware mixes 24 inputs per 160-sample frame and the ARM11 exchanges data with it through those regions, pipes and semaphores.
 
-| Offset | Size | Field |
-| ------ | ---- | ----- |
-| `0x100` | 4 | Magic `DSP1` |
-| `0x104` | 4 | Binary size |
-| `0x108` | 2 | Memory layout (bits 0–7 program RAM, 8–15 data RAM; each bit selects a 0x8000-byte bank starting at `0x1FF00000`) |
-| `0x10D` | 1 | Special-segment memory type |
-| `0x10E` | 1 | Segment count (1–10) |
+### Speaker and case
 
-Hardware configuration registers for DSP memory are `CFG11_SHAREDWRAM_32K_DATA` and `…_CODE`.
+Copetti notes that the original Nintendo 3DS did not play well with its speakers: Nintendo published troubleshooting guidance for buzzing noises and fluctuations when the 3D slider moved, which Copetti attributes to the case design (Old 3DS; the source does not say whether later models were affected).
 
-### Shared data layout
+### Backwards-compatible CSND block
 
-The firmware alternates between two 0x8000-byte areas (at `0x1FF50000` and `0x1FF70000`). Each holds, in order: frame count, input configurations, input status, input ADPCM coefficients, DSP configuration, DSP status, output samples, intermediate mix samples, compressor table, debug statistics, three unknown coefficient blocks and two surround biquad filters. The 24 inputs each produce three sets of four audio channels (two left, two right) that feed three intermediate mixers; two mixers are used for effects (delay, reverb) and aux. The detailed field layouts are on 3dbrew's *DSP Memory Region* page.
+CSND is the DS-style sound block (32 channels, double the DS), with registers at `0x10103000`. DS, DSi and GBA software relies on it to reproduce their hardware, and 3DS software can use it as an extension of the DSP. The DSP and CSND work independently and both output to the speaker, and early homebrew used CSND while the DSP was being reverse engineered. `0x10103000` is also used by the Codec, CSND and DSP services per 3dbrew. The sound output lines (I2S) are at `0x10145000` and the codec/microphone chips sit on the SPI buses ([I/O](io-and-peripherals.md)).
 
-### Services
-
-`dsp::DSP` exposes `RecvData`/`SendData`, `SendFifoEx`/`RecvFifoEx`, a set of semaphore commands, `ConvertProcessAddressFromDspDram`, and pipe commands (`WriteProcessPipe`, `ReadPipe`, `GetPipeReadableSize`, `ReadPipeIfPossible`, …).
+> Unknown: the sources do not say whether the DSP or CSND hardware, or their firmware images, differ on the New 3DS.
 
 ## Homebrew notes
 
@@ -64,7 +56,7 @@ The firmware alternates between two 0x8000-byte areas (at `0x1FF50000` and `0x1F
 
 ## Sources
 
-- [3dbrew: DSP Services](https://www.3dbrew.org/wiki/DSP_Services), [DSP Binary](https://www.3dbrew.org/wiki/DSP_Binary), [DSP Memory Region](https://www.3dbrew.org/wiki/DSP_Memory_Region), [DSP AAC Decoder](https://www.3dbrew.org/wiki/DSP_AAC_Decoder) — service commands, firmware header, shared-memory layout.
+- [3dbrew: DSP Services](https://www.3dbrew.org/wiki/DSP_Services), [DSP Binary](https://www.3dbrew.org/wiki/DSP_Binary), [DSP Memory Region](https://www.3dbrew.org/wiki/DSP_Memory_Region), [DSP AAC Decoder](https://www.3dbrew.org/wiki/DSP_AAC_Decoder) — service commands, firmware header, shared-memory layout, AAC (documented in full on [DSP firmware interface](dsp.md)).
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — DSP part and clock.
 - [3dbrew: IO Registers](https://www.3dbrew.org/wiki/IO_Registers) — DSP/CSND register addresses.
 - [libctru `ndsp.h`](https://github.com/devkitPro/libctru) — sample rate definition and the userland DSP driver API.

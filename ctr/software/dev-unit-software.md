@@ -43,7 +43,37 @@ The memory modes match the retail [APPMEMTYPE table](../hardware/memory.md#fcram
 
 ### CTR-SDK tools and others
 
-Test tools shipped on dev units include: Downloadplay Client, Network Settings, SaveDataFiler, CTR MenuSelector, CecBoxTool and CecLotCheckTool (StreetPass box/lot tools), BossLotCheckTool (SpotPass), Stereo Camera Calibrator, SdCardDebugUtility, FragDisk, Friend Add Tool and Friend Testing Partner, Game Coin Setter, PedometerHistoryChanger, IR Communication Checker, EcDevTool and Dummy Nintendo eShop, FangateFwUpdater, NFC tools (NoftWriter, NfpSdmcTool, NfpManager, NfpUtility), UdsLocalIdChecker (local wireless), and TWL development tools (NINTENDO DS WMtest, TWLNandFiler). Middleware viewers include NintendoWare for CTR (H3D Model Viewer, Layout Viewer, Effect Viewer) and the Mobiclip 3D movie player.
+Descriptions derive from SDK 2.3.4 unless noted. Title IDs are written as 3dbrew writes them (high-low).
+
+| Tool | Title ID | What it does |
+| ---- | -------- | ------------ |
+| Downloadplay Client | `00040000-0ff40402` | Text-mode replacement for Download Play to test 3DS-mode child apps (no DS Download Play). A dev unit cannot receive software from a retail unit or the reverse (different keys). |
+| Network Settings | `00040000-0ff40702` | Edit the three connection slots: security mode (open, WEP, WPA/WPA2 TKIP/AES), SSID (32 chars), key in plain text, auto-DNS; "Write Setting & Connect Test" overrides other settings such as proxy. Needs a reboot to exit. |
+| SaveDataFiler | `00040000-0ff40a02` | Export/import saves and extdata to SD under `sdmc:/filer/UserSaveData/`; can corrupt saves on purpose; L+R+Start deletes all shared extdata. TWL apps ignored; GBA apps shown as broken. |
+| CTR MenuSelector | `00040010-0ff40b02` | Switched Home Menu / Test Menu; replaced by Config's "Menu" in SDK 1.1.0. |
+| CecBoxTool | `00040000-0ff41602` | StreetPass backup/restore, delete boxes, count inbox/outbox, reset MAC filter ([StreetPass](streetpass-cec.md)). |
+| CecLotCheckTool | `00040000-0f800902` | Manage up to twelve StreetPass boxes, create dummy boxes, reset the 8-hour per-source rate limit (it checks the console is not retail first). |
+| BossLotCheckTool | `00040000-0ff40e00` | Inspect SpotPass tasks per title (status, count, interval, URL, result, HTTP status, size, last modified) and run a task; shows the friend code. |
+| Stereo Camera Calibrator | `00040000-0ff40600` | Adjust the outer cameras relative to each other, automatically with a chart or manually. |
+| SdCardDebugUtility | `00040000-07fffa00` | Fill free SD space, create sample pictures and empty voice memos, launch pickers, create dummy SpotPass tasks. |
+| FragDisk | `00040000-0ff41800` | Fragment SD free space by creating many small files and deleting every second one. |
+| Friend Add Tool | `00040000-0fe04000` | Delete all friends or fill the list with dummy codes or 1-100 codes from `friend_code.txt`. |
+| Friend Testing Partner | `00040000-0fe00c00` | Replace presence data (playing title, message, Mii, favourite title) with dummy values refreshed about every ten seconds. |
+| Game Coin Setter | `00040000-0ff40d00` | Set Play Coins (0-300); L+R+X stops today's walking increment. |
+| PedometerHistoryChanger | `00040000-0ff30300` | Export/import pedometer data as `PedometerExport.csv` / `PedometerImport.csv` (year, month, day, hour, steps). |
+| IR Communication Checker | `00040000-0f804900` | Counts data on the infrared port; cannot be closed except by power cycle. |
+| EcDevTool | `00040000-0ff41b00` | Add balance (not on production servers), delete title rights, delete eShop account, change country, tax address (USA/Canada). |
+| Dummy Nintendo eShop | (shares the retail eShop's IDs) | Tests `JumpToEshop()`; region specific. |
+| FangateFwUpdater | `00040000-0ff41f00` | Update or destroy the external NFC reader firmware; CTR devices only, not SNAKE. |
+| NoftWriter / NfpSdmcTool / NfpManager / NfpUtility | `00040000-0f807f00` / `0ff42100` / `0ff41e00` / `0ff42000` | amiibo image flashing, tag data editing, connection and data management, bulk tag viewing. |
+| UdsLocalIdChecker | `00040000-0ff3ff00` | Scan for local (UDS) networks. |
+| NINTENDO DS - WMtest, TWLNandFiler | | DS-mode Wi-Fi scan, measure and noise tools; TWL NAND save browser with hex viewer. |
+| NintendoWare for CTR (H3D Model Viewer, Layout Viewer, Effect Viewer) | | Need Host IO; full function only on a CTR-PARTNER debugger. |
+| Mobiclip 3D Movie Player | `00040000-00036A00` | Plays `.moflex` from the SD root. |
+
+### More Config settings
+
+Beyond those above, Config offers: Language (with an "invalid" option); Fangate failure emulation and "Nup" (online update check; both unknown purpose); name and NG-name flag; country ID (also undefined 255) and region ID; Hid setting (touch and circle pad calibration); flicker top/bottom (screen bias voltage); ABL enable (power-save backlight; also on 2DS); luminance level (older versions allowed above 5 and crashed Home Menu quick settings); backlight dimming (**New 3DS:** camera-controlled); sound mode (mono/stereo/surround); Coppacs setting (parental consent for the Americas); OLV access key; test setting; stereo camera and gyro/accelerometer "for check" calibrations that appear to write incorrect data; "Ctr Info Setting" reading `ctrsetting.txt` from SD; and reset settings (re-runs initial setup without deleting software). If anything other than `Prod` or `Dev2` is chosen as system mode, the menu setting automatically switches to the Test Menu. Dev Home Menu themes need dev themes; retail themes do not work. In Dev Menu, L+R+Left+B+Start (after confirmation) bulk-uninstalls all SDK tools and then DevMenu itself crashes.
 
 ## Technical details
 
@@ -61,6 +91,7 @@ Early homebrew used a leaked Nintendo-authored `DevMenu` (and later `BigBlueMenu
 ## Sources
 
 - [3dbrew: 3DS Development Unit Software](https://www.3dbrew.org/wiki/3DS_Development_Unit_Software) — dev Home Menu, Dev Menu, Config, test tools.
+- [3dbrew: Nintendo Software](https://www.3dbrew.org/wiki/Nintendo_Software) — dev units listed as not publicly available.
 - [3dbrew: Peripherals](https://www.3dbrew.org/wiki/Peripherals) — unit and card model codes.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Games](https://www.copetti.org/writings/consoles/nintendo-3ds/) — development hardware kits and SDK.
 - [Hacks Guide Wiki: History of 3DS Hacking](https://wiki.hacks.guide/wiki/3DS:History_of_3DS_Hacking) — end of dev hardware services.

@@ -59,6 +59,8 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 | Shader load/draw fragment | [shader programming](pica200-shader-programming.md#2-scale-rotate-translate-with-uniforms) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
 | Shaders s1-s5 (`.pica`) | [shader programming](pica200-shader-programming.md) | assembles with picasso 2.7.2 (syntax only) | not run | not run | not run |
 | `tools/pica_cmdlist_decode.py` | [pipeline](pica200-command-pipeline.md#host-side-command-list-decoder) | self-test passes on synthetic lists only | n/a | n/a | n/a |
+| Input, camera/Y2R, microphone, NFC/IR, system-info, QTM/MVD, UDS, `ac` and service-probe examples | [input and sensors](input-and-sensors.md), [cameras](camera-and-y2r.md), [microphone](microphone.md), [NFC and IR](nfc-and-infrared.md), [system info](system-info-and-power.md), [QTM and MVD](new-3ds-qtm-and-mvd.md), [local wireless](local-wireless.md), [service groups](service-groups.md) | yes (`-Wall -Wextra`, linked to ELF with `3dsx.specs`) | not run | not run | not run |
+| citro3d lighting fragment | [citro3d fixed-function API](citro3d-fixed-function-api.md) | yes (compile only, `-Wall -Wextra`) | not run | not run | not run |
 | Fixed-step main loop | [frame pacing](frame-pacing.md#separating-simulation-from-rendering) | yes | not run | not run | not run |
 | ndsp streaming setup | [audio](audio.md#setting-up-a-channel) | yes | not run | not run | not run |
 | citro2d sprite and text fragments | [2D rendering](rendering-2d.md) | yes (inside a minimal program) | not run | not run | not run |

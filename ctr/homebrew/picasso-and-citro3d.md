@@ -47,7 +47,7 @@ Components can be named `xyzw`, `rgba` or `stpq` and swizzled (`r0.wwxy`); outpu
 
 ### Related shader tools
 
-`aemstro` (smealum, last commit January 2015) is the "original" PICA200 shader disassembler/assembler in Python, written while the instruction set was still being reverse engineered; its own README says it is experimental, its assembler is out of date and cannot reassemble its own disassembly, and it recommends neobrain's `nihstro` or picasso for real projects. Treat it as history ([history](history.md)), not as a reference for the instruction encoding; use 3dbrew's shader instruction set page for that.
+`aemstro` (smealum, last commit January 2015) is the "original" PICA200 shader disassembler/assembler in Python, written while the instruction set was still being reverse engineered; its own README says it is experimental, its assembler is out of date and cannot reassemble its own disassembly, and it recommends neobrain's `nihstro` or picasso for real projects. Its two scripts are `aemstro.py` (disassembles `.shbin`/`.bcsdr` files to stdout; `python3 aemstro.py input.shbin`) and `aemstro_as.py` (assembles vertex shaders only, `aemstro_as.py input.vsh output.shbin`, with `test.vsh` as the sample); it needs Python 3. The assembler cannot reassemble the disassembler's output and is described as "much less up to date" than the disassembler ("mostly the instruction format thing is all wrong"). Treat it as history ([history](history.md)), not as a reference for the instruction encoding; use 3dbrew's shader instruction set page for that ([instruction semantics](../engineering/pica200-shader-programming.md#instruction-semantics-3dbrew-gpushader-instruction-set)). It is not covered by the wiki's build checks.
 
 ### citro3d: GPU library
 
@@ -64,7 +64,7 @@ citro3d "exposes hardware functionality in the way that is most natural and conv
 | `light`, `lightenv`, `lightlut` | Up to **8** lights, per-light and environment LUTs, 256-entry light LUTs |
 | `fog`, `proctex`, `gas`, `effect` | Fog (128-entry LUT), procedural textures (see [shading features](../hardware/gpu-shading-features.md)), gas, blend/depth/stencil state |
 
-A typical frame: begin a frame, choose a render target (top-left, top-right, bottom), bind a shader program and uniforms, set the texture-environment stages, draw, end the frame; citro3d copies the render target to the screen's LCD framebuffer with the transfer flags stored on the target. This matches the pipeline in [GPU](../hardware/gpu.md) and [displays](../hardware/display.md). A practical guide to frames, draw-call costs, batching, textures and combiners is on [GPU rendering](../engineering/gpu-rendering.md).
+A typical frame: begin a frame, choose a render target (top-left, top-right, bottom), bind a shader program and uniforms, set the texture-environment stages, draw, end the frame; citro3d copies the render target to the screen's LCD framebuffer with the transfer flags stored on the target. This matches the pipeline in [GPU](../hardware/gpu.md) and [displays](../hardware/display.md). A practical guide to frames, draw-call costs, batching, textures and combiners is on [GPU rendering](../engineering/gpu-rendering.md). Which call writes which register for lighting, fog, procedural textures, gas, blending and depth/stencil state, with their defaults and traps, is on [citro3d fixed-function API](../engineering/citro3d-fixed-function-api.md).
 
 Three behaviours of the frame API matter for performance and correctness [documented: `source/renderqueue.c`]:
 
@@ -80,6 +80,8 @@ Three behaviours of the frame API matter for performance and correctness [docume
 - Instruction set accepted by picasso: `nop`, `end`, `emit`, `setemit`, `add`, `dp3`, `dp4`, `dph`, `dst`, `mul`, `sge`, `slt`, `max`, `min`, `ex2`, `lg2`, `litp`, `flr`, `rcp`, `rsq`, `mov`, `mova`, `cmp`, `mad`, and flow control (`call`, `callc`, `callu`, `for`, `break`, `breakc`, `ifc`, `ifu`, `jmpc`, `jmpu`).
 - Geometry shader vertex emission: `setemit vtxId, emitFlags` configures a vertex (`vtxId` 0–2; flags `prim` to also emit a primitive, `inv` to invert vertex order) and `emit` sends it.
 
+Model note: neither tool has a model check in the paths read for the wiki; the PICA200 is the same GPU family on the Old 3DS and the New 3DS, and no source read here reports a library difference between them.
+
 ## Limits and risks
 
 - GPU hangs are easy to cause: strides must match the real vertex size and some configuration orders must be respected ([GPU](../hardware/gpu.md#known-pitfalls), [shading features](../hardware/gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)).
@@ -91,5 +93,5 @@ Three behaviours of the frame API matter for performance and correctness [docume
 - [picasso (devkitPro)](https://github.com/devkitPro/picasso) — `Manual.md`: registers, directives, geometry-shader modes, caveats.
 - [citro3d (devkitPro)](https://github.com/devkitPro/citro3d) — headers and sources: module list, limits, frame API.
 - [3dbrew: Homebrew Libraries and Tools](https://www.3dbrew.org/wiki/Homebrew_Libraries_and_Tools) — `citro3d`, `citro2d`, `picasso`, `nihstro`, `aemstro` descriptions.
-- [aemstro (smealum)](https://github.com/smealum/aemstro) — README: scope and status of the original shader (dis)assembler.
+- [aemstro (smealum)](https://github.com/smealum/aemstro) — README and file list (`aemstro.py`, `aemstro_as.py`, `test.vsh`): scope, usage and status of the original shader (dis)assembler.
 - [3dbrew: GPU/Shader Instruction Set](https://www.3dbrew.org/wiki/GPU/Shader_Instruction_Set) — instruction encoding.

@@ -45,6 +45,8 @@ The GPU is not stereoscopic-aware. A game renders the top screen twice (slightly
 
 > Conflict: Copetti says the shader instruction set is very similar to Microsoft's `vs_2_0`; 3dbrew says it was heavily inspired by `vs_3_0`/Direct3D shader code. Both agree it is Direct3D-shader-like. This page follows 3dbrew's wording for the hardware and uses neither version as a compatibility claim, because the PICA instruction set is documented directly on 3dbrew's Shader Instruction Set page. Unresolved.
 
+> Unknown: the 3dbrew GPU pages and the DMP talk do not say whether any behaviour in them differs on the New 3DS. The only model flag in these sources is bit 2 ("new model") of the hardware-ID external register. Treat the register and pitfall information as measured on an unspecified model, and test on both before relying on a quirk.
+
 ### Maestro features (DMP extensions)
 
 | Name | Capability |
@@ -59,7 +61,7 @@ The GPU is not stereoscopic-aware. A game renders the top screen twice (slightly
 
 The GPU has two register spaces.
 
-**External registers** (ARM11 physical `0x10400000`, user VA `0x1EF00000`) control basic operation. Key blocks:
+**External registers** (ARM11 physical `0x10400000`, user VA `0x1EF00000`) control basic operation ([full map](gpu-external-registers.md#map)). Key blocks:
 
 | Offset | Block |
 | ------ | ----- |
@@ -85,7 +87,15 @@ The GPU has two register spaces.
 | `0x200–0x27F` | Geometry pipeline (attribute buffers, draw commands) |
 | `0x280–0x2DF` | Shader processors |
 
-Draws use `GPUREG_DRAWARRAYS` or `GPUREG_DRAWELEMENTS`. Constant vertex attributes can use *fixed attributes*, and small draws can supply vertices inline by writing `0xF` to `GPUREG_FIXEDATTRIB_INDEX` followed by float data (immediate mode).
+Field-level tables for both spaces are on [GPU internal registers](gpu-internal-registers.md) and [GPU external registers](gpu-external-registers.md). Draws use `GPUREG_DRAWARRAYS` or `GPUREG_DRAWELEMENTS`.
+
+**Fixed vertex attributes.** An attribute that is constant for a whole draw call needs no array or uniform: set its bit in the fixed-attribute mask of `GPUREG_ATTRIBBUFFERS_FORMAT_HIGH`, make sure no vertex array is configured for it (an array always overrides the fixed value, whatever the bit says), and still count it in the "active attributes" field of the same register. Then write the attribute index to `GPUREG_FIXEDATTRIB_INDEX` and the value as one packed float24 4-tuple to the three `GPUREG_FIXEDATTRIB_DATA` registers. The value is always a 4-component float vector; the configured attribute type is ignored `[reverse-engineered: 3dbrew GPU/Programming Guide]`.
+
+**Immediate mode.** Small draws (UI quads, debug lines) can put vertices directly into the command list. Set the number of attributes per vertex in `GPUREG_VSH_NUM_ATTR` (every vertex-loader register is ignored), set up the pipeline as for a normal draw, but instead of writing `DRAWARRAYS`/`DRAWELEMENTS` write `0xF` to `GPUREG_FIXEDATTRIB_INDEX` and then stream attributes to `GPUREG_FIXEDATTRIB_DATA`, one 3-word write per attribute and all attributes of a vertex in order. A vertex draws as soon as its last attribute arrives. Finish with the same writes used after a normal draw. With strips or fans, write `GPUREG_RESTART_PRIMITIVE` before or while drawing to end the previous strip. `citro3d`'s version is `C3D_ImmDrawBegin`/`C3D_ImmSendAttrib`/`C3D_ImmDrawEnd` ([API page](../engineering/citro3d-fixed-function-api.md#render-targets-and-immediate-mode)).
+
+**Draw sequence (official SDK).** 3dbrew's Programming Guide lists the 18 writes the SDK's GL layer uses around a `DRAWELEMENTS`; the order and its conflict with citro3d's own sequence are on the [command pipeline page](../engineering/pica200-command-pipeline.md#what-a-draw-call-writes). Briefly: `GEOSTAGE_CONFIG`/`CONFIG2` and `PRIMITIVE_CONFIG` first, then `RESTART_PRIMITIVE`, `INDEXBUFFER_CONFIG`, `NUMVERTICES`, `START_DRAW_FUNC0` = drawing, the trigger, `START_DRAW_FUNC0` = configuration, `VTX_FUNC`, `FRAMEBUFFER_FLUSH`, and clears of the geometry-stage, primitive and `VSH_ENTRYPOINT` registers.
+
+**Primitive Engine.** One of the four vertex processors is the Primitive Engine (PE), which provides the geometry-shader stage and variable-size primitives. Variable-size primitives are implemented by prefixing each per-primitive run of indices in an index array with its size, which subdivision schemes (Catmull-Clark, Loop) use. How the feature is switched on is unknown, and the PE's full function is not reverse-engineered `[reverse-engineered: 3dbrew GPU/Primitive Engine]`. The registers `GPUREG_GSH_MISC0` (`0x252`) and `GPUREG_GSH_MISC1` (`0x254`), `GEOSTAGE_CONFIG` bit 31 and `SH_INPUTBUFFER_CONFIG` bits 8-15 mark a "reserved geometry-shader subdivision" in use (type 2 Loop, 3 Catmull-Clark), and `GSH_MISC0 = 0x01004302` marks the particle system `[reverse-engineered: 3dbrew GPU/Internal Registers]`.
 
 ### Design notes from DMP
 
@@ -93,17 +103,16 @@ DMP's CEDEC 2012 talk gives the reasoning: the PICA200 was announced in 2006 as 
 
 ### Known pitfalls
 
-- Vertex attributes are aligned to their element size; the stride in `GPUREG_ATTRIBBUFFERi_CONFIG2` must exactly equal the real vertex size (use padding attributes) or the GPU hangs or draws nothing.
-- Output map registers (`GPUREG_SH_OUTMAP_O*`) consume slots only for outputs enabled in `GPUREG_SH_OUTMAP_MASK`.
+- Vertex attributes are read aligned to their element size, and padding attributes (component type > 11) are always aligned to 4 bytes. The stride passed to the GPU is the *unaligned* size, and the stride in `GPUREG_ATTRIBBUFFERi_CONFIG2` must exactly equal the real vertex size (use padding attributes) or the GPU hangs or draws nothing.
+- Output map registers (`GPUREG_SH_OUTMAP_O*`) consume slots only for outputs enabled in `GPUREG_SH_OUTMAP_MASK`; `GPUREG_SH_OUTMAP_TOTAL` is the number of consecutive slots used. Example: `TOTAL = 2`, `MASK = 0x11` (o0 and o4), `O0 = 0x03020100` (position xyzw), `O1 = 0x0B0A0908` (colour rgba) ([semantics table](gpu-internal-registers.md#shader-output-semantics)).
 - Texture unit 1 (`TEXUNIT1`): per 3dbrew's Pitfalls page, binding an L4-format (4-bit, probably any 4-bit format) texture located in **VRAM** can make the GPU unstable (freezing after a random time). If the texture is 8×16 or larger the display also shows corrupt visuals until reboot, even in other software. It was not seen with other texture units or with FCRAM textures. `[reverse-engineered]` by one 3dbrew author, who could reproduce it only once; treat as unconfirmed.
-- Vertex attributes are read aligned to their element size; padding attributes (component type > 11) are always 4-byte aligned, and the stride passed to the GPU is the unaligned size (3dbrew GPU/Pitfalls).
-- Two consecutive `MOVA` instructions freeze the GPU; a `NOP` between them (or reordering) avoids it.
-- Shader outputs configured must be written exactly once; `MOVA` (address-register) instructions cannot be adjacent.
+- Two consecutive `MOVA` (address-register) instructions freeze the GPU; a `NOP` between them (or reordering) avoids it.
+- Every shader output component that is configured must be written exactly once, or the GPU freezes.
 - After changing a shader program, the attribute-buffer and vertex-input registers must be configured again, and a draw-elements sequence must end with two dummy writes to `GPUREG_PRIMITIVE_CONFIG`, otherwise the GPU can crash ([shading features](gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)).
 
 ## Homebrew notes
 
-Homebrew normally uses `citro3d` (state-tracking wrapper) and `citro2d`, with shaders written in `picasso` assembly ([picasso and citro3d](../homebrew/picasso-and-citro3d.md), [development workflow](../homebrew/development-workflow.md)). How to use it efficiently — frame structure, draw-call costs, batching, texture formats, combiner recipes, stereo — is on [GPU rendering](../engineering/gpu-rendering.md); measuring GPU time and diagnosing hangs on [performance](../engineering/performance.md) and [debugging](../engineering/debugging.md#gpu-hangs). The `3ds-examples` repository contains ready GPU samples (cube map, fragment lighting, geometry shader, loop subdivision, procedural texture, toon shading, normal mapping, particles, stereoscopic 2D, wide mode 3D and more). Emulator work needs the register-level pages on 3dbrew.
+Homebrew normally uses `citro3d` (state-tracking wrapper; the call-to-register mapping for lighting, fog and render state is on [citro3d fixed-function API](../engineering/citro3d-fixed-function-api.md)) and `citro2d`, with shaders written in `picasso` assembly ([picasso and citro3d](../homebrew/picasso-and-citro3d.md), [development workflow](../homebrew/development-workflow.md)). How to use it efficiently — frame structure, draw-call costs, batching, texture formats, combiner recipes, stereo — is on [GPU rendering](../engineering/gpu-rendering.md); measuring GPU time and diagnosing hangs on [performance](../engineering/performance.md) and [debugging](../engineering/debugging.md#gpu-hangs). The `3ds-examples` repository contains ready GPU samples (cube map, fragment lighting, geometry shader, loop subdivision, procedural texture, toon shading, normal mapping, particles, stereoscopic 2D, wide mode 3D and more). Emulator work needs the register-level pages on 3dbrew.
 
 ## Open questions
 

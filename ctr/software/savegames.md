@@ -31,11 +31,13 @@ AES-CTR is applied over the DISA container, below the wear-levelling layer (if a
 
 **Repeating-counter weakness:** in the earliest scheme the keystream repeated every 512 bytes. Split a save into 512-byte chunks, discard the all-`0xFF` chunks, and the most common remaining chunk is the keystream, which lets the whole save be decrypted without the key.
 
+The scheme is chosen by NCSD partition flags. The v2 hashed keyY arrived with 2.0.0-2 (flag 3) but a proper counter only with 2.2.0-4 (flag 7); the 2.0.0-2 hashed keyY was likely never used on retail cards.
+
 **Key Y generation:**
 
-- **v1:** first 8 bytes of the plaintext CXI access-descriptor signature, then the card's ID values `CardID0` and `CardID1` (from card commands `0x90` and `0xA0`).
+- **v1:** (used when all the flags checked by the running `NATIVE_FIRM` are clear) first 8 bytes of the plaintext CXI access-descriptor signature, then the card's ID values `CardID0` and `CardID1` (from card commands `0x90` and `0xA0`).
 - **v2:** first `0x10` bytes of SHA-256 over the first 8 signature bytes and a `0x40`-byte value read from the card (the same data returned by `GetRomId`, the card's unique ID).
-- **v3** (6.0.0-11 and later; enabled by NCSD partition flags; all retail games finalised after that release use it): SHA-256 over the 8 signature bytes, the `GetRomId` data, the CXI program ID and the ExeFS `.code` hash, then an AES-CMAC of that hash with a key in slot `0x2F`. The slot-`0x2F` key Y is generated through the RSA engine during `NATIVE_FIRM` start-up.
+- **v3** (6.0.0-11 and later; enabled by NCSD partition flags; all retail games finalised after that release use it): SHA-256 over the 8 signature bytes, the `GetRomId` data, the CXI program ID and the ExeFS `.code` hash, then an AES-CMAC of that hash with a key in slot `0x2F`. The slot-`0x2F` key Y is generated through the RSA engine during `NATIVE_FIRM` start-up from RSA slot 0 (initialised by the boot ROM and overwritten later in boot by the key used to verify RSA signatures other than NCCH access descriptors). From 7.0.0-13 the same routine also sets up a keyslot for the new NCCH encryption. The routine returns early if a `0x10`-byte block in the `0x01FF8000` region is all zero (otherwise it clears the block and generates the key), probably to allow launching a 6.0+ `NATIVE_FIRM` from under older firmware.
 
 SD and NAND saves are plain DISA containers once the common SD/NAND encryption layer is removed; the AES-CTR key-Y layer and wear levelling described here apply only to game-card saves [documented: 3dbrew Savegames].
 
@@ -50,11 +52,13 @@ Only used on "CARD1" game cards: a block map at offset 0 of the flash chip, imme
 | Entry count | `flash_size / 0x1000 - 1`, one per 0x1000 sector counting from physical sector 1 (sector 0 holds map and journal) | same |
 | CRC16 after the map | directly after the last entry | at `0x3FE`, preceded by zero padding |
 
-The CRC16 covers all bytes before it (CRC-16/MODBUS style: polynomial `0xA001`, initial `0xFFFF`). Journal entries are a pair of identical `journal_entry_half` records (virtual/physical sector, previous mappings, realloc counts, checksums) plus a 32-bit field that is `0xFFFFFFFF` on newer systems; the rest of the first 0x1000 bytes is `0xFF`. Each checksum byte is the CRC16 of one encrypted 0x200-byte block with its two bytes XORed together [documented: 3dbrew Savegames].
+The CRC16 covers all bytes before it (CRC-16/MODBUS style: polynomial `0xA001`, initial `0xFFFF`). Block map entries: V1 `{u8 phys_sec; u8 alloc_cnt; u8 chksums[8]}` (bit 7 of `phys_sec` set means initialised and checksummed), V2 `{u8 alloc_cnt; u8 phys_sec}` (fields swapped; initialised bit still in the first byte). Journal entries are a pair of identical `journal_entry_half` records (virtual/physical sector, previous mappings, realloc counts, checksums) plus a 32-bit field that is `0xFFFFFFFF` on newer systems; the rest of the first 0x1000 bytes is `0xFF`. Each checksum byte is the CRC16 of one encrypted 0x200-byte block with its two bytes XORed together [documented: 3dbrew Savegames].
+
+A save flash that is all `0xFF` is treated by the game as uninitialised and default data is created without a prompt. A new non-card save image starts as all `0xFF` until formatted. 3dbrew's contributor notes say a save backup can keep the previous files and the whole image header in "random" locations from one save to the next; this is anecdotal.
 
 ## Homebrew notes
 
-Save tools exist for extracting and editing DISA saves, extdata and title databases (`save3ds`, `3ds-save-tool`, and older FUSE-based tools; the older ones mishandle the format). Game-specific save exploits (a save file crafted to overflow a parser) form a whole class of [secondary userland exploits](../homebrew/exploits.md), and the 3DS cards' save chips can be read and written with a "save dongle" per 3dbrew.
+Save tools exist for extracting and editing DISA saves, extdata and title databases: `save3ds` (FUSE or batch import/export), wwylele's `3ds-save-tool` (reconstructs data from the DPFS tree), `3dsfuse` (needs a separate CMAC update before writing to a card; old and wrong on the format) and `3DSExplorer` (read-only, no new encrypted saves). Game-specific save exploits (a save file crafted to overflow a parser) form a whole class of [secondary userland exploits](../homebrew/exploits.md), and the 3DS cards' save chips can be read and written with a "save dongle" per 3dbrew.
 
 ## Open questions
 

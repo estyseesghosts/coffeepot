@@ -1,6 +1,6 @@
 # CTR game cards
 
-Retail 3DS games come on small cartridges ("game cards", internally **CTR cards**) that look almost identical to Nintendo DS cards. A small notch on the top-right corner stops them from fitting into older DS/DSi consoles. The 3DS also reads DS and DSi cards from the same slot.
+Retail 3DS games come on small cartridges ("game cards", internally **CTR cards**) that look almost identical to Nintendo DS cards. A small notch on the top-right corner stops them from fitting into older DS/DSi consoles; 3dbrew adds that if the case is modified so a 3DS card fits, a DS or DSi refuses to detect it and shows no banner icon. The 3DS also reads DS and DSi cards from the same slot. The same card slot and card format apply to all models; the sources do not mention a New 3DS difference.
 
 A card holds the game's read-only data and, usually, a small chip for save data. Cards can also carry a block of system-update data, which is why a console can be updated from a game cartridge.
 
@@ -17,7 +17,9 @@ Card varieties differ:
 - **ROM-based:** a ROM chip (128 MB to 4 GB) plus a separate save chip (128 KB or 512 KB).
 - **Flash-based:** the whole card (up to 2 GB) is a flash chip partitioned into game and save areas.
 
-Because every game links the SDK, the ROM/RAM a game may use depends on the SDK revision.
+Because every game links the SDK, the ROM/RAM a game may use depends on the SDK revision. Internally the ROM chip sits on an 8-bit data bus and the save memory on a serial bus, both clocked at up to 16.6 MHz (Copetti).
+
+Development hardware uses two developer flash card types (`CTR-005(-01)`, shaped like a retail card, and the large `CTR-008` with replaceable save flash); see [models](models.md#model-identifiers).
 
 ## Technical details
 
@@ -35,9 +37,23 @@ Same 17-pin layout as DS and DSi cards:
 | 6 | ECS | Save chip select, active low |
 | 7 | IRQ | Removal detection |
 | 8 | VCC | 3.3 V supply |
-| 9–16 | DAT0–DAT7 | Bidirectional data bus (8 bits for ROM; for the save chip they carry SPI/SIO signals) |
+| 9–16 | DAT0–DAT7 | Bidirectional data bus; meaning depends on which chip is selected (below) |
 
-On a 3DS the card power is only enabled when the power supply bits of `CFG9_CARDSTATUS` are set to `10`; card insertion is readable from bit 0 of the same register. Time to first clock pulse is about 280 ms (3DS) versus 166 ms (DS/DSi).
+CLK frequencies apply to both save-SPI and ROM transfers. Pin signals by selected bus:
+
+| Pin | Name | ROM bus (selected by RCS, pulled low to start a ROM transfer) | Save bus (selected by ECS, pulled low to start a save SPI transfer) |
+| --- | ---- | ------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 9–12 | DAT0–DAT3 | Bidirectional data | not connected |
+| 13 | DAT4 | Bidirectional data | NC / SIO3 |
+| 14 | DAT5 | Bidirectional data | WP# / SIO2 |
+| 15 | DAT6 | Bidirectional data | SO / SIO1 |
+| 16 | DAT7 | Bidirectional data | SI / SIO0 |
+
+| Property | 3DS | DS and DSi |
+| -------- | --- | ---------- |
+| VCC | Only enabled when the power-supply bits of `CFG9_CARDSTATUS` are set to `10` | Always available when a card is detected |
+| Card detect | Physical insertion switch, readable through bit 0 of `CFG9_CARDSTATUS` | IRQ pin |
+| Time to first clock pulse | about 280 ms | about 166 ms |
 
 ### Save chip
 
@@ -45,7 +61,42 @@ Save-game SPI transfers use CPOL=1, CPHA=1. The only chip identified so far retu
 
 ### Command protocol
 
-Starting commands (8-byte mode, plain): `0x9F` reset; `0x71C93FE9BB0A3B18` "act as a 3DS card"; `0x90` get card ID 1; `0xA0` get card ID 2; `0x3E` enter 16-byte mode. In 16-byte mode, `0x82` returns the 0x200-byte header ("InitialData", which includes an NCCH header at `0x100`) and enables encryption; further commands are encrypted with keys derived from the header and AES key slot `0x3B` (key X is set up by Boot9; key Y comes from the first 16 bytes of the header response). If the response to command `0xA0` ANDed with 3 equals 3, 3dbrew says slot `0x11` with an all-zero normal key is used instead. After every `0x200`-byte data block in 16-byte mode the card appends a 4-byte CRC32 of the unencrypted block (polynomial `0x82608EDB`, output XOR `0xFFFFFFFF`).
+Starting commands (8-byte mode, plain): `0x9F` reset; `0x71C93FE9BB0A3B18` "act as a 3DS card"; `0x90` get card ID 1; `0xA0` get card ID 2; `0x3E` enter 16-byte mode. In 16-byte mode, `0x82` returns the 0x200-byte header ("InitialData", which includes an NCCH header at `0x100`) and enables encryption; further commands are encrypted, as described next. After every `0x200`-byte data block in 16-byte mode the card appends a 4-byte CRC32 of the unencrypted block (polynomial `0x82608EDB`, output XOR `0xFFFFFFFF`).
+
+### Encryption after command `0x82`
+
+3dbrew gives this algorithm (big-endian byte order unless noted). The 0x200-byte response to `0x82` ("InitialData") starts with `0x10` bytes of key Y, then a 16-byte encrypted seed, a 16-byte tag and a 12-byte nonce; its bytes `0x100`-`0x1FF` hold an NCCH header (the `NCCH` magic is visible in the sample).
+
+1. Set AES key slot `0x3B` key Y to bytes `0x000`-`0x00F`. The matching key X is set up by Boot9.
+2. Decrypt bytes `0x010`-`0x01F` with AES-128-CCM in slot `0x3B` using the 12-byte nonce at `0x030`-`0x03B` to get the **primary seed**, and verify the 16-byte tag at `0x020`-`0x02F`. If the response to command `0xA0` ANDed with `3` equals `3`, slot `0x11` with an all-zero normal key is used instead.
+3. Split the seed into left and right halves.
+4. Initialise a **SNOW 2.0** stream cipher with the seed as the 128-bit key and a 128-bit static value (which depends on the card's ID2) as the IV. Run it 32 times (32 words, 1024 bits) and discard the output.
+5. Initialise an **RC4** cipher with a 256-bit key: a 128-bit static value (depending on ID2) followed by four outputs of the SNOW stream. Run RC4 256 times and discard 256 bytes.
+6. From now on all commands and responses are RC4-encrypted; the card controller and the card share the RC4 state and advance it together.
+
+Command `0x83` **re-keys**: a new SNOW 2.0 context is keyed with the seed's left half followed by the low 64 bytes of the decrypted `0x83` command (as written on 3dbrew), the same IV, then steps 4 and 5 repeat with the new stream.
+
+The static values are fixed inside the card controller and the cards; they do not come from Process9 or anywhere in `NATIVE_FIRM`, so a [security-architecture](../software/security-architecture.md) analysis cannot read them from firmware.
+
+### Sample command sequence (3dbrew)
+
+Observed for *LEGO Star Wars III: The Clone Wars* (EUR), title ID `0004000000038c00`. Sizes are in bytes of returned data.
+
+| Size | Command (decrypted) | Meaning |
+| ---- | ------------------- | ------- |
+| 0x2000 | `9F00000000000000` | Reset |
+| 0 | `71C93FE9BB0A3B18` | Signal that the card should act as a 3DS card |
+| 4 | `9000000000000000` (sent twice) | Get card ID 1; response `9000FEC2` |
+| 4 | `A000000000000000` | Get card ID 2; response `00000000` |
+| 0 | `3E00000000000000` | Enter 16-byte command mode |
+| 0x200 | `82000000000000000000000000000000` | Get header and enable encryption |
+| 0 | `8300000000000000708DF1A731717D0B` | Seed (re-key) |
+| 4 | `A2000000...708DF1A731717D0B` | Get card ID 1 (encrypted); `9000FEC2` |
+| 4 | `A3000000...` | Get card ID 2 (encrypted) |
+| 0 | `C5000000...` | Refresh card NAND |
+| 0x200 | `BF00000000000000...` (the address is inside the command) | Read card at address 0, then at `0x4000` |
+
+(Encrypted forms are in the source and depend on the RC4 state.) In 16-byte mode the data bus stays `0x00` until the card clocks out `0x01`, then the data follows.
 
 ### Update region
 
@@ -57,7 +108,7 @@ DS-compatible flash cartridges were the first route to running unofficial code, 
 
 ## Open questions
 
-- Details of the card key derivation beyond the header are not reproduced here; see the 3dbrew *Gamecards* page.
+- The static values that depend on the card's ID2 are not public in the sources used.
 - The origin of the `0x71C93FE9BB0A3B18` command constant is not explained in the source.
 
 ## Sources

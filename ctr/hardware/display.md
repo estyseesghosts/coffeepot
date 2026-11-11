@@ -76,11 +76,37 @@ Top-screen registers start at physical `0x10400400`, bottom at `0x10400500`. All
 
 **Interlace modes** (bits 5–4): 0 A (none), 1 AA (scanline doubling), 2 AB (interleave A and B), 3 BA. The bottom screen always uses mode A; the top screen uses AB in 3D mode and A in 2D mode. The GSP service enables the parallax barrier only when interlacing bit 5 = 1 and alternative-mode bit 6 = 0.
 
-3D mode is decided by software: per 3dbrew, the GSP service enables stereoscopy only when interlace bit 5 = 1 and bit 6 = 0 (GSP mode 2), mode 1 is the full 240×800 output with both off, and bit 6 alone (bit 5 = 0) selects 2D (mode 0, the default). Bit 6 behaves differently per panel: on the bottom screen it doubles every pixel; on the top screen it appears to receive two pixels per clock; on a 2DS it only shifts the bottom framebuffer two pixels right. Interlacing and scan-doubling cannot both be enabled in userland but work on bare metal.
+#### Timing registers in detail
+
+All pixel and scanline timing fields are 12 bits (each half of a two-field register too) `[reverse-engineered: 3dbrew, authors not stated]`. The horizontal events fire when `HCount` equals the register value, in this order (values may wrap through `HTotal`): `0x10 < 0x14 <= 0x60.low <= 0x04 <= 0x60.high <= 0x08 <= 0x0C <= 0x10`, and `0x18 <= 0x60.low`. Each match latches the controller into a new mode; if two events coincide, a fixed latch order decides. The modes, in order: HSync (moves the LCD to the next line); back porch (no pixels, at least 16 pixel clocks or the picture glitches); left border (solid colour); image (pixel data fetched by DMA from video memory or main RAM); right border / image end; an unknown synchronisation mode that seems broken; front porch (no pixels, at least 68 clocks or the screen loses sync).
+
+| Offset | 3dbrew name | Notes |
+| ------ | ----------- | ----- |
+| `0x04` | HStart | when the image starts in the visible region (register `0x60`) |
+| `0x08` | HBR | right-border start (?); no visible effect but must hold a valid value |
+| `0x0C` | HPF | front porch: image blanked, no pixels pushed; a single red dot is shown just before entering it (cause unknown) |
+| `0x10` | HSync | the sync pulse; must last at least one pixel clock for the LCD to register it |
+| `0x14` | HPB | back porch (?); must be at least one larger than HSync or HSync never triggers; display blank, nothing pushed |
+| `0x18` | HBL | left-border trigger; enables pixel pushing. If smaller than the back porch the back porch has zero length. May be lower than HSync. Must be <= the low half of `0x60`, else no pixels are pushed |
+| `0x1C` | H interrupt timing | low u16 asserts the PDC interrupt line when `HCount` equals it, the high u16 probably deasserts it. Low must be smaller than high; if low < `HTotal` then high must also be < `HTotal`; low >= `HTotal` disables the interrupt. GSP sets low = `HTotal`, so the H-sync interrupt never fires |
+| `0x20` | ? | two unknown u16 fields |
+| `0x28` | ? | seems to set the vertical blanking interval: lower than `VTotal - VDisp` cuts off the top lines; higher pushes the image down and shows the overscan colour; higher than `HTotal` makes the GPU skip vertical synchronisation of pixel data |
+| `0x30` | ? | total vertical scanlines in the pixel buffer; if less than `VDisp`, the last two scanlines repeat interlaced |
+| `0x34` | VDisp (?) | vertical scanlines displayed (top screen only, it seems); if less than `VTotal`, the remaining lines are not refreshed and fade out |
+| `0x38` | vertical data offset (?) | a high enough value shifts the picture up; at or above some threshold (less than one scanline shown) the screen loses sync |
+| `0x40` | V interrupt timing | like `0x1C` but compared against `VCount` and limited by `VTotal`; the interrupt that fires is VSync, and it seems to fire at `HCount` == 0 always |
+| `0x44`, `0x48` | ? | `0x44` is like `0x10`; in `0x48` bit 0 seems to disable HSync and bit 8 VSync, other bits not writable |
+| `0x5C` | ? | low u16 image width (including some offset?), high u16 image height (unused?) |
+| `0x60` | HDisp | low u16 image start (border to pixel data), high u16 image end (pixel data to border) |
+| `0x64` | ? | low u16 unknown, high u16 total framebuffer height (scanlines blitted regardless of framebuffer height) |
+
+Setting `VTotal` to 494 lowers the refresh to about 50.04 Hz, as noted above.
+
+The two eye framebuffers of the top screen are both displayed regardless of the 3D slider; with the slider off, the left and right addresses are normally set equal. If they differ with the 3D effect disabled, the LCD seems to alternate between left and right each frame `[reverse-engineered: 3dbrew]`. AB/BA interlacing alternates scanlines of A and B (the stride is added to the internal scanline pointer after each line and the other framebuffer is selected); AA reads the A pointer for both. 3D mode is decided by software: per 3dbrew, the GSP service enables stereoscopy only when interlace bit 5 = 1 and bit 6 = 0 (GSP mode 2), mode 1 is the full 240×800 output with both off, and bit 6 alone (bit 5 = 0) selects 2D (mode 0, the default). Bit 6 behaves differently per panel: on the bottom screen it doubles every pixel; on the top screen it appears to receive two pixels per clock; on a 2DS it only shifts the bottom framebuffer two pixels right. Interlacing and scan-doubling cannot both be enabled in userland but work on bare metal.
 
 ### Transfer engine
 
-The transfer engine at `0x10400C00` converts GPU render targets (8×8-tiled) into LCD framebuffers (linear) and back, with optional vertical flip, colour conversion and 1×1/2×1/2×2 box-filter downscale (used for anti-aliasing and mipmaps). It also has a plain `TextureCopy` mode. Constraints (minimum widths/heights and alignments) are listed on 3dbrew's GPU external registers page.
+The transfer engine at `0x10400C00` converts GPU render targets (8×8-tiled) into LCD framebuffers (linear) and back, with optional vertical flip, colour conversion and 1×1/2×1/2×2 box-filter downscale (used for anti-aliasing and mipmaps). It also has a plain `TextureCopy` mode. Flags, constraints (minimum widths/heights and alignments) and the working format conversions are in [GPU external registers](gpu-external-registers.md#transfer-engine).
 
 ### Framebuffer memory (system applets)
 
@@ -97,7 +123,7 @@ Homebrew normally uses `libctru`'s `gfx` API (which wraps the GSP service) rathe
 
 ## Sources
 
-- [3dbrew: GPU/External Registers](https://www.3dbrew.org/wiki/GPU/External_Registers) — PDC registers, framebuffer formats, interlace modes, transfer engine.
+- [3dbrew: GPU/External Registers](https://www.3dbrew.org/wiki/GPU/External_Registers) — PDC registers, timing order and latch modes, framebuffer formats, interlace modes, transfer engine (full register map: [GPU external registers](gpu-external-registers.md)).
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — resolutions and screen sizes.
 - [3dbrew: Memory layout](https://www.3dbrew.org/wiki/Memory_layout) — VRAM framebuffer addresses.
 - [3dbrew: Video Capture](https://www.3dbrew.org/wiki/Video_Capture) — screen capture test points.

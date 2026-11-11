@@ -2,7 +2,7 @@
 
 Sound on the 3DS is produced by a separate audio processor (the **[DSP](../../glossary.md#dsp)**) running Nintendo's audio firmware. Homebrew talks to it through **ndsp**, libctru's driver: you queue buffers of samples on up to 24 channels, and the DSP resamples, mixes and plays them. The CPU's job is to keep those queues full. This page covers setting ndsp up (including the firmware file it needs), choosing formats and buffer sizes, streaming compressed music, the callback that runs every audio frame, and how to diagnose crackles and gaps.
 
-Hardware background: [audio](../hardware/audio.md). Buffer placement and flushing: [memory and cache](memory-and-cache.md#dsp-buffers).
+Hardware background: [audio](../hardware/audio.md); shared-memory and firmware formats: [DSP firmware interface](../hardware/dsp.md). Buffer placement and flushing: [memory and cache](memory-and-cache.md#dsp-buffers).
 
 ## Before you start
 
@@ -113,7 +113,7 @@ Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libm
 
 ## What ndsp does not cover
 
-- **AAC.** Some DSP firmware builds contain an AAC decoder reached through the DSP binary pipe 3 (3dbrew *DSP AAC Decoder*: modes 0 none, 1 decode, 2 encode; the page says parts still need testing). libctru 2.7.1 has no AAC API (no match in its headers), so homebrew decodes AAC, MP3 or Vorbis on the CPU. Whether a given dumped `dspfirm.cdc` includes the AAC component varies with the game it was dumped from per 3dbrew `[reverse-engineered]`.
+- **AAC.** Some DSP firmware builds contain an AAC decoder reached through the DSP binary pipe 3 (3dbrew *DSP AAC Decoder*: modes 0 none, 1 decode, 2 encode; the page says parts still need testing). The 0x20-byte message format, decode request fields and sample-rate enum are on [DSP firmware interface](../hardware/dsp.md#aac-decoder). libctru 2.7.1 has no AAC API (no match in its headers), so homebrew decodes AAC, MP3 or Vorbis on the CPU. Whether a given dumped `dspfirm.cdc` includes the AAC component varies with the game it was dumped from per 3dbrew `[reverse-engineered]`.
 - **CSND.** The older DS-style sound hardware path is a separate service; this page and libctru's current audio API use ndsp ([hardware audio](../hardware/audio.md)).
 - **Microphone.** Capture is a different service (`audio/mic` example), not ndsp.
 

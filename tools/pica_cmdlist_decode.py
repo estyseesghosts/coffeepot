@@ -2,7 +2,10 @@
 """Decode a PICA200 GPU command list (the buffer given to GX ProcessCommandList).
 
 Format source: libctru source/gpu/gpu.c (GPUCMD_AddInternal) at commit 62b7c42;
-register names from libctru include/3ds/gpu/registers.h (same commit).
+register names from libctru include/3ds/gpu/registers.h (same commit), plus the
+following ids that libctru leaves unnamed or misplaces and that 3dbrew GPU/Internal Registers
+names: 0x04C DEPTHMAP_TRANSFORM_ENABLE, 0x0AC/0x0AD TEXUNIT3_PROCTEX4/5, 0x0E2/0x0E3
+FOG_LINEAR_SLOPE/OFFSET (see ctr/hardware/gpu-internal-registers.md).
 
 VERIFICATION STATUS: tested only on SYNTHETIC command lists that this file
 builds itself (python3 -I tools/pica_cmdlist_decode.py --selftest). It has
@@ -38,7 +41,7 @@ REG_NAMES = {
     0x03F:"003F",0x040:"FACECULLING_CONFIG",0x041:"VIEWPORT_WIDTH",0x042:"VIEWPORT_INVW",
     0x043:"VIEWPORT_HEIGHT",0x044:"VIEWPORT_INVH",0x045:"0045",0x046:"0046",0x047:"FRAGOP_CLIP",
     0x048:"FRAGOP_CLIP_DATA0",0x049:"FRAGOP_CLIP_DATA1",0x04A:"FRAGOP_CLIP_DATA2",
-    0x04B:"FRAGOP_CLIP_DATA3",0x04C:"004C",0x04D:"DEPTHMAP_SCALE",0x04E:"DEPTHMAP_OFFSET",
+    0x04B:"FRAGOP_CLIP_DATA3",0x04C:"DEPTHMAP_TRANSFORM_ENABLE",0x04D:"DEPTHMAP_SCALE",0x04E:"DEPTHMAP_OFFSET",
     0x04F:"SH_OUTMAP_TOTAL",0x050:"SH_OUTMAP_O0",0x051:"SH_OUTMAP_O1",0x052:"SH_OUTMAP_O2",
     0x053:"SH_OUTMAP_O3",0x054:"SH_OUTMAP_O4",0x055:"SH_OUTMAP_O5",0x056:"SH_OUTMAP_O6",
     0x057:"0057",0x058:"0058",0x059:"0059",0x05A:"005A",0x05B:"005B",0x05C:"005C",0x05D:"005D",
@@ -58,7 +61,7 @@ REG_NAMES = {
     0x09A:"TEXUNIT2_DIM",0x09B:"TEXUNIT2_PARAM",0x09C:"TEXUNIT2_LOD",0x09D:"TEXUNIT2_ADDR",
     0x09E:"TEXUNIT2_TYPE",0x09F:"009F",0x0A0:"00A0",0x0A1:"00A1",0x0A2:"00A2",0x0A3:"00A3",
     0x0A4:"00A4",0x0A5:"00A5",0x0A6:"00A6",0x0A7:"00A7",0x0A8:"TEXUNIT3_PROCTEX0",
-    0x0A9:"TEXUNIT3_PROCTEX1",0x0AA:"TEXUNIT3_PROCTEX2",0x0AB:"TEXUNIT3_PROCTEX3",0x0AE:"00AE",
+    0x0A9:"TEXUNIT3_PROCTEX1",0x0AA:"TEXUNIT3_PROCTEX2",0x0AB:"TEXUNIT3_PROCTEX3",0x0AC:"TEXUNIT3_PROCTEX4",0x0AD:"TEXUNIT3_PROCTEX5",0x0AE:"00AE",
     0x0AF:"PROCTEX_LUT",0x0B0:"PROCTEX_LUT_DATA0",0x0B1:"PROCTEX_LUT_DATA1",
     0x0B2:"PROCTEX_LUT_DATA2",0x0B3:"PROCTEX_LUT_DATA3",0x0B4:"PROCTEX_LUT_DATA4",
     0x0B5:"PROCTEX_LUT_DATA5",0x0B6:"PROCTEX_LUT_DATA6",0x0B7:"PROCTEX_LUT_DATA7",0x0B8:"00B8",
@@ -70,7 +73,7 @@ REG_NAMES = {
     0x0D2:"TEXENV2_COMBINER",0x0D3:"TEXENV2_COLOR",0x0D4:"TEXENV2_SCALE",0x0D5:"00D5",0x0D6:"00D6",
     0x0D7:"00D7",0x0D8:"TEXENV3_SOURCE",0x0D9:"TEXENV3_OPERAND",0x0DA:"TEXENV3_COMBINER",
     0x0DB:"TEXENV3_COLOR",0x0DC:"TEXENV3_SCALE",0x0DD:"00DD",0x0DE:"00DE",0x0DF:"00DF",
-    0x0E0:"TEXENV_UPDATE_BUFFER",0x0E1:"FOG_COLOR",0x0E2:"00E2",0x0E3:"00E3",
+    0x0E0:"TEXENV_UPDATE_BUFFER",0x0E1:"FOG_COLOR",0x0E2:"FOG_LINEAR_SLOPE",0x0E3:"FOG_LINEAR_OFFSET",
     0x0E4:"GAS_ATTENUATION",0x0E5:"GAS_ACCMAX",0x0E6:"FOG_LUT_INDEX",0x0E7:"00E7",
     0x0E8:"FOG_LUT_DATA0",0x0E9:"FOG_LUT_DATA1",0x0EA:"FOG_LUT_DATA2",0x0EB:"FOG_LUT_DATA3",
     0x0EC:"FOG_LUT_DATA4",0x0ED:"FOG_LUT_DATA5",0x0EE:"FOG_LUT_DATA6",0x0EF:"FOG_LUT_DATA7",
@@ -263,7 +266,7 @@ def decode(words):
             warns.append(f"word {start}: write mask 0 (nothing is written)")
         for r, _ in cmds[-1].writes():
             if r > 0x2FF or r not in REG_NAMES:
-                warns.append(f"word {start}: register 0x{r:03X} is not in libctru registers.h")
+                warns.append(f"word {start}: register 0x{r:03X} is not a known register name")
                 break
     fins = [c for c in cmds if c.reg == REG_FINALIZE]
     if not fins:

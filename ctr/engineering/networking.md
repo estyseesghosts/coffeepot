@@ -20,7 +20,7 @@ The services themselves are listed in [CTR services](../software/services.md); h
 ## Before you start
 
 - Checked against libctru 2.7.1 at commit `62b7c42c88b1ee837f513358409d2e5c8f9001a9` (local clone) and the `3ds-examples` commit pinned on [source versions](source-versions.md); 3dbrew pages *HTTPC Services* and *SSL Services* fetched in November 2026.
-- All three code examples build with devkitARM r68-1 (GCC 16.1.0) and libctru 2.7.1-1, `-Wall -Wextra`, no warnings. **None has been run** on hardware or in an emulator; behaviours that need a network are listed under Open questions.
+- All four code examples build with devkitARM r68-1 (GCC 16.1.0) and libctru 2.7.1-1, `-Wall -Wextra`, no warnings. **None has been run** on hardware or in an emulator; behaviours that need a network are listed under Open questions.
 - Terms: a **root CA** is the certificate authority at the top of a chain of trust; a server's certificate is accepted only if it chains up to a root you trust. **TLS** is the encryption layer under HTTPS. **Non-blocking** means a call returns at once with "would block" instead of waiting.
 - A connected Wi-Fi network is required. Without one, `httpcInit` fails (see [Technical details](#technical-details)).
 
@@ -326,6 +326,63 @@ What could **not** be verified here:
 - Which TLS versions and cipher suites the 3DS stack supports. `SSLCOPT_TLSv10` and 3dbrew's description of option bit 11 suggest an old stack; modern servers that require newer TLS may refuse the connection regardless of certificates.
 - 3dbrew notes that the certificate not-before/not-after dates are not validated against the system date (and possibly not at all), and that the option mask set on a new sslc context, `0x1B`, does not include the "verify date" bit (`0x4`) [reverse-engineered: 3dbrew SSL Services, raw wikitext read 10 November 2026]. So an expired certificate may be accepted, and a wrong console clock should not cause a validation failure by itself. Do not rely on expiry checking; if freshness matters, check dates yourself or pin the exact server certificate. This is unmeasured; see Open questions.
 
+## Is Wi-Fi connected?
+
+Before `socInit` or `httpcInit` it helps to know whether there is a connection at all, so you can show a message instead of an opaque failure. The **AC** service (`ac:i`, else `ac:u`) answers: `acInit()` / `acExit()` (reference counted), then `ACU_GetStatus(&s)` gives 1 for "not connected" and 3 for "connected"; `ACU_GetWifiStatus(&s)` instead returns which stored access-point slot is in use as `AC_AP_TYPE_*` flags (0 = none) [documented: `ac.h`, `ac.c`]. The security mode, SSID and proxy settings of the current connection have getters too.
+
+libctru also offers `acWaitInternetConnection()`. Its body is `while (ACU_GetWifiStatus succeeds && status == 0);`: it **polls with no sleep and no timeout**, so on a console that is offline it spins forever, using a full core of the thread that calls it [documented: `ac.c`]. Write the wait yourself with a sleep and a deadline:
+
+```c
+#include <3ds.h>
+#include <stdio.h>
+
+// Is the console connected to an access point right now? (ac.h: ACU_GetStatus 3 = connected)
+static bool wifi_connected(void)
+{
+	if (R_FAILED(acInit())) return false;
+	u32 status = 0;
+	bool ok = R_SUCCEEDED(ACU_GetStatus(&status)) && status == 3;
+	acExit();
+	return ok;
+}
+
+// Wait up to timeoutMs for a connection. Unlike acWaitInternetConnection() this sleeps
+// between checks and gives up.
+static bool wait_for_wifi(u32 timeoutMs)
+{
+	if (R_FAILED(acInit())) return false;
+	bool ok = false;
+	for (u32 waited = 0; waited <= timeoutMs; waited += 100) {
+		u32 status = 0;
+		if (R_FAILED(ACU_GetStatus(&status))) break;
+		if (status == 3) { ok = true; break; }
+		svcSleepThread(100ULL * 1000 * 1000);        // 100 ms
+	}
+	acExit();
+	return ok;
+}
+
+int main(void)
+{
+	gfxInitDefault();
+	consoleInit(GFX_TOP, NULL);
+	printf("connected now: %s\n", wifi_connected() ? "yes" : "no");
+	printf("waiting up to 3 s... %s\n", wait_for_wifi(3000) ? "connected" : "no connection");
+	printf("START exits.\n");
+	while (aptMainLoop()) {
+		hidScanInput();
+		if (hidKeysDown() & KEY_START) break;
+		gfxFlushBuffers();
+		gfxSwapBuffers();
+		gspWaitForVBlank();
+	}
+	gfxExit();
+	return 0;
+}
+```
+
+Expected: `connected now:` matches whether the console shows a connected Wi-Fi in HOME; the wait returns at once when connected and after 3 s otherwise. Not run on any console. The status can change at any moment (the user can leave Wi-Fi range or turn it off), so a successful check is not a guarantee for the next call: handle failures of `socInit`, `httpcInit` and every request anyway. **New 3DS:** nothing in `ac.h` differs by model.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Check |
@@ -343,7 +400,7 @@ What could **not** be verified here:
 
 ## Not covered yet
 
-Local wireless between consoles (`nwm::UDS`: `udsInit`, `udsCreateNetwork`, `udsScanBeacons`, `udsConnectNetwork`, `udsSendTo`/`udsPullPacket`) is a different stack from the sockets above and has no engineering page yet; the only upstream starting point is the `network/uds` example in [3ds-examples](https://github.com/devkitPro/3ds-examples/tree/be2001fee08cf8ec7d3366e095e83f6f75da8942/network) and the service entry in [CTR services](../software/services.md). Input devices and sensors likewise have no engineering page yet. A controlled test server with expired and truncated responses, and measured timing logs, have not been built; all behaviour here is from source and 3dbrew only. What the sockets and HTTP service do across HOME and sleep is unmeasured: see [application lifecycle](application-lifecycle.md#open-questions).
+Local wireless between consoles (`nwm::UDS`) is a different stack from the sockets above; see [local wireless](local-wireless.md). Input devices and sensors are on [input and sensors](input-and-sensors.md). A controlled test server with expired and truncated responses, and measured timing logs, have not been built; all behaviour here is from source and 3dbrew only. What the sockets and HTTP service do across HOME and sleep is unmeasured: see [application lifecycle](application-lifecycle.md#open-questions).
 
 ## Technical details
 
@@ -383,7 +440,7 @@ Local wireless between consoles (`nwm::UDS`: `udsInit`, `udsCreateNetwork`, `uds
 
 ## Verification status
 
-The three examples (`soc` init, non-blocking connect, bounded download) build against libctru 2.7.1-1 with devkitARM r68-1; emulator, Old 3DS and New 3DS: not run. No `[measured]` numbers appear on this page.
+The four examples (`soc` init, non-blocking connect, bounded download, Wi-Fi status and wait) build against libctru 2.7.1-1 with devkitARM r68-1; emulator, Old 3DS and New 3DS: not run. No `[measured]` numbers appear on this page.
 
 ## Sources
 
@@ -393,3 +450,4 @@ The three examples (`soc` init, non-blocking connect, bounded download) build ag
 - [3ds-examples `network/http`](https://github.com/devkitPro/3ds-examples/tree/be2001fee08cf8ec7d3366e095e83f6f75da8942/network/http), [`network/sslc`](https://github.com/devkitPro/3ds-examples/tree/be2001fee08cf8ec7d3366e095e83f6f75da8942/network/sslc), [`network/sockets`](https://github.com/devkitPro/3ds-examples/tree/be2001fee08cf8ec7d3366e095e83f6f75da8942/network/sockets) — the verification-disabling example, the root-CA example, the 1 MiB `soc` buffer.
 - [3dbrew: HTTP Services](https://www.3dbrew.org/wiki/HTTP_Services) — root CA behaviour, error codes.
 - [3dbrew: SSL Services](https://www.3dbrew.org/wiki/SSL_Services) — SSL option bits, verification notes, error codes.
+- [libctru `ac.h`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/include/3ds/services/ac.h) and [`ac.c`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/source/services/ac.c) — Wi-Fi status values, `acWaitInternetConnection` loop.

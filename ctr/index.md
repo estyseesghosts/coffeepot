@@ -29,6 +29,12 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [GPU shading features](hardware/gpu-shading-features.md) — lighting, shadows, procedural textures and the hardware's quirks.
 - [Security hardware](hardware/security-hardware.md) — AES/RSA/SHA engines, OTP and boot ROM key storage.
 - [Models and variants](hardware/models.md) — the six models and their parts.
+- [ARM11 MPCore internals](hardware/arm11-mpcore.md) — register-level reference for the ARM11 cores: caches, MMU/TLB, interrupts, timers, performance counters, VFP11.
+- [GPU internal registers](hardware/gpu-internal-registers.md) — bit-level reference for the PICA200 command-list registers.
+- [GPU external registers](hardware/gpu-external-registers.md) — memory fill, transfer engine, profiling and command-list start registers.
+- [DSP firmware interface](hardware/dsp.md) — DSP firmware file format, shared audio memory layout, AAC decoder and `dsp::DSP` commands.
+- [Screen video capture points](hardware/video-capture.md) — board test points for tapping the lower screen's video signal.
+- [Board test points](hardware/tp-nets.md) — measured test pads on the Old 3DS board.
 
 ## Software
 
@@ -46,6 +52,12 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [Country/region data](software/country-region-data.md) — the shared archive of country and region tables.
 - [Security architecture](software/security-architecture.md) — the chain of trust and its design flaws.
 - [Development units](software/dev-unit-software.md) — Nintendo's non-retail hardware and software.
+- [Kernel objects](software/kernel-objects.md) — field-level layouts of KProcess, KThread, class tokens, debug events and per-core state.
+- [SVC reference](software/svc-reference.md) — every system call with availability, KernelSetState/GetSystemInfo details, error codes and Luma3DS additions.
+- [Title metadata and tickets](software/title-metadata-and-tickets.md) — TMD and ticket byte layouts, keys and certificates.
+- [System title list](software/title-list.md) — system titles by category, with IDs.
+- [System update data](software/update-data.md) — titles changed by the early system updates.
+- [System flaws](software/system-flaws.md) — documented hardware, boot ROM, ARM9 and ARM11 flaws with fix versions.
 
 ## Homebrew
 
@@ -58,6 +70,7 @@ Unusually for a console, it contains **three** generations of ARM processor: a d
 - [picasso and citro3d](homebrew/picasso-and-citro3d.md) — the shader assembler and GPU library.
 - [Development workflow](homebrew/development-workflow.md) — toolchain versions, how `.3dsx` programs are loaded today, `.3dsx` vs `.cia`, and the example projects.
 - [Research index](homebrew/research-index.md) — who is credited with which findings and tools, and where vanished sources survive.
+- [3ds-examples catalogue](homebrew/3ds-examples.md) — every devkitPro sample program mapped to the wiki guide that covers it.
 
 ## Engineering
 
@@ -81,6 +94,15 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Networking](engineering/networking.md) — starting `soc:U`, non-blocking sockets, bounded-memory HTTP downloads with httpc, and HTTPS with certificate validation left on.
 - [PICA200 command pipeline](engineering/pica200-command-pipeline.md) — what draw calls write, how command lists are encoded and reach the GPU, a hang/overflow/cache checklist, and a command-list decoder.
 - [PICA200 shader programming](engineering/pica200-shader-programming.md) — picasso shaders from one triangle to lighting, instruction encoding, float24 behaviour and a debugging tree.
+- [Input and sensors](engineering/input-and-sensors.md) — buttons, Circle Pad, touch, motion sensors, C-Stick and ZL/ZR, key repeat and model differences.
+- [Cameras and Y2R](engineering/camera-and-y2r.md) — capture sequence, buffers, YUV-to-RGB conversion.
+- [Microphone](engineering/microphone.md) — shared-memory ring buffer sampling.
+- [NFC and infrared](engineering/nfc-and-infrared.md) — amiibo tag-state machine, the Old 3DS NFC adapter path, and the IR transceiver session.
+- [System information and power](engineering/system-info-and-power.md) — model, battery, memory and other system-level services.
+- [New 3DS extras: QTM and MVD](engineering/new-3ds-qtm-and-mvd.md) — head tracking and the hardware video decoder.
+- [Local wireless](engineering/local-wireless.md) — UDS host, join, send and receive.
+- [libctru service groups](engineering/service-groups.md) — init/exit pattern, every remaining service group, utilities, and a probe for which services your build can open.
+- [citro3d fixed-function API](engineering/citro3d-fixed-function-api.md) — which citro3d call sets lighting, fog, procedural textures, gas and render state.
 - [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
 - [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush and draw-call costs (not yet run on hardware).
 

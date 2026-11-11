@@ -26,7 +26,7 @@ This page explains the design; the individual attacks are in the [exploit catalo
 
 ### Later changes
 
-> Conflict/unverified: this paragraph follows Copetti. Only the "OTP readable on firmware before 3.0.0" point was confirmed in 3dbrew's System Flaws page (OTP dumping "required a boot of < 3.0.0-X"). The 7.0.0 RSA-engine and 11.0.0 anti-downgrade statements were not found there and should be read as [hypothesis] until checked against the flaw tables.
+> Conflict/unverified: this paragraph follows Copetti; 3dbrew's flaw tables (see [system flaws](system-flaws.md)) confirm the 11.0.0 anti-downgrade list (key system titles only, legacy FIRMs added in 11.8.0). Only the "OTP readable on firmware before 3.0.0" point was confirmed in 3dbrew's System Flaws page (OTP dumping "required a boot of < 3.0.0-X"). The 7.0.0 RSA-engine and 11.0.0 anti-downgrade statements were not found there and should be read as [hypothesis] until checked against the flaw tables.
 
 Nintendo reworked the chain over time: system version 7.0.0 added the RSA engine to the NCCH decryption path (keys cleared after Kernel9 loads, so earlier exploits could not read newer games); 3.0.0 hid the OTP after boot; **New 3DS:** a loader stage (**arm9loader**) with OTP-derived keys was added (fixed in 9.5.0/9.6.0 after flaws); title downgrade protection was added later (11.0.0 closed the anti-downgrade list gap).
 
@@ -56,7 +56,7 @@ Nintendo reworked the chain over time: system version 7.0.0 added the RSA engine
 
 Two further entries from the same page: `srv:pm` was a globally reachable port until 7.0.0-13, letting any process re-register itself and bypass the exheader service-access list (since then it is a service restricted to PIDs below 6, one session at a time) [documented: 3dbrew System Flaws]; and because FIRM partitions are AES-CTR encrypted with a fixed keystream, knowing a FIRM binary reveals keystream that enables minor FIRM downgrades and, with sighax, arbitrary FIRM installation. Downgrading titles via AM worked by deleting the installed title first so Process9 had nothing to compare against.
 
-The full tables, with credit and fix versions, are on that page.
+The full catalogue, with every flaw, discoverer and fix version, is on the [system flaws](system-flaws.md) page.
 
 ## Homebrew notes
 
@@ -64,7 +64,7 @@ See [exploits](../homebrew/exploits.md) for how these flaws were chained into us
 
 ## Open questions
 
-- The catalogue above is a summary; fixed-in-version dates for each flaw should be read from 3dbrew.
+- The catalogue above is a summary; the complete list is on [system flaws](system-flaws.md).
 - Whether later firmware changed the chain beyond the items listed is not covered in the sources used.
 
 ## Sources
@@ -72,4 +72,5 @@ See [exploits](../homebrew/exploits.md) for how these flaws were chained into us
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Anti-Piracy and Homebrew](https://www.copetti.org/writings/consoles/nintendo-3ds/) — the designed chain of trust, OS functions, design flaws.
 - [3dbrew: 3DS System Flaws](https://www.3dbrew.org/wiki/3DS_System_Flaws) — detailed flaw list.
 - [3dbrew: Bootloader](https://www.3dbrew.org/wiki/Bootloader) — Boot9 signature use.
+- [3dbrew: TP Nets](https://www.3dbrew.org/wiki/TP_Nets) — see [board test points](../hardware/tp-nets.md).
 - [3dbrew: Titles](https://www.3dbrew.org/wiki/Titles), [Ticket](https://www.3dbrew.org/wiki/Ticket), [Title metadata](https://www.3dbrew.org/wiki/Title_metadata) — signing and certificate chains.

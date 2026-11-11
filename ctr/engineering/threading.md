@@ -33,6 +33,8 @@ For a `.3dsx` under Luma3DS the maximum is 89% [documented: `hbldr.c`]. How the 
 - Work handed to a core-1 thread can wait up to a slice before it starts. Use core 1 for throughput (decoding ahead, building next frame's data with a frame of slack), not for anything that must finish within a few milliseconds.
 - A large share slows the system modules your program talks to. A third-party measurement on an Old 3DS saw `DSP_FlushDataCache` rise from ~0.1 ms to 1–5 ms at 80% [measured by a third party: libctru issue #556]. Prefer the kernel's `svcFlushProcessDataCache` from code that runs while a share is active ([memory and cache](memory-and-cache.md#the-functions)), and tune the percentage by measurement.
 
+> Conflict: how many threads fit on core 1. libctru's `thread.h` says that with `APT_SetAppCpuTimeLimit` set "it is possible to create a single thread on this core". The unpublished HeartGold/SoulSilver port notes (`old-3ds-guide-revised.md`) record a layout with **two** worker threads (display composition and geometry) on Old 3DS core 1, and flag the contradiction themselves, as "to verify on hardware: which `threadCreate` calls return non-NULL". This page follows libctru: plan for **one** application thread on core 1 on an Old 3DS, check `threadCreate` for `NULL`, and put multiple jobs on that one thread's queue. Whether a second core-1 thread can really be created is not established here.
+
 Two well-known ports illustrate a common placement: the Super Mario 64 3DS port runs its audio thread on core 1 on Old 3DS and core 2 on New 3DS [documented: its README]. That is a design choice for that program, not a rule; measure your own.
 
 ### Core 2 (New 3DS only)

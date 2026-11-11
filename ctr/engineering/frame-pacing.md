@@ -88,6 +88,7 @@ while (aptMainLoop()) {
 - Cap the catch-up (here 8 steps) so a long stall — loading, the HOME Menu, a debugger break — does not cause a burst of fast-forwarded steps.
 - For games ported from a console with its own refresh rate (the DS refreshes at about 59.83 Hz, not 60), decide explicitly whether to run the logic at the original rate or at 60; small differences accumulate in music and timers.
 - Report two numbers separately: logic ticks per second and distinct frames shown per second.
+- If a separate render thread produces pictures that the display consumes (a pattern from a large port, [porting](porting.md#lessons-reported-by-one-large-port)), also log how old the picture on screen is in logic ticks, and keep the hand-over queue short (one pending plus one in flight was the starting point in that port's notes); show the newest finished picture and drop unstarted older ones under load, but never drop logic ticks or audio `[hypothesis]` (from the unpublished notes of that port; not tested for this wiki).
 
 ## Detecting missed frames
 

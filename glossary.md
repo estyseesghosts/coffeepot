@@ -213,3 +213,15 @@ A 64-bit counter of CPU ticks since power-on, read with `svcGetSystemTick()`. On
 ### Non-blocking I/O {#non-blocking}
 
 A socket mode where a call returns at once with "would block" instead of waiting for data. Used with `poll` to implement timeouts. See [networking](ctr/engineering/networking.md).
+
+### Translation lookaside buffer (TLB) {#tlb}
+
+A small cache of recent virtual-to-physical address translations. See [ARM11 MPCore internals](ctr/hardware/arm11-mpcore.md#address-translation-mmu).
+
+### MESI {#mesi}
+
+A cache-coherency protocol where each cache line is Modified, Exclusive, Shared or Invalid. See [ARM11 MPCore internals](ctr/hardware/arm11-mpcore.md#snoop-control-unit-scu).
+
+### Address space identifier (ASID) {#asid}
+
+An 8-bit tag so translation entries from different processes can coexist in the TLB. See [ARM11 MPCore internals](ctr/hardware/arm11-mpcore.md#address-translation-mmu).

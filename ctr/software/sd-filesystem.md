@@ -6,7 +6,7 @@ The 3DS uses its SD card (**New 3DS:** microSD) for photos, music, videos and �
 
 On the card the 3DS creates a `Nintendo 3DS` folder. Inside it, one sub-folder named after the console (`<ID0>`) and one named after the card (`<ID1>`) hold everything that console has installed on that card. Moving a card to a different console does not give that console access to the old content.
 
-Photos and videos taken with the camera app go to `DCIM`; software, save data and DSiWare exports go inside `Nintendo 3DS/<ID0>/<ID1>/`. 3D video (added in system version 3.0.0-5) is stored as `.avi` with MJPEG frames.
+Photos and videos taken with the camera app (and browser image downloads) go to `DCIM`; software, save data and DSiWare exports go inside `Nintendo 3DS/<ID0>/<ID1>/`. 3D video (added in system version 3.0.0-5) is stored as `.avi` with MJPEG frames.
 
 ## Technical details
 
@@ -35,7 +35,7 @@ Everything under `Nintendo 3DS/<ID0>/<ID1>` is AES-128-CTR encrypted with consol
 2. Compute its SHA-256 hash.
 3. CTR byte `i` = hash byte `i` XOR hash byte `16+i`, for `i = 0…15`.
 
-The counter is fixed per file and never changes when the file is rewritten, so XORing two versions of the same file reveals plaintext where one version overwrote zeroes.
+The counter is fixed per file and never changes when the file is rewritten, so XORing two versions of the same file (for example newly created extdata and a later copy) reveals plaintext where the newer version overwrote zeroes. Files under `nand/data/<ID0>` use the same key slot, but only for MACs.
 
 ### Directory names
 
@@ -52,8 +52,8 @@ The counter is fixed per file and never changes when the file is rewritten, so X
 | `extdata` | Extra save data created by titles |
 | `title` | SD-installed [titles](titles.md), encrypted |
 | `Nintendo DSiWare` | Exported DSiWare |
-| `Private/<Title ID Low>` | Cleartext data: `00020400` (Camera, `phtcache.bin`), `00020500` (Sound, `voice/XX/*.m4a`) |
-| `/private/Nintendo 3DS/app/<Game Code>/` | Some apps (e.g. Flipnote Studio 3D) store cleartext data here |
+| `Private/<Title ID Low>` | Cleartext data: `00020400` (Camera, `phtcache.bin`; to make a picture visible rename it to eight digits plus `.mpo` and put it in `DCIM`), `00020500` (Sound, `voice/XX/*.m4a`, XX = 01-10) |
+| `/private/Nintendo 3DS/app/<Game Code>/` | Some apps store cleartext data here under their four-letter game code; Flipnote Studio 3D (`JKZP`) keeps numbered `.kwz` files and a `!!.lst` |
 
 Save data for titles on the SD card is stored under each title's `data` folder ([titles](titles.md), [savegames](savegames.md)).
 
@@ -69,5 +69,6 @@ The SD card is user-writable, and its encryption depends on a console key (`mova
 
 - [3dbrew: SD Filesystem](https://www.3dbrew.org/wiki/SD_Filesystem) — layout, encryption counter derivation, ID1 derivation.
 - [3dbrew: Titles](https://www.3dbrew.org/wiki/Titles) — SD title directory structure.
+- [3dbrew: Flash Filesystem](https://www.3dbrew.org/wiki/Flash_Filesystem) — `nand/data/<ID0>` MACs.
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — SD capacity, formatting.
 - [Hacks Guide Wiki: History of 3DS Hacking](https://wiki.hacks.guide/wiki/3DS:History_of_3DS_Hacking) — SD-based exploit families.

@@ -105,6 +105,20 @@ libctru can decompress the same formats tex3ds writes, so you can compress your 
 
 Whether compression speeds up loading depends on SD-card read speed versus decompression CPU time, and may differ between Old 3DS and New 3DS [hypothesis — measure Old 3DS first, then New 3DS].
 
+## Streaming and load hitches
+
+A game can be fine in steady play and still stutter when it loads: opening a file, reading it from the SD card, decompressing and converting it all take time, and on an Old 3DS they take it from the same single core that runs your game. These are the rules this wiki carries, mostly from the author's unpublished notes (`old-3ds-guide-revised.md`, section 10, written for a port) and therefore `[hypothesis]` until measured on your own game:
+
+- **Keep file work out of the frame.** No `fopen`, blocking SD read, texture decode or allocation in the part of the loop that must meet a deadline, and none inside audio refill or GPU callbacks. Load from a worker thread ([threading](threading.md)) and hand finished data over with an event.
+- **Few large sequential reads beat many small ones.** Pack related assets into one file with an index of offsets and lengths, and read whole blocks. Whether compressing the pack helps depends on SD read speed versus CPU decompression and has to be measured on hardware (see Data compression above).
+- **Time the stages separately**: wait on the file, decompress, decode, swizzle, cache flush, upload. A single "load time" number hides which one to fix. Log from memory and write the log out later, not synchronously per asset.
+- **Test cold and warm.** The first run after boot reads from the card; a repeat may be served from caches. Report both, and report the transition frame, not only the average.
+- **Prefetch what a transition predicts** (the next map's textures, the next menu's art) but never let prefetching evict something the current frame needs, and never hold a global lock across an SD read.
+- **Fail visibly.** A missing or corrupt asset should produce a clear log line and a fallback, not a crash several frames later.
+- **Bound the memory.** Know what the loaded set costs in linear memory and VRAM before you add a feature ([memory and cache](memory-and-cache.md#size-arithmetic)); a texture cache that is nearly full can turn a handful of loads into seconds of work.
+
+No measured SD throughput, decompression speed or prefetch gain exists on this wiki; the experiments are listed under Open questions.
+
 ## Technical details
 
 - `.t3x` files start with a header describing sub-textures (count, coordinates) followed by the texture data, optionally compressed; the format is defined by `tex3ds` and parsed by citro3d's `tex3ds.c`. Imported textures are allocated in linear memory unless the `vram` argument is true.
@@ -122,6 +136,8 @@ Whether compression speeds up loading depends on SD-card read speed versus decom
 
 - Measured SD read throughput for RomFS inside a `.3dsx` versus an installed `.cia`, Old vs New 3DS.
 - Decompression speed of LZ11 vs Huffman vs none for typical game data on Old 3DS.
+- How much a background prefetch thread costs the main thread on an Old 3DS (it shares the CPU and the SD bus) compared with loading on demand, measured on the first frame after a scene change.
+
 
 ## Sources
 
@@ -130,3 +146,4 @@ Whether compression speeds up loading depends on SD-card read speed versus decom
 - [libctru](https://github.com/devkitPro/libctru) — `util/decompress.h`, `romfs.h`.
 - [citro2d](https://github.com/devkitPro/citro2d) — font and sprite-sheet loading.
 - [picasso](https://github.com/devkitPro/picasso) — shader assembly.
+- Unpublished author notes `old-3ds-guide-revised.md` (section 10, file I/O and asset streaming) — the streaming rules above; labelled `[hypothesis]` here.

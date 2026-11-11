@@ -15,18 +15,22 @@ The two programs are the console's [boot ROM](../../glossary.md#boot-rom): they 
 
 Approximate timeline: LCDs initialised at ~4 s; Home Menu fully loaded at ~7 s; boot ROM and firmware load in under ~1 s.
 
-Only `NATIVE_FIRM` can be booted from power-off. The other [firmware images](firmware.md) are started afterwards by the OS. If every source fails the console shows a blue **BOOTROM** error screen.
+Only `NATIVE_FIRM` boots usefully from power-off: the boot ROM can launch `TWL_FIRM` or `AGB_FIRM` as well, but 3dbrew says that ends in a Japanese error screen or a shutdown. The other [firmware images](firmware.md) are started afterwards by the OS. If every source fails the console shows a blue **BOOTROM** error screen.
 
 ## Technical details
 
 ### Boot ROM facts
 
 - Parts of both boot ROMs are protected through `CFG_SYSPROT9` and `CFG_SYSPROT11` after use.
-- Boot9 hard-codes NAND as the boot device (AES key slot `0x06` for NAND FIRM). It has working SD(HC) code but the device IDs are fixed to NAND; an SD card can only replace the NAND if the NAND chip is physically disconnected.
+- Boot9 hard-codes NAND as the boot device (AES key slot `0x06` for NAND FIRM). It has working SD(HC) code but the device IDs are fixed to NAND; an SD card can only replace the NAND if the NAND chip is physically disconnected and the card is wired onto the NAND's bus. Because the card's CID differs, the partitions would have to be re-encrypted for the new CID, and DS-mode (TWL) boot would not work (3dbrew).
+- NAND FIRM selection: Boot9 does not assume two FIRM partitions; it parses all 8 NCSD partitions and tries every one that is really a FIRM, in the listed order, until one boots. Among the partitions not yet processed, the one with the highest `u32` at `firmhdr+4` is tried first; that value is normally `0`, so the order is normally the NCSD order.
+- The boot ROMs are identical for all six models (3DS, 3DS XL, 2DS, New 3DS, New 3DS XL, New 2DS XL) (3dbrew).
+- Booting `TWL_FIRM` or `AGB_FIRM` with the boot ROM is possible in principle, but leads to a Japanese error screen or a shutdown right after the FIRM launch (3dbrew).
 - Boot9 start-up (`crt0` at `0xFFFF8000`): clears `CFG_RST11` bit 0, sets stacks (SVC `0xFFF04000`, IRQ `0xFFF03F00`, system `0xFFF03B00`), initialises the MPU (ITCM region: base 0, 128 MB; DTCM region: `0xFFF00000`, 16 KB) and clears DTCM before `main`.
 - `main()` initialises PXI, RSA, the crypto engines, sets up AES slot `0x3F` with the OTP-decryption key (a different key for dev units), decrypts and verifies the OTP, then tries NAND, then the Wi-Fi flash. On success it also overwrites the RSA key slots with private keys (see [security hardware](../hardware/security-hardware.md)). On failure it clears `0x07FFB800+0x3C70`.
-- Wi-Fi flash FIRM boot: base offset `0x400`, encrypted with AES-CBC using a key kept in the protected ROM data, and signed with separate RSA keys. It is only attempted if NAND boot failed and the Wi-Fi module is accessible.
-- DS-cartridge boot (**NTR boot**): with the shell closed and Start + Select + X held, Boot9 tries an inserted NTR card before NAND. NCSD/FIRM backup is not used for non-NAND boots.
+- Wi-Fi flash FIRM boot: base offset `0x400`, encrypted with AES-CBC using a normal key stored in the protected Boot9 data (separate retail and dev keys) instead of the NAND-FIRM encryption, and signed with separate RSA keys. The encryption covers only the FIRM sections; the counter words are `{FIRM section offset, load address, section size, section size}`. It is only attempted if NAND boot failed and the Wi-Fi module is accessible (flash status register bit 0 clear). Everything below flash offset `0x1F300` is write-protected by the flash itself, so it cannot be written from 3DS or DS mode (3dbrew).
+- DS-cartridge boot (**NTR boot**): with the shell closed and Start + Select + X held, Boot9 tries an inserted NTR card before NAND. NCSD/FIRM backup is not used for non-NAND boots. On the Old 3DS and 2DS the console normally will not turn on at all with the shell closed (the sleep switch can be faked with a magnet); 3dbrew says that with the key combination held the power button starts it (the page text is cut off at that point, so the exact condition is not stated).
+- `crt0` (at `0xFFFF8000`, reached from the reset vector `0xFFFF0000`) also calls `mpu_init()`: it clears bits `0x000F9005` in the CP15 control register, invalidates the instruction and data caches and drains the write buffer, programs the eight protection regions (ITCM region register `0x24`: base `0`, 128 MB; DTCM region register `0xFFF0000A`: base `0xFFF00000`, 16 KB), sets cacheable/bufferable bits and permissions, and finally ORs `0x0005707D` into the control register. It then installs exception handler addresses at `0x08000000`, clears `0x08000030` (`0x10` bytes) and the DTCM, copies the initial DTCM image from the Boot9 data, and clears `0xFFF00230`-`0xFFF01AC0` before jumping to `main`.
 
 ### NAND reads during a successful boot (firmware 6.x)
 
@@ -59,11 +63,59 @@ The error screen reads `BOOTROM 8046` / `ERRCODE: ffWWGGNN`, with `ff` the sleep
 | `0xDE` (−34) | FIRM header magic wrong or RSA verification failed |
 | `0xCF` (−49) | FIRM section load failed (address blacklist, read error, or hash mismatch) |
 
-Examples from 3dbrew: `ERRCODE: 00F800FF` with partition codes `DEDEFFFF FFFFFFFF` is what appears when the RSA signatures of both FIRM partitions are corrupted; `00F800FE …` patterns appear when the NAND chip is not found or is wired wrongly.
+Also `0xFD` (−3): SD driver initialisation failed because Boot9 state was not initialised (3dbrew calls this unobtainable).
+
+Examples from 3dbrew (the words are `ERRCODE`, the two partition-code words, then the two SD error words):
+
+| Words | Cause |
+| ----- | ----- |
+| `00F800FE 00000000 00000000 00000200 00000000` | SD-card reader connected to the NAND bus at boot |
+| `00F800FE 00000000 00000000 00000400 00000000` | NAND not found (?) |
+| `00F800FE FFFFFFFF FFFFFFFF 00000080 00800000` | NAND error with DAT1 wired as DAT0 |
+| `00F800FE FFFFFFFF FFFFFFFF 00000005 00800000` | NAND error with DAT2 wired as DAT0 |
+| `00F800FE FFFFFFFF FFFFFFFF 00000005 00000000` | NAND error with DAT3 wired as DAT0 |
+| `00F800FF F8F8FFFF FFFFFFFF 00000000 00000000` | `firm0` and `firm1` both corrupt (failed signature checks) |
+| `00F800FF DEDEFFFF FFFFFFFF 00000000 00000000` | `firm0` and `firm1` both corrupt (possibly certain flags missing?) |
+| `00F800FF CFCFFFFF FFFFFFFF 00000000 00000000` | `firm0` and `firm1` both corrupt |
+| `00F800EE FFFFFFFF FFFFFFFF 00000000 00000000` | NCSD header in sector 0 corrupt (failed signature check) |
+
+The error screen prints `BOOTROM 8046`, `ERRCODE: %08X` (the word at `0x1FFFE00C`), then the words at `0x1FFFE010`/`014` and `018`/`01C`. The first three words at `0x1FFFE000` are filled by Boot11 with the ARM11 MPCore cycle counter and its two event counters (CCNT, PMN0, PMN1; see [ARM11 MPCore internals](../hardware/arm11-mpcore.md#performance-monitor-per-core-cp15-c15)), and remain in memory when the processors jump to FIRM.
+
+**SD driver error bits** (word at `0x1FFFE018`):
+
+| Bit | Meaning |
+| --- | ------- |
+| `0x1` | `STATUS2`: received command field does not match what was sent |
+| `0x2` | `STATUS2`: received CRC does not match the calculated CRC |
+| `0x4` | `STATUS2`: framing error, stop bit not seen |
+| `0x8` | `STATUS2`: data not received within the timeout |
+| `0x10` | `STATUS2`: RX FIFO overflow |
+| `0x20` | `STATUS2`: TX FIFO overflow |
+| `0x40` | `STATUS2` bit 31: illegal access error (3dbrew: "???") |
+| `0x80` | At least one error bit set in the device's command reply, or an unexpected state |
+| `0x100` | Device reported an illegal command |
+| `0x200` | Timer-based timeout waiting for device operations to finish |
+| `0x400` | Timer-based timeout during the MMC initialisation sequence |
+| `0x800` | Some sort of timeout (unknown) |
+| `0x8000` | Timeout performing an AES operation on sector data |
+| `0x80000` | AES operation attempted while another was in progress |
+
+The word at `0x1FFFE01C` is the device's R1 reply status (see the SD Physical Layer specification for its bit list).
+
+**Hardware failures.** When the console detects a hardware fault it shows an LED pattern. 3dbrew's only documented example: if a 3DS's screen is replaced with another model's screen, the console powers on with black screens, and after about a minute the Wi-Fi LED blinks four times, stays on for a second and the console powers off, with the blue LED staying on. Usually a hardware fault just crashes or powers off the console, so little more is known.
 
 ### Boot ROM memory images
 
-The Boot11 image contains the boot error font (`0x1817C`), Blowfish key data for DS mode, the RSA-2048 moduli for 3DS (`0x1C878`), and initial data. Full details are in 3dbrew's *Bootloader* page.
+| Boot11 address | Size | Content |
+| -------------- | ---- | ------- |
+| `0x0001817C` | `0x78` | Error-screen font bitmap data (30 big-endian dwords, raw size 32x30, 1 bit per pixel); starts right after the crt0 code, the protected Boot11 code follows at `0x181F4` |
+| `0x00019400` | - | Start of Boot11's data area (first 8 bytes unknown) |
+| `0x00019408` | `0x2090` | Blowfish key data, later copied to the ARM9's ITCM at `twlkeydata+0x3E0` |
+| `0x0001C498` | `0x60`, `0x40`, `0x40`, `0x80`, `0x80`, `0x200` | Further DS-mode key data copied to `twlkeydata+0x380`, `+0x340`, `+0x300`, `+0x280`, `+0x0` and `+0x80` |
+| `0x0001C878` | `0x800` | The 3DS RSA-2048 moduli, copied to `arm9_itcm+0x4900`: Boot9 copies the first four on retail units, the last four on dev units |
+| `0x0001D078` | `0x120` | Initial `.data` for `0x1FFE8000`; the very end of the protected ARM11 boot ROM |
+
+Boot11's `main()` initialises PXI, installs a function pointer at `0x1FFE8028` that `firmboot()` may call, then runs `firmboot()`, the ARM11 twin of Boot9's final function. Its sleep-switch check reads the MCU over I²C; if that read fails it falls back to GPIO register `0x10147000` bit 4. The result is `0x2` when the shell is closed (sleep) and `0` otherwise.
 
 ## Homebrew notes
 
@@ -73,6 +125,7 @@ The boot ROM is the root of the whole [security architecture](security-architect
 
 - Many Boot9 functions are only known by address (`LT_ffff…`), their purposes are partly inferred.
 - Why Boot9 can in principle boot `TWL_FIRM`/`AGB_FIRM` but ends in an error screen or shutdown (per 3dbrew) is not explained.
+- The condition under which the Old 3DS/2DS powers on with the shell closed (3dbrew text is truncated) is not fully stated.
 
 ## Sources
 

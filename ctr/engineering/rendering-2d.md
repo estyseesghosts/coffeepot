@@ -103,6 +103,20 @@ Ports of DS-style games (tile backgrounds, palette banks, sprite tables) hit a s
 - **A cached static menu is valid only while the effect state is identical** (fade, window, blend) to the state it was rendered under.
 - **Mind gutters.** Nearest sampling at non-integer scale (for example 1.25x to fill 400x240) gives uneven pixel widths; pad atlas tiles when you use bilinear.
 
+DS 2D features that do not map one-to-one onto PICA200 quads (same source, same `[hypothesis]` status; they are cautions about a *pixel-exact* port, not about ordinary new games):
+
+| DS behaviour | A PICA200 approach | Why it is not automatic |
+| ------------ | ------------------ | ----------------------- |
+| Text background scrolling | Persistent texture or cached tile quads, scrolled by UV offset | The texture must already hold the correct map content; rebuilding it on the CPU every update removes the gain |
+| Layer priority between backgrounds and sprites | Draw in explicit order (layers or bands) | A depth test alone does not reproduce per-pixel priority and tie rules |
+| Windows (including sprite windows) | Scissor for rectangles, stencil or an extra mask pass otherwise | A scissor is rectangular only; arbitrary window masks may need a fallback |
+| Mosaic | Quantised UVs or pre-processed tiles | Sample origin and grouping must match the original; prototype it |
+| Per-scanline scroll or register changes (H-blank effects) | Merge identical runs into a few scissored strips with per-run UVs | Drawing one strip per scanline (192) costs more than the CPU path it replaces |
+| Alpha blending and brightness | Combiner constants, vertex colour, target blending in a proven order | Coefficient clamping and target masks need exact test cases |
+| Capture, bitmap and other unusual modes | A separate proven path, or the software renderer | Do not reinterpret them as ordinary background quads |
+
+Build such a renderer in steps: start with one narrow subset that you can prove exact against the software renderer (for example opaque scrolling text backgrounds), send everything else to the software path, and log one reason code per scene for each fallback. A hybrid that mixes CPU and GPU layers is safe only where both agree on layer order and alpha; otherwise fall back for the whole screen. Keep the software renderer: it is the oracle and the fallback.
+
 Verify such a path by comparing both renderers on the same captured state, then on an Old 3DS and a New 3DS; an emulator pass is not enough ([testing on hardware](testing-on-hardware.md)).
 
 ## Pixel-perfect scaling

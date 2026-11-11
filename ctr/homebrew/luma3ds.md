@@ -63,11 +63,38 @@ Rosalina's GDB server (ports 4000–4003, up to three debugged processes at once
 
 `k11_extension` adds or replaces supervisor calls so that userland code with the right permissions can do things the stock kernel forbids. Files in its `svc` folder include `ControlMemory`/`ControlMemoryUnsafe`, `ControlProcess`, `ControlService`, `CopyHandle`, `CreateThread`, `GetHandleInfo`/`GetProcessInfo`/`GetSystemInfo`/`GetThreadInfo`, `KernelSetState`, `MapProcessMemoryEx`/`UnmapProcessMemoryEx`, `SendSyncRequest`, `SetGpuProt`, `SetWifiEnabled`, `TerminateProcess`, `TranslateHandle`, `Backdoor`/`CustomBackdoor` ([kernel](../software/kernel.md)).
 
+### Rosalina menu map
+
+Top-level entries of the Rosalina overlay menu, from `sysmodules/rosalina/source/menus.c` and `menus/*.c` [documented: Luma3DS source]. Entries marked "if..." are shown only conditionally.
+
+| Entry | What it contains |
+| ----- | ---------------- |
+| Take screenshot | Saves the screens; the result screen reports conversion and file-write time in ms |
+| Screen filters... | Colour-temperature presets from 6500K (default) down to 1200K ("Ember") and up to 10000K ("Aquarium"), two "enhance colours" entries recommended for IPS panels, and advanced configuration |
+| Cheats... | Cheat-code engine |
+| New 3DS menu... (only on a **New 3DS**) | "Enable/Disable L2 cache", "Set clock rate to 268MHz / the higher rate", and, unless the QTM service is unavailable or the model is a New 2DS XL: "Temporarily disable Super-Stable 3D", "Test parallax barrier positions", "Super-Stable 3D calibration" |
+| Process list | Processes with a memory viewer |
+| Debugger options... | Enable or disable the GDB debugger; force-debug the next application at launch |
+| System configuration... | Volume-slider override, Wi-Fi control and toggle, LED master-brightness override, audio routing (auto, force headphones, force speakers), power-button toggle, card-slot power toggle, screen brightness |
+| Miscellaneous options... | Switch the Homebrew title to the current app, change the menu combo, start InputRedirection, update time and date over NTP, nullify the user time offset, **Dump DSP firmware**, show temperature in Fahrenheit |
+| Save settings | Writes the settings (most Rosalina settings are not saved automatically) |
+| Return to HOME Menu; Power off / reboot; System info; Credits; Debug info | System info shows screen types, kernel version, MCU firmware version, PMIC and battery vendor; Debug info (shown only when a visibility check passes; the condition was not traced) shows the kernel-extension physical address range, SD and NAND bus speeds and the application memory type (`APPMEMTYPE`) |
+
+Facts worth knowing as a developer:
+
+- **DSP firmware.** *Dump DSP firmware* writes `/3ds/dspfirm.cdc` on the SD card, the file that libctru's `ndsp` needs for any audio ([audio](../engineering/audio.md)). The `3ds-examples` audio README tells homebrew users to obtain it this way; an emulator that emulates the DSP at a high level accepts an empty file, per that README ([3ds-examples catalogue](3ds-examples.md#audio)).
+- **InputRedirection** streams a computer or controller's input to the console; its socket binds UDP port **4950** (`input_redirection.c`) and runs in a Rosalina thread on the system core. The protocol is not documented in the sources read here.
+- **NTP** sync uses a hard-coded server address (`51.137.137.111`, commented `time.windows.com`), so it can break if that address changes [documented: `ntp.c`].
+- **Game plugins (3GX).** The plugin loader looks for `/luma/plugins/<16-hex-digit title ID>` (a folder of `.3gx` files) and falls back to `/luma/plugins/default.3gx`; the file magic is the ASCII text `3GX$0002`, and a mismatched version is reported as outdated plugin or outdated loader. The loader reads `/luma/plugins/user_param.bin` for parameters and enables with the `plugin_loader_enabled` config flag [documented: `plugin/file_loader.c`, `plugin/3gx.c`, `plgloader.c`, `arm9/source/config.c`]. A cheat engine crash on thread-heavy games is why plugins exist ([limits](#limits-and-risks)).
+- **Old 2DS note.** The README's roadmap says the planned `TwlBg`/`AgbBg` reimplementation would give better upscaling for DS and GBA games "except on Old 2DS"; this is the only Old-versus-New statement in the README apart from the New 3DS menu above.
+
 ## Technical details
 
 - Licence: GPLv3 (the GDB stub is triple-licensed MIT/GPLv2+; the `pm`, `sm`, `pxi` reimplementations are MIT).
 - Maintainers: TuxSH (lead, joined 2016), Aurora Wright (author, created the project in 2015, now inactive), PabloMK7 (plugin loader, joined 2023).
-- Roadmap (from the README): reimplement `TwlBg`/`AgbBg` (better, configurable upscaling for DS and GBA games), reimplement `Process9` for `TWL_FIRM`/`AGB_FIRM`, and eventually all of `Kernel11`.
+- Credits (README and Rosalina credits screen): devkitPro (fincs, WinterMute, mtheall) for the toolchain; Nanquitas for the first game plugin loader and GDB stub contributions; piepie62 for the current Rosalina cheat engine (Duckbill for the original); panicbit for the original screen filters; jasondellaluce for LayeredFS; LiquidFenrir for the process-list memory viewer; ChaN for FatFs; Stary for the networking code, basic GDB functionality and InputRedirection (proof of concept by ShinyQuagsire).
+- GDB clients: devkitARM-patched GDB and IDA Pro (without "stepping support" enabled) are the actively supported ones.
+- Roadmap (from the README): reimplement `TwlBg`/`AgbBg` (better, configurable upscaling for DS and GBA games, "except on Old 2DS" per the README; developed privately, no ETA), reimplement `Process9` for `TWL_FIRM`/`AGB_FIRM`, and eventually all of `Kernel11`.
 
 ## Limits and risks
 

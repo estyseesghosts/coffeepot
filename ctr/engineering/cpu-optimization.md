@@ -14,7 +14,7 @@ Hardware reference: [CPU](../hardware/cpu.md). Measuring whole frames: [performa
 [documented: DDI 0360E §1.7, §16.4]
 
 - **Eight-stage integer pipeline** (two fetch stages, decode, issue, then shift/ALU/saturate, a three-stage multiply-accumulate pipe, or address/two data-cache stages), with throughput approaching one instruction per cycle. Results that feed the next instruction directly, especially loads, cause stalls; the compiler schedules around this at `-O2`.
-- **Branch prediction**: a 128-entry branch target address cache with static prediction for branches it misses, and a 3-entry return stack ([CPU](../hardware/cpu.md#the-mp11-core-from-arms-manual)). Data-dependent branches that go either way at random mispredict often; a mispredicted branch throws away the instructions already fetched.
+- **Branch prediction**: a 128-entry branch target address cache with static prediction for branches it misses (forward conditional branches predicted not taken, backward taken), and a 3-entry return stack that predicts `BX lr`, `LDM sp!,{..,pc}` and `LDR pc,[sp..]` returns but not `BLX reg` calls ([CPU](../hardware/cpu.md#the-mp11-core-from-arms-manual); details in [ARM11 MPCore internals](../hardware/arm11-mpcore.md#branch-prediction)). Data-dependent branches that go either way at random mispredict often; a mispredicted branch throws away the instructions already fetched.
 - **Caches** per core: 16 KB instruction + 16 KB data, 4-way set-associative, 32-byte lines; the data cache is write-back, write-allocate and non-blocking (hit-under-miss). The Old 3DS has nothing between the L1 cache and FCRAM; the New 3DS adds an optional 2 MB L2 ([CPU](../hardware/cpu.md#clocks-and-core-counts)).
 - **VFP11 floating point**: single-precision add/multiply/multiply-accumulate at one per cycle (8-cycle latency); double multiply and multiply-accumulate at one per two cycles; divide and square root take about 15 (single) and 29 (double) cycles each. No NEON.
 - **Instruction sets**: ARMv6K ARM and Thumb-1 (no Thumb-2), the ARMv6 SIMD instructions (packed 8-/16-bit arithmetic in normal registers, e.g. `uadd8`, `qadd16`, `usad8`), `LDRD`/`STRD`, `PLD` (preload hint), `LDREX`/`STREX` exclusives, **no hardware integer divide**.
@@ -33,11 +33,11 @@ Hardware reference: [CPU](../hardware/cpu.md). Measuring whole frames: [performa
 | `memcpy`/`memset` of small fixed sizes through a pointer | Call overhead | Let the compiler see constant sizes; copy whole structs |
 | `printf`, `malloc`, file I/O in the frame | Unbounded time | Pre-allocate, format and log once per second |
 
-Unaligned access: the MPCore supports unaligned word and halfword loads and stores in hardware when the system enables it (DDI 0360E chapter 4), but they cost extra cycles and `LDRD`/`STRD`/`LDM`/`STM` still need alignment. Keep data naturally aligned; use `memcpy` into a local to read misaligned packed data portably [documented behaviour of the core; whether the 3DS kernel enables unaligned support is not confirmed here — do not depend on it].
+Unaligned access: the MPCore supports unaligned word and halfword loads and stores in hardware when the system enables it (control register `U` bit; DDI 0360E chapter 4), but they cost extra cycles, and `LDRD`/`STRD`/`LDM`/`STM`, exclusive and coprocessor (VFP) accesses that are not aligned raise an alignment Data Abort once `U` is set ([ARM11 MPCore internals](../hardware/arm11-mpcore.md#unaligned-access)). Keep data naturally aligned; use `memcpy` into a local to read misaligned packed data portably [documented behaviour of the core; whether the 3DS kernel enables unaligned support is not confirmed here — do not depend on it].
 
 ## Floating point and fixed point
 
-- libctru puts every thread's VFP into **default-NaN and flush-to-zero** mode (round to nearest) [documented: libctru `source/system/syscalls.c`]. Denormals become zero: fast, but very small values behave differently from desktop builds.
+- libctru puts every thread's VFP into **default-NaN and flush-to-zero** mode (round to nearest): it writes `FPSCR = BIT(25) | BIT(24)` with all exception-enable bits clear, because the kernel does not initialise `fpscr` [documented: libctru `source/system/syscalls.c`, line 249-254]. That combination is exactly the manual's **RunFast** mode: every operation finishes in hardware in fixed time, with no support code and no user traps [documented: DDI0360E §16.5.4]. Denormals become zero: fast, but very small values behave differently from desktop builds. Code that turns on floating-point exception enables or leaves flush-to-zero off makes some operations bounce to software support code instead (see [ARM11 MPCore internals](../hardware/arm11-mpcore.md#vfp11-floating-point-unit)).
 - The GPU's vertex shaders compute in 24-bit floats. Doing transforms on the GPU ([GPU rendering](gpu-rendering.md#do-work-in-the-vertex-shader)) is usually cheaper than on the CPU, even though the result is less precise.
 - Fixed-point integer arithmetic (e.g. 16.16) is worth it mainly when you need bit-exact results (deterministic replays, ports of DS or GBA games whose logic is integer); single-precision VFP is not slow on this core. Measure before converting float code to fixed point.
 
@@ -158,7 +158,7 @@ Caveats [hypothesis — to be confirmed on hardware]: the counters belong to a c
 
 - **Optimising the wrong thing.** Profile first ([performance](performance.md#finding-the-bottleneck)); a CPU micro-optimisation does nothing for a GPU-bound frame.
 - **Benchmarking a loop the compiler deleted.** Consume results through a `volatile` or a checksum.
-- **Desktop SIMD habits.** No NEON; auto-vectorisation flags for other targets do nothing useful here.
+- **Desktop SIMD habits.** No NEON; auto-vectorisation flags for other targets do nothing useful here. The VFP11 does have VFPv2 *short-vector* instructions (up to 8 single or 4 double operations per instruction via `FPSCR.LEN`/`STRIDE`), and the integer SIMD instructions work on packed bytes and halfwords; whether compilers or libraries on this toolchain use either has not been checked here [hypothesis: devkitARM does not auto-vectorise for short vectors; check the generated code].
 - **Leaving the counters enabled.** Call `PERFCOUNTEROP_DISABLE` when done so other tools can use them.
 
 ## Open questions

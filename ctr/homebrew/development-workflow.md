@@ -324,6 +324,12 @@ A `.cia` or `.3ds` additionally needs a **banner** (the image and sound shown on
 | `makerom` | Builds NCCH, CCI and CIA files | 3dsguy, maintained by profi200 | yes |
 | `bannertool` | Builds banners and SMDH | Steveice10 | no |
 | `braindump`, `uncart` | Dump ExeFS/RomFS and cartridges | neobrain (et al.) | no |
+| `gl3ds`, `Caelina` | OpenGL implementations for the 3DS (gl3ds uses libctru, per 3dbrew) | Cruel et al.; machinamentum | no, no |
+| `SpriteTools` | Animation extensions for `sf2dlib` | BtheDestroyer | deprecated |
+| `amiitool` | Decrypts, encrypts and signs amiibo dumps (pairs with the NFC example in [3ds-examples](3ds-examples.md#catalogue)) | socram8888 | no |
+| Pascal bindings ("N2DS .. N3DS Computers") | 2DS/3DS development in Pascal (closed source per 3dbrew) | Kenneth Dwayne Lee | yes |
+
+Applications are installed by copying files into `3ds/` on the SD card, either directly or in a subfolder named exactly like its executable. Per 3dbrew's *Homebrew Applications*, an app usually ships `name.3dsx` (executable), an optional `name.smdh` (icon and metadata, unnecessary when embedded in the `.3dsx`) and an optional `name.xml` listing the installed titles the app may take over at run time (and thereby inherit their permissions) plus any arguments passed to the `.3dsx`. A standalone `.xml` can point at a differently named `.3dsx` so one app can run in several modes. The Homebrew Launcher scans the SD card for all `.3dsx` files but shows an icon only for those that have one. [documented: 3dbrew *Homebrew Applications*, revision read November 2026] Developer-relevant entries on that list: `ctrrpc` (plutoo; RPC server/client to poke service commands and syscalls over Wi-Fi from Python, unmaintained), `ctr-streaming-server` (yellows8; A/V playback and HID streaming server, unmaintained), `3DSident` (hardware/system identity tool), `ScreenInfo` (SciresM; tells whether a **New 3DS** has TN or IPS LCD panels), `NFCReader` (reads NFC/RFID UIDs).
 
 The Lua route mentioned by WikiTemp (Lua Player Plus) is not covered here; its status is unknown.
 
@@ -398,6 +404,7 @@ If a project still fails, first build **the untouched `templates/application` ex
 - [devkitPro getting started](https://devkitpro.org/wiki/Getting_Started) — installer and pacman setup
 - [devkitPro/3ds-examples](https://github.com/devkitPro/3ds-examples) — template project and examples
 - [libctru](https://github.com/devkitPro/libctru) — library and `3dslink` tooling
+- [3dbrew: Homebrew Applications](https://www.3dbrew.org/wiki/Homebrew_Applications) (revision read November 2026) — install layout (`.3dsx`/`.smdh`/`.xml`) and the application list.
 - [WikiTemp: 3DS Homebrew Development](https://wiki.gbatemp.net/wiki/3DS_Homebrew_Development) (GBAtemp, revision 65702, last edited 25 February 2017) — historical setup guide; used for SMDH/banner/common-error coverage and flagged where outdated.
 - [3dbrew: Homebrew Libraries and Tools](https://www.3dbrew.org/wiki/Homebrew_Libraries_and_Tools) — tool and library list.
 - [Luma3DS homebrew loader](https://github.com/LumaTeam/Luma3DS/blob/master/sysmodules/loader/source/hbldr.c) — extended header generated for 3DSX
