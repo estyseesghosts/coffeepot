@@ -21,6 +21,7 @@ Small, self-contained 3DS programs that measure costs the wiki's engineering pag
 | [`tile-renderer`](../engineering/PICA200/2d-tile-renderer.md) | default builds (r68) | not run | 4 strategies x 2 standalone sessions; the 20-variant suite x 1 session, no errors | the 20-variant suite x 1 session, 268 MHz mode, no errors |
 | [`coffeebench`](#building-and-running) (micro suite) | yes (r68) | not run | 3 sessions | 3 sessions, 268 MHz mode |
 | [tile suite](#tile-renderer-suite) (20 chained binaries) | yes (r68) | not run | 1 session; the chain ran all 20 | 1 session; the chain ran all 20 |
+| [New 3DS full-speed suites and `corebench`](#new-3ds-full-speed-suites) | yes (r68) | not run | n/a | not run |
 
 All New 3DS runs so far are a New 2DS XL at the default 268 MHz clock, which a program gets unless it calls `osSetSpeedupEnable(true)`. They show how the New 3DS behaves in compatibility mode, not its full speed.
 
@@ -83,6 +84,23 @@ What the later runs add:
 - **The corrected `loop_256b` control gives CPI 0.99 on both models** with no misses, so the earlier control was close enough; the cliff is unchanged.
 
 The 20-variant tile-suite results, and what they settle for E1 to E6, are on the [tile page](../engineering/PICA200/2d-tile-renderer.md#suite-results-old-3ds-and-new-3ds).
+
+## New 3DS full-speed suites
+
+The first New 3DS runs were at 268 MHz ([suite runs](#suite-runs-old-3ds-and-new-3ds)) because a program gets the Old 3DS clock unless it calls `osSetSpeedupEnable(true)`, which switches the CPU to 804 MHz and enables the L2 cache. Two builds run at full speed. Stage them with `bash tools/stage_n3ds.sh dist-n3ds` and copy `dist-n3ds/sdmc/*` to the card.
+
+| What | Binary | What it does |
+| ---- | ------ | ------------ |
+| **Micro suite, N3DS** | `3ds/coffeebench-n3ds/coffeebench-n3ds.3dsx` (`make N3DS=1` in `suite/`) | Refuses to run on an Old 3DS. Runs `icachebench`, `membench`, `flushbench`, `drawbench` and `corebench` twice in one boot: first with the CPU forced to 268 MHz (`osSetSpeedupEnable(false)`), then at 804 MHz + L2. Files are `<program>-sp0.csv` and `<program>-sp1.csv` in one session directory, so each pair is a same-boot, same-binary A/B. |
+| **Tile suite, N3DS** | `3ds/coffeepot-tiles-n3ds/coffeepot-tiles-n3ds.3dsx`, then `t02.3dsx` to `t20.3dsx` | The same 20 variants as the [tile suite](#tile-renderer-suite), each calling `osSetSpeedupEnable(true)` first, chained inside `/3ds/coffeepot-tiles-n3ds/`. Compare with the 268 MHz session `s004` of `n3ds-0`; the ids carry a `_n3ds` suffix. |
+
+Every CSV records `meta,speedup_requested` and `meta,clock_probe_us`, a fixed 2,000,000-iteration loop timed with the system tick: the New 3DS at 804 MHz takes about a third of the time it takes at 268 MHz, and that figure, not the request, is the evidence of which clock a run had. The `-sp0` files from the micro suite give the 268 MHz reference for the probe. Whether the L2 cache is on is not readable; `osSetSpeedupEnable` is documented to switch both, so treat 804 MHz and L2 as one setting.
+
+### corebench
+
+`corebench` asks whether the New 3DS's extra cores run beside the first one at full speed. It pins threads to application core 0 (the main thread), 2 and 3 (core 1 is the system core and is left alone) and runs a fixed amount of work on every core at the same moment, reporting the slowest core's time: perfect scaling is the same time as one core alone. Two workloads: `compute` (four independent adds per iteration, no memory traffic) and `memory` (24 passes of `memset` over a private 512 KiB buffer per core). Configurations: `c0`, `c2`, `c3`, `c0+c2`, `c0+c2+c3`. A core the kernel refuses to give a homebrew program is reported as `note,... threadCreate failed` and the configurations that need it are skipped, so whether homebrew can use cores 2 and 3 at all is part of what the first run will show. The rows are `result,corebench,<compute|memory>,<config>,<cores>,<runs>,<min_us>,<med_us>,<max_us>`.
+
+**Status:** all three build without warnings (devkitARM r68). None has run on hardware. The 804 MHz setting, the speed-up request surviving a chainload (each tile binary sets it again itself), and the thread placement on cores 2 and 3 are the unconfirmed parts.
 
 ## Lessons for running and reading these benchmarks
 

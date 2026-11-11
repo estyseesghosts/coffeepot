@@ -20,6 +20,11 @@
 #include <string.h>
 #include "session.h"
 
+#ifdef COFFEEBENCH_SUITE
+// Set by the suite's main(): -1 leave the clock alone, 0 force 268 MHz, 1 force 804 MHz + L2 (New 3DS only).
+extern int coffee_speed_mode;
+#endif
+
 static FILE *bench_fp;
 static int bench_error_count;
 
@@ -90,7 +95,14 @@ static inline void bench_begin(const char *program, bool *isNew)
 #else
     int session = coffee_session_new();
 #endif
-    coffee_result_path(path, sizeof(path), session, program);
+    char fname[64];
+#ifdef COFFEEBENCH_SUITE
+    if (coffee_speed_mode >= 0) snprintf(fname, sizeof fname, "%s-sp%d", program, coffee_speed_mode);
+    else snprintf(fname, sizeof fname, "%s", program);
+#else
+    snprintf(fname, sizeof fname, "%s", program);
+#endif
+    coffee_result_path(path, sizeof(path), session, fname);
     bench_fp = fopen(path, "w");
     if (!bench_fp) {
         bench_error_count++;
@@ -129,12 +141,17 @@ static inline void bench_begin(const char *program, bool *isNew)
                (unsigned long)GET_VERSION_MINOR(fw), (unsigned long)GET_VERSION_REVISION(fw));
     bench_line("meta,kernel_version,%lu.%lu.%lu", (unsigned long)GET_VERSION_MAJOR(kv),
                (unsigned long)GET_VERSION_MINOR(kv), (unsigned long)GET_VERSION_REVISION(kv));
+    int speed_req = -1;
 #if defined(BENCH_SPEEDUP)
-    if (newflag) osSetSpeedupEnable(BENCH_SPEEDUP ? true : false);
-    bench_line("meta,speedup_requested,%d", newflag ? (BENCH_SPEEDUP ? 1 : 0) : -1);
-#else
-    bench_line("meta,speedup_requested,untouched");
+    speed_req = BENCH_SPEEDUP ? 1 : 0;
 #endif
+#ifdef COFFEEBENCH_SUITE
+    if (coffee_speed_mode >= 0) speed_req = coffee_speed_mode;
+#endif
+    if (speed_req >= 0 && newflag) osSetSpeedupEnable(speed_req ? true : false);
+    if (speed_req < 0) bench_line("meta,speedup_requested,untouched");
+    else bench_line("meta,speedup_requested,%d", newflag ? speed_req : -1);
+    bench_line("meta,clock_probe_us,%.0f", coffee_clock_probe_us());
     bench_line("meta,speedup_l2_state,not-readable");
     bench_line("meta,cpu_ticks_per_usec,%.4f", CPU_TICKS_PER_USEC);
     bench_line("meta,linear_free_bytes,%lu", (unsigned long)linearSpaceFree());

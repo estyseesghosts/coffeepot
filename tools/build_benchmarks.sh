@@ -20,4 +20,9 @@ done
 # The 20-binary tile-renderer suite (also fails on any warning).
 echo "== tile-renderer suite"
 if bash "$root/tools/build_tile_suite.sh" "$(mktemp -d)" >/dev/null 2>&1; then echo "ok"; else echo "FAILED: tile-renderer suite (run tools/build_tile_suite.sh <dir> to see why)"; status=1; fi
+echo "== tile-renderer suite (New 3DS, 804 MHz)"
+if bash "$root/tools/build_tile_suite.sh" "$(mktemp -d)" n3ds >/dev/null 2>&1; then echo "ok"; else echo "FAILED: New 3DS tile suite"; status=1; fi
+echo "== coffeebench-n3ds"
+if make -C "$root/ctr/benchmarks/suite" N3DS=1 clean >/dev/null 2>&1 && log="$(make -C "$root/ctr/benchmarks/suite" N3DS=1 2>&1)" && ! grep -qi warning <<<"$log"; then echo "ok"; else echo "FAILED: coffeebench-n3ds"; status=1; fi
+make -C "$root/ctr/benchmarks/suite" N3DS=1 clean >/dev/null 2>&1
 exit $status

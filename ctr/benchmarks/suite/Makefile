@@ -31,11 +31,20 @@ include $(DEVKITARM)/3ds_rules
 #     - icon.png
 #     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
+ifdef N3DS
+# make N3DS=1: the New 3DS build. Runs every module at 268 MHz and again at 804 MHz + L2, and adds corebench.
+TARGET		:=	coffeebench-n3ds
+BUILD		:=	build-n3ds
+APP_TITLE	:=	Coffeepot microbench N3DS
+APP_DESCRIPTION	:=	New 3DS: 268 vs 804 MHz, extra cores
+N3DS_FLAGS	:=	-DCOFFEEBENCH_N3DS=1
+else
 TARGET		:=	coffeebench
 APP_TITLE	:=	Coffeepot microbench
 APP_DESCRIPTION	:=	icache, mem, flush and draw benchmarks
+endif
 APP_AUTHOR	:=	coffeepot
-BUILD		:=	build
+BUILD		?=	build
 SOURCES		:=	source ../drawbench/shader
 DATA		:=	data
 INCLUDES	:=	include ../common
@@ -53,7 +62,7 @@ CFLAGS	:=	-g -Wall -O2 -mword-relocations \
 			-ffunction-sections \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -D__3DS__ -DCOFFEEBENCH_SUITE=1 $(EXTRA_CFLAGS)
+CFLAGS	+=	$(INCLUDE) -D__3DS__ -DCOFFEEBENCH_SUITE=1 $(N3DS_FLAGS) $(EXTRA_CFLAGS)
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 

@@ -60,6 +60,19 @@ static inline void coffee_result_path(char *out, size_t size, int session, const
     if (snprintf(out, size, "%s/%s.csv", dir, name) >= (int)size) out[0] = 0;   // too long: open fails loudly
 }
 
+// A fixed 2,000,000-iteration register loop (subs + bne, about one cycle per iteration), timed with the
+// system tick. The absolute figure only means something next to another probe on the same console: a New 3DS at
+// 804 MHz takes about a third of the time it takes at 268 MHz. The CSVs record it so a run can show which clock
+// it had, since libctru has a setter for the speed-up (osSetSpeedupEnable) but no getter.
+static inline double coffee_clock_probe_us(void)
+{
+    u32 n = 2000000;
+    u64 t0 = svcGetSystemTick();
+    __asm__ volatile("1: subs %0, %0, #1\n\tbne 1b" : "+r"(n) : : "cc");
+    u64 t1 = svcGetSystemTick();
+    return (double)(t1 - t0) / CPU_TICKS_PER_USEC;
+}
+
 // emit(key, value) is called once per provenance fact.
 static inline void coffee_provenance(void (*emit)(const char *key, const char *value))
 {

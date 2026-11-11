@@ -26,7 +26,11 @@
 #ifndef SUITE_ID
 #define SUITE_ID tilerenderer   /* a bare identifier: the build script passes -DSUITE_ID=t03_direct_t16 */
 #endif
+#ifdef SUITE_N3DS
+#define SUITE_DIR "/3ds/coffeepot-tiles-n3ds"   /* the 804 MHz suite lives in its own folder */
+#else
 #define SUITE_DIR "/3ds/coffeepot-tiles"
+#endif
 
 /* ---- compile-time modes ---- */
 #ifndef TILE_STRATEGY
@@ -377,6 +381,12 @@ static void csvBegin(void)
 	u32 fw = osGetFirmVersion(), kv = osGetKernelVersion();
 	csvLine("meta,firm_version,%lu.%lu.%lu", (unsigned long)GET_VERSION_MAJOR(fw), (unsigned long)GET_VERSION_MINOR(fw), (unsigned long)GET_VERSION_REVISION(fw));
 	csvLine("meta,kernel_version,%lu.%lu.%lu", (unsigned long)GET_VERSION_MAJOR(kv), (unsigned long)GET_VERSION_MINOR(kv), (unsigned long)GET_VERSION_REVISION(kv));
+#ifdef BENCH_SPEEDUP
+	csvLine("meta,speedup_requested,%d", isNew ? (BENCH_SPEEDUP ? 1 : 0) : -1);
+#else
+	csvLine("meta,speedup_requested,untouched");
+#endif
+	csvLine("meta,clock_probe_us,%.0f", coffee_clock_probe_us());
 	csvLine("meta,speedup_l2_state,not-readable");
 	csvLine("meta,cpu_ticks_per_usec,%.4f", CPU_TICKS_PER_USEC);
 	csvLine("meta,linear_free_bytes,%lu", (unsigned long)linearSpaceFree());
@@ -452,6 +462,13 @@ static void csvResults(int visibleTiles, int rebuilds, int droppedBase, float cm
 int main(int argc, char **argv)
 {
 	(void)argc; (void)argv;
+#ifdef BENCH_SPEEDUP
+	/* New 3DS only: 1 = 804 MHz and the L2 cache, 0 = 268 MHz. Done first so the whole run has one clock. */
+	{
+		bool isNew3ds = false;
+		if (R_SUCCEEDED(APT_CheckNew3DS(&isNew3ds)) && isNew3ds) osSetSpeedupEnable(BENCH_SPEEDUP ? true : false);
+	}
+#endif
 #if BENCH_AUTO
 #if SUITE_INDEX > 1
 	gSession = (argc >= 2) ? atoi(argv[1]) : 0;   /* continue the session the first binary started */
