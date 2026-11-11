@@ -89,6 +89,7 @@ static inline void bench_begin(const char *program, bool *isNew)
     static const char *const model_names[] = {
         "Old 3DS", "Old 3DS XL", "New 3DS", "2DS", "New 3DS XL", "New 2DS XL"
     };
+    bench_error_count = 0;   // a suite runs a module more than once per process
     char path[96];
 #ifdef COFFEEBENCH_SUITE
     int session = coffee_session_read();
