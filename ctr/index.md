@@ -107,6 +107,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Renderer architecture](engineering/renderer-architecture.md) — decision guide for retained vs immediate rendering, batching, state caching, flush ranges and effect reformulation, with planned (not yet run) GPU benchmarks.
 - [Stereo engineering](engineering/stereo-engineering.md) — cost of the second eye, camera separation and convergence, the 3D slider, depth plane, HUD depth and comfort testing on an Old 3DS.
 - [3D scene optimisation](engineering/3d-scene-optimisation.md) — visibility culling, draw ordering and the early-depth evidence, LOD, baked lighting and 2D quads in 3D scenes.
+- [Case study: HGSS port](engineering/case-study-hgss-port.md) — hardware profiling, renderer-state failures, cache validation, audio and shutdown pitfalls.
 - [Case studies: rendering trade-offs](engineering/case-studies-rendering-tradeoffs.md) — DS and 2D port pipelines, frame ownership and Smash content budgets.
 - [Case studies: commercial 3DS games](engineering/case-studies-commercial.md) — developer-stated techniques from five shipped games, labelled as reported, with what hardware tests would verify them.
 - [Case studies: large 3DS ports](engineering/case-studies-ports.md) — reported techniques and results from three N64 ports (F-Zero X, Super Mario 64, Ocarina of Time), with model and conditions.

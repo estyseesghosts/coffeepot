@@ -204,6 +204,10 @@ For screenshots, readback of a render-to-texture, or software post-processing: w
 
 `ndsp` wave buffers live in linear memory. Write the samples, flush (`DSP_FlushDataCache`, or `svcFlushProcessDataCache` under heavy core-1 use), then queue with `ndspChnWaveBufAdd`; do not touch the buffer again until its `status` is `NDSP_WBUF_DONE` (or `NDSP_WBUF_FREE` if never queued) [documented: `3ds-examples/audio/streaming`, libctru `ndsp/ndsp.h`].
 
+### A cache key also needs a coherent snapshot
+
+A key can cover every relevant input and still race a writer between hashing and rendering. For shared emulated video memory, decide whether the consumer takes a full snapshot, synchronizes with writers, or uses a correctly synchronized generation/retry scheme that can detect writes across the entire read. Hashing or checking a generation once does not by itself make unsynchronized reads coherent. Include the cost and ownership of the chosen scheme in measurements. The HGSS team identified live VRAM reads as an open race in its [case study](case-study-hgss-port.md#pitfalls-and-open-questions); occurrence and a remedy remain unverified.
+
 ## Buffer lifetime
 
 Most corruption bugs are a buffer reused while another processor still reads it. Give each GPU- or DSP-visible buffer an explicit owner and state, and only move forward:

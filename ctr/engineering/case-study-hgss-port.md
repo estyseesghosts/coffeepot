@@ -1,0 +1,70 @@
+# HGSS 3DS: debugging an optimized DS port
+
+The HeartGold/SoulSilver port translates DS graphics and audio to 3DS software and GPU operations. Its worklogs show that a locally correct optimization can be inactive, slower in a real scene, or unsafe when another part of the pipeline changes state. This case study records specific failures and the checks that exposed them; it is not a benchmark for other games.
+
+## Before you start
+
+The entries below are the project's own reports, not measurements reproduced by Coffeepot. They describe particular development builds and scenes on Old 3DS or, where explicitly stated, Azahar or a host. Firmware, exact toolchain and run conditions are not consistently stated in the notes. The worklogs are linked at a fixed repository revision; the checkout also contained newer uncommitted November 11 notes, which are identified separately and are not represented by those pinned links. Numbers from different sessions or renderer configurations must not be combined into a single before/after result.
+
+## Establish the bottleneck and validate the counters
+
+On November 10, 2026, two Old 3DS Goldenrod field runs of builds `b3024a0` and `b3024a0-profoff` reported 8.6–9.8 compositions/s, 4.0–5.5 publishes/s and drawer wall times of 92–179 ms. The project identified the drawer as the presentation constraint in those runs. The two logs were not an acceptable matched PROFILE/OFF A/B; do not infer instrumentation overhead from their difference. [reported: HGSS baseline worklog, firmware and full conditions not stated]
+
+A geometry throttle was built from an apparent 27-built-to-6-shown ratio, but `sSwapsDone` also counted skipped scenes. The first throttle serialized producer and consumer; the project reported Azahar compositions falling from 23.75 to 11.50/s. Both throttle variants were reverted. [reported: HGSS pacing worklog, November 10, 2026; Azahar, version and test model unspecified] The fix was not another throttle: inspect every counter's increment sites and relate a change to the stage that limits the chosen output metric.
+
+Another counter used an unsigned 64-bit accumulator as `total -= start; ...; total += end`. A different thread could sample the intermediate negative value as a huge positive duration. Measure the interval in a local variable and publish a complete sample with appropriate synchronization. Also distinguish nested timers: the project's `take` interval already contained flat-fill and object-sort intervals. Adding all three counted the same time more than once. Thread wall time includes waiting and preemption; it is not automatically CPU time. See [performance](performance.md#measuring-time).
+
+## Fast paths: prove admission, work and output separately
+
+A band-redraw fixture reported bit-exact results and fewer visited scanlines, but an in-game Goldenrod menu smoke recorded zero object-band and background-band takes. Build flags had also initially reached application compilation but not the library containing the optimized code; several emulator runs had tested the off-path. The team added build identifiers, invalidation markers, symbol checks and admission/rejection counters. [reported: HGSS wave-2 integration, November 6, 2026; host fixtures and Azahar, not an Old 3DS timing result]
+
+The later P3 flat-picture skip similarly recorded zero skips in a 600-tick Azahar field window in the local November 11 working notes. Its register signature changed each pass; the specific significance of each changing field and the hardware gain remain open. Do not mask a changing register merely to increase hits: first prove which pixels, metadata and future states depend on it. Track attempts, takes, reason buckets, bytes or scanlines avoided, and output disagreements. A green fixture and a zero-hit live path establish different things.
+
+In a separate P2 experiment, four geometry optimizations engaged and audits passed, yet the combined configuration reduced Azahar compositions by 28–33% in the specified scripts; the team reverted the bundle. [reported: HGSS P2 results in the local November 11 working notes; emulator results only, build and conditions in those notes] This establishes a regression for that bundle and test, not which individual flag caused it or what it would cost on hardware.
+
+## State lifetime and batch boundaries
+
+A retained sorted-object list survived when DS object rendering was disabled. Normal software sprite drawing checked the enable bit, but GPU admission and an empty-plane shortcut consumed the old count. The fix cleared the retained count on disable; a fixture exercised enable → disable without clearing object memory → re-enable and compared the actual renderer with a forced full render. It reproduced the bug locally; the note does not prove that stale count was the cause of the corresponding hardware performance result. [reported: HGSS run 26 note, November 2026; host fixture, hardware attribution unconfirmed]
+
+A different optimization merged opaque 3D batches and changed stencil handling. Characters appeared duplicated and halos appeared around effects on both Old 3DS and New 3DS. The worklog traces the regression to changed vertex ranges and state dependencies, and reports reverting the merge and stencil change while retaining separate state caching and texture hoisting. [reported: HGSS session 20, November 2026; exact builds and scene conditions in that note] A batch boundary needs equivalent textures, vertex ranges, depth, stencil, blend and ordering semantics, not just matching material labels. A scene that looks like a sprite bug may originate in 3D: inspect the source object table and the actual submitted geometry before assigning ownership.
+
+The battle dialogue mirror is another useful boundary: the GPU background take ran in a command phase where blending was off, but a blended entry phase used the software path. The team replaced a dead overlay-name veto with a battle-state veto; Azahar showed correct text with that workaround. The underlying GPU mirror mechanism and the hardware A/B of the veto were still open in the pinned note. [reported: HGSS W2, November 4, 2026; pre-fix mirror confirmed on Old 3DS] Capture registers, all relevant graphics memory, palettes and object state from the *same phase*, including prior output-buffer contents. An uncaptured dependency or a screenshot taken seconds later is not a valid comparison.
+
+## Interrupts, callbacks and shutdown
+
+The port's emulated H-blank walk dispatched 192 line events; a thread switch was requested after each. In one Old 3DS session the project attributed roughly 12 ms of a frame to the interrupt phase, then reported 12,751 → 411 µs after deferring the switches until the end of the walk while retaining handlers and bookkeeping. [reported: HGSS session 20, November 2026; exact builds, firmware and complete run conditions not specified] This is not a general license to defer interrupts: verify handler ordering, visibility and any code that depends on a switch between events. Time dispatch, work and scheduling separately before changing them.
+
+The Settings callback example is a lifetime failure: a V-blank callback could run after its background configuration had been freed. The port-specific fix disabled the callback before freeing the object; the scripted PC reproduction passed, with hardware acceptance tracked separately. Another shutdown hung because the geometry worker was joined before a queue drain that required that worker. Drain while the consumer still runs, then stop and join it; do not free a thread after a timed-out join. These are project-specific dependencies—draw your own ownership and shutdown graph. See [thread lifetime](threading.md#thread-lifetime) and [lifecycle](application-lifecycle.md#exit).
+
+## Audio and save compatibility failures
+
+The port's linker placed an empty section alias away from the intended volume table. The game then interpreted unrelated data as fader values; notes describe stuck, over-loud channels. A replacement table and link-time checks fixed the diagnosed alias, but a later correction expanded it from 128 to 256 entries after an in-game index of 128 exposed the first fix as incomplete. A clean PC waveform still did not prove the DSP handoff: the project separately found an unflushed audio buffer. Validate table bounds against all real callers, compare samples before and after mixing, and check buffer ownership and cache flush at the DSP boundary. [reported: HGSS S13, November 2026; host audio comparisons, later device symptoms; full conditions in source] Apply headroom before saturation; turning down an already clipped signal does not recover it. See [audio](audio.md#diagnosing-crackles-and-gaps).
+
+A different compatibility layer paired a reflected CRC table with a non-reflected update algorithm. The port could read its own wrongly checksummed saves while rejecting retail saves. The repair used the correct table and recognized the known legacy checksum during migration, while still rejecting values matching neither. [reported: HGSS S17, November 2026; host test, device round-trip pending] Check a known vector and independently produced saves in both directions; a self-round-trip alone is insufficient. See [files and saves](filesystem-and-saves.md#testing-failure-handling).
+
+## Technical details: reproduce the investigation
+
+1. Freeze scene, save, script, configuration, binary hash, model and firmware; keep baseline binaries in separate output directories. Compare repeated, alternating A/B runs where possible and record logging overhead separately.
+2. Check runtime model and build banners in *each* log. Confirm feature flags reached every library and that the tested binary actually contains and executes the intended path.
+3. Define each metric's start/end, unit, denominator and nesting. Reconcile queued, completed, skipped and displayed counts; do not add a child timer to its parent.
+4. Capture one coherent graphics state and identical prior buffers. Compare the candidate against an independently forced reference, test invalidation, and verify the fast path fires. A reference implementation can itself be wrong: use an independent capture when both paths share an assumption.
+5. Report host and emulator correctness separately from Old 3DS and New 3DS timing, audio, lifecycle and visual checks. A private or dirty-tree note should not be represented as a pinned public revision.
+
+## Pitfalls and open questions
+
+- A signature may cover the right bytes but race a writer between hashing and rendering. HGSS explicitly plans to measure this live-VRAM race; the notes do not establish its frequency or a safe general fix.
+- A `0 disagreements` counter only covers the path, states and fields actually compared. It does not prove a dormant optimization or every graphics mode correct.
+- One scene or one matched pair cannot establish performance throughout the game; background loads, battle effects and hardware contention change the result.
+- The pinned project status and claim sheets contain historical entries; consult the dated worklog and exact artifact before treating a gate as complete. Coffeepot has not repeated the runs.
+
+## Sources
+
+- [Old 3DS baseline and pacing correction](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/2026-11-10-o3ds-baseline-and-the-pacing-mistake.md) — measured field runs and reverted throttle.
+- [November 10 issues and fixes](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/2026-11-10-session-issues-and-fixes.md) — counter semantics, artifact identity, unmatched A/B and negative results.
+- [Wave-2 integration and dormancy](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/halfA-integration-wave2.md) — zero takes, build-flag propagation and fixture coverage.
+- [Run 26 disabled-object state](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/o3ds-log26-disabled-obj.md) — retained state and disable/re-enable regression fixture.
+- [Session 20 performance work](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s20-performance-session.md) — interrupt scheduling, batching, thread lifetime and hardware observations.
+- [Battle dialogue investigation](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/w2-battle-ui-veto-and-quad-hunt.md) — phase-dependent GPU take, full-state capture and pending hardware check.
+- [Settings V-blank callback](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s14-options-vblank.md) and [geometry shutdown](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s16-pokepics-and-quit.md) — callback and queue lifetime failures.
+- [Volume table and audio investigation](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s13-nns-volume-table.md) and [save CRC investigation](https://github.com/estyseesghosts/hgss-3ds/blob/845cae588d0a3560997cf4e113b8ed599478ff81/docs/progress/agent-notes/s17-save-crc-and-tall-grass.md) — compatibility failures and verification limits.
+- Local HGSS working-tree notes dated November 10–11, 2026 (`docs/progress/agent-notes/2026-11-10-o3ds-000-results.md` and `2026-11-11-session-issues-and-fixes.md`) — P2/P3 results; uncommitted at review, not included in the pinned revision above.

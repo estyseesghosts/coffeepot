@@ -95,6 +95,10 @@ With those three sources you can fill in this table for any frame; it is the sta
 | Transfers / clears | PPF and PSC deltas |
 | Frame interval | ticks between successive `C3D_FrameBegin` returns |
 
+### Check the measuring code
+
+Write down whether each counter counts attempts, completed work, skipped work or presented frames; inspect every increment site before dividing two counters. Define intervals as disjoint or explicitly nested and do not add a child timer to its parent. A wall-clock interval includes preemption and waits. Publish a complete duration to other threads with appropriate synchronization rather than exposing a transient unsigned subtraction. HGSS found all three pitfalls while diagnosing an Old 3DS port; see the [case study](case-study-hgss-port.md#establish-the-bottleneck-and-validate-the-counters) [reported: project worklog, November 2026].
+
 ## Finding the bottleneck
 
 | Observation | Likely bottleneck | Next step |

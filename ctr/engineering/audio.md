@@ -111,6 +111,12 @@ Decode Ogg Vorbis (`libvorbisidec`), Opus (`opusfile`) or tracker modules (`libm
 
 `ndspGetFrameCount()` (sound frames processed) and `ndspGetDroppedFrames()` (sound frames ndsp reports as dropped) are useful counters to log.
 
+### Isolate the stage that distorts
+
+Inspect the generated samples before the device handoff and again after capture. Flat-topped samples indicate saturation: reduce gain before the saturating operation, because reducing already-clipped output cannot recover peaks. If a file render is clean but device playback is not, check buffer lifetime, format, rate and DSP cache flush before changing the mixer. Calibrate any recording chain with a known signal before comparing levels.
+
+HGSS reported both a bad linked volume-table alias and a missing DSP buffer flush; its first table repair was too short for one in-game index. See the [case study](case-study-hgss-port.md#audio-and-save-compatibility-failures) for the separate symptoms and evidence [reported: project S13, November 2026; hardware conditions unspecified].
+
 ## Mixing deadlines and where the audio thread runs
 
 If you mix on the CPU (a software mixer, an emulated sound chip, synthesis) the deadline is the next refill, not the frame: a buffer must be finished before the DSP has played what is already queued. Practical rules, `[hypothesis]` unless labelled:

@@ -302,6 +302,8 @@ The example has a fault knob: compile with `-DSAVE_FAULT_INJECTION`, set `g_faul
 
 Record the console model, firmware, card brand and size, and number of repetitions with each result; per [AGENTS.md](../../AGENTS.md), a pass becomes `[measured]` only when those are written down.
 
+For an imported save format, test checksum implementations against known external vectors and saves produced by the original system, then test both directions of the round-trip. A self-consistent writer and reader can share the same wrong algorithm. In HGSS, a reflected CRC table was paired with a non-reflected update; the port accepted its own saves while rejecting retail saves [reported: project S17, November 2026; host investigation, hardware round-trip pending]. Any legacy migration should recognize only the known legacy format and still reject data matching neither checksum. [Case study](case-study-hgss-port.md#audio-and-save-compatibility-failures).
+
 ## Technical details
 
 | Item | Value | Source |

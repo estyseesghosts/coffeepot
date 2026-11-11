@@ -89,6 +89,8 @@ Create a `PORT_AUDIT.md` in the port's repository:
 
 For every library, determine whether it is (a) buildable for ARM11 and already supplied by devkitPro, (b) small enough to port, (c) replaceable by a 3DS library, or (d) inappropriate on this hardware. The [devkitPro portlibs](../homebrew/development-workflow.md) include codecs, compressors, fonts, physics and other packages; their existence does not mean a desktop integration is free.
 
+**Audit literal hardware addresses as well as SDK macros.** Redirecting an SDK register macro to emulated memory does not redirect a source file's direct pointer literal. HGSS found crashes from DS I/O and VRAM addresses that bypassed the port's arrays. Scan the port-preprocessed sources for pointer literals, parse and range-check numeric values (including forms without leading zeroes), then inspect the resulting binary and test late-loading scenes. Treat this as a targeted audit, not proof that every indirect address has been found. [reported: project S15, November 2026; [case study](case-study-hgss-port.md)].
+
 ### 2.3 List non-negotiable behaviour
 
 Separate **correctness** from **presentation**. For example, a strategy game might require identical move order, script events, RNG, collision and save behaviour, but allow a different antialiasing mode, menu layout, or lighting approximation. A console-game port may require exact tick cadence, object ordering and pixel-effect masks. Write those rules down *before* replacing the renderer.
