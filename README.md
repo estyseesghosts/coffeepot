@@ -1,6 +1,8 @@
 # coffeepot
 
-A wiki of research on Nintendo consoles: their hardware, their software, and homebrew development. It is written for curious humans and for coding agents doing hardware or software work, so every page opens in plain language and then gives the full technical detail.
+an aggregated collection of research on nintendo consoles, what makes them tick, and how to write homebrew for them 
+
+none of this research is my own and i do not assume credit for any of the work presented here. this is merely a collection to assist in development. 
 
 ## Platforms
 
