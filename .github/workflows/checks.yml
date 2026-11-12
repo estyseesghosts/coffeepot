@@ -47,3 +47,26 @@ jobs:
       # Also builds the pixel-equivalence variants (the emulator comparison itself runs on a developer's
       # machine: tools/emu_pixel_check.py).
       - run: bash tools/build_pixel_check.sh "$(mktemp -d)"
+
+  nx-host-tests:
+    name: NX host-side logic tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Save format, coin persistence and PCM padding: plain C11, no console, UBSan where available.
+      - run: bash nx/tests/run.sh
+
+  nx-examples:
+    name: Build NX examples and benchmarks
+    runs-on: ubuntu-latest
+    # Pin the image by digest for reproducible results; :latest tracks the current devkitPro release, which may be
+    # newer than the versions recorded in nx/engineering/source-versions.md.
+    container: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+      # Builds every example and its self-test variant; fails on any warning.
+      - run: bash tools/build_nx.sh "$RUNNER_TEMP/nx-out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nx-binaries
+          path: ${{ runner.temp }}/nx-out

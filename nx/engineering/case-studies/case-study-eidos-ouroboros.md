@@ -40,7 +40,7 @@ Read this as a warning about optimising the wrong subsystem (a per-frame readbac
 5. **Per-frame wait-idle or full barriers → scope the sync.** Per-slot fences, minimal pass barriers from actual read/write sets, full wait only at teardown, resize, and lifetime boundaries [reported].
 6. **Keep the CPU oracle off the hot path.** A CPU compositor as reference and replayable packet harness; count GPU vs CPU frames and refuse to ship disabled fog, edge, shadow, or capture [reported].
 
-The moral is short: Maxwell was never the bottleneck. The copies, the consumers, and the clocks were.
+The supported conclusion is narrower: in the one measured configuration (scene "Mistralton field", private measurements), the reported readback, the pixel consumers and the clock settings were the major costs. The report gives no GPU-side measurement of the renderer after those were removed, so whether Maxwell later becomes the limit is **unresolved**; the evidence is also private and cannot be independently checked `[reported]`.
 
 ## Open questions
 

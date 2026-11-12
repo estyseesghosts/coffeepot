@@ -38,7 +38,9 @@ Jargon: the **[CPU](../../../glossary.md#cpu)** runs guest ARM9/ARM7 code; the *
 
 No speed figures are stated in the tree, so none are given here.
 
-## What it gets wrong (costs and traps)
+## Constraints, observed problems and untested hypotheses
+
+Rows tagged `[documented]` are read from the source; `[reported]` rows are the authors' own statements; `[hypothesis]` rows are inferred from the structure and were not measured.
 
 | Cost / trap | Detail |
 | ----------- | ------ |

@@ -39,9 +39,9 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source
+SOURCES		:=	source ../common
 DATA		:=	data
-INCLUDES	:=	include
+INCLUDES	:=	include ../common
 # This compile check ships no RomFS data, so ROMFS stays unset (upstream deko_basic sets it to romfs).
 #ROMFS		:=	romfs
 
@@ -54,7 +54,7 @@ OUT_SHADERS	:=	shaders
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
-			$(ARCH) $(DEFINES)
+			$(ARCH) $(DEFINES) $(CFLAGS_EXTRA)
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 

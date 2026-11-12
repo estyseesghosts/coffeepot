@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 }
 ```
 
-Verification: compiles inside the wiki's compile-check program with devkitA64 r30-1 / `libnx` 4.12.0-1, `-Wall`, no warnings; not run on hardware. The input calls match `switch-examples` `templates/application/source/main.c` `[documented]`.
+Verification: compiles inside the wiki's `api-check` program with devkitA64 r30-1 / `libnx` 4.12.0-1, `-Wall`, no warnings; not run on hardware. The input calls match `switch-examples` `templates/application/source/main.c` `[documented]`.
 
 The old HID polling API (`hidScanInput`, `hidKeysHeld`, `hidKeysDown`, `CONTROLLER_P1_AUTO`) was deprecated in `libnx` 4.0.0 and removed in 4.1.3 `[documented]` (`libnx` `Changelog.md`, "Version 4.0.0" and "Version 4.1.3"). The pad API has `padGetButtons` for held buttons and `padGetButtonsDown`/`padGetButtonsUp` for edges; there is no `padGetButtonsHeld` `[documented]` (`libnx` `nx/include/switch/runtime/pad.h`). Code copied from older tutorials will not compile against current `libnx`.
 

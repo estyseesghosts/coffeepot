@@ -1,5 +1,8 @@
-// Compile-check for every code fragment published on the nx/ engineering pages.
-// Built with devkitA64 r30 / libnx 4.12.0 / deko3d 0.5.0 under -Wall (see nx/engineering/source-versions.md).
+// API signature check for the code fragments published on the nx/ engineering pages.
+// It proves only that each fragment compiles and links against the pinned headers (devkitA64 r30, libnx 4.12.0,
+// deko3d 0.5.0, -Wall; see nx/engineering/source-versions.md). main() never calls them: they are not runnable
+// recipes, and the graphics fragments lack the shaders, resources and render targets a real frame needs.
+// Runnable, tested code is in ../first-game and the other example directories.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +12,7 @@
 #include <sys/stat.h>
 #include <switch.h>
 #include <deko3d.h>
+#include "pcm_pad.h"
 
 // ---------------------------------------------------------------- input-loop
 static void inputLoop(void)
@@ -32,11 +36,12 @@ static void inputLoop(void)
 static void nxlinkSetup(void)
 {
     consoleInit(NULL);
-    socketInitializeDefault();   // sockets first,
-    nxlinkStdio();               // then redirect stdout and stderr to the nxlink host
+    const bool sockets = R_SUCCEEDED(socketInitializeDefault());   // sockets first,
+    int nxlinkFd = sockets ? nxlinkStdio() : -1;                   // then redirect stdout and stderr; < 0 means no host
     printf("this line appears in the PC terminal when started with nxlink -s\n");
-    // ... main loop ...
-    socketExit();
+    // ... main loop; the program must keep working when nxlinkFd < 0 ...
+    if (nxlinkFd >= 0) { close(nxlinkFd); }                        // libnx: close it during cleanup
+    if (sockets) { socketExit(); }
     consoleExit(NULL);
 }
 
@@ -156,27 +161,6 @@ static void tick(double frameSeconds, double* acc, double* alpha)
     *alpha = *acc / DT;             // render interpolation factor
 }
 
-// ---------------------------------------------------------------- crash-safe-save
-static int saveSafely(const char* dir, const void* data, size_t len)
-{
-    char tmp[256], cur[256], bak[256];
-    snprintf(tmp, sizeof tmp, "%s/save.tmp", dir);
-    snprintf(cur, sizeof cur, "%s/save.dat", dir);
-    snprintf(bak, sizeof bak, "%s/save.bak", dir);
-
-    FILE* f = fopen(tmp, "wb");
-    if (!f) return -1;
-    if (fwrite(data, 1, len, f) != len) { fclose(f); return -1; }
-    fflush(f);
-    fsync(fileno(f));               // push the data to the card before touching the old save
-    fclose(f);
-
-    remove(bak);                    // rename() will not replace an existing destination here
-    rename(cur, bak);               // fails harmlessly on the very first save
-    return rename(tmp, cur);        // on failure the old save is still in save.bak
-}
-
-
 // ---------------------------------------------------------------- lifecycle
 static volatile bool g_docked, g_focused = true;
 
@@ -207,7 +191,14 @@ static void keepRunningInBackground(void)
 {
     // default is to suspend on Home/sleep; NoSuspend keeps the process running (nxquake2 uses it)
     appletSetFocusHandlingMode(AppletFocusHandlingMode_NoSuspend);
-    appletLockExit();                 // lets the app finish saving when an exit is requested
+    appletLockExit();                 // once exit is requested the process gets 15 s to clean up, then it is terminated
+}
+
+static void shutdownWithinDeadline(void)
+{
+    // appletMainLoop() has returned false. Do bounded cleanup (a save, closing services), never open-ended work.
+    // ... save, stop audio, destroy graphics ...
+    appletUnlockExit();               // required before main() returns
 }
 
 // ---------------------------------------------------------------- gpu-health
@@ -227,12 +218,10 @@ static bool requireFile(const char* path)
 }
 
 // ---------------------------------------------------------------- pull-audio-block
-static void padBlock(int16_t* stereoFrames, int have, int want)
+static void padBlock(int16_t* stereoFrames, size_t want, const int16_t* src, size_t have)
 {
-    // when the source runs dry, repeat the last frame explicitly instead of leaving garbage (melonDS does this)
-    if (have <= 0) return;
-    uint32_t last = ((uint32_t*)stereoFrames)[have - 1];
-    while (have < want) ((uint32_t*)stereoFrames)[have++] = last;
+    // short source: repeat the last frame; no source: silence. pcm_fill is host-tested (nx/tests).
+    pcm_fill(stereoFrames, want, src, have);
 }
 
 // ---------------------------------------------------------------- scale
@@ -241,12 +230,12 @@ static int integerScale(int destW, int renderW) { return destW / renderW; }
 int main(int argc, char* argv[])
 {
     (void)argc; (void)argv;
-    // Fragments are compile-checked only; nothing here is run.
+    // Never taken: the fragments above are only checked against the headers.
     if (argc > 99) {
         inputLoop(); nxlinkSetup();
         (void)createStaticBlock; (void)bindCameraUniforms; (void)updateSmallUniform; (void)frame;
         (void)teardown; (void)captureAndReplay; (void)imageBytes; (void)passToPass; (void)tick;
-        (void)saveSafely; (void)integerScale; lifecycleSetup(); keepRunningInBackground(); (void)gpuHealthy; (void)requireFile; (void)padBlock;
+        (void)integerScale; lifecycleSetup(); keepRunningInBackground(); (void)shutdownWithinDeadline; (void)gpuHealthy; (void)requireFile; (void)padBlock;
     }
     return 0;
 }

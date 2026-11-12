@@ -73,26 +73,55 @@ The packages the code examples on the NX pages were compiled with (from `pacman 
 
 The installed `deko3d` is older than the pinned clone: the clone's `deko3d.h` adds `dkFenceImport`, `dkImageFormatGetFlags`, `DkImageFormatFlags_*`, `DkDeviceFlags_YAxis*` and renames `DkImageFormat_A5BGR5_Unorm` to `A1BGR5_Unorm`. None of those appear in the wiki examples. All API names used in the examples exist in both headers. The installed `libnx` (4.12.0) is newer than the pinned clone (4.10.0 in its changelog); the examples use only APIs present in both.
 
+## Verification model
+
+Compiling is not validating. Each example and benchmark carries its own status at these levels, and a status is raised only by doing the step.
+
+| Level | Evidence required |
+| ----- | ----------------- |
+| API checked | Signatures and contracts read from the pinned headers or source |
+| Builds | Clean devkitA64 build, `-Wall`, no warnings, with the toolchain below (`tools/build_nx.sh`) |
+| Host-tested | Pure logic run on the host with edge cases and injected failures (`nx/tests/run.sh`) |
+| Emulator-tested | Run in an emulator; records what the run established (a picture, a report), never timing |
+| Hardware-tested | A console run with model, firmware, launch mode and observed behaviour recorded |
+| Benchmarked | Reproducible workload, clocks, correctness checks and distributions recorded |
+
+Emulator runs used Eden 0.2.1 (`tools/eden_run.py`) on Windows 11. Eden does not model the console's memory limits, audio timing, clocks, thermals or suspend, so a pass is not a hardware pass.
+
 ## Verification status
 
-| Item | Builds | Emulator-tested | Switch hardware |
-| ---- | ------ | --------------- | --------------- |
-| Every C fragment on [rendering](rendering.md), [performance and porting](performance-and-porting.md), [libnx and deko3d](../homebrew/deko3d-and-libnx.md) and [toolchain and workflow](../homebrew/toolchain-and-workflow.md) | Yes: compiled together as one program, `nx/engineering/examples/compile-check/` (`source/main.c` plus the upstream `deko_basic` Makefile), with `-Wall -O2` against the installed toolchain above; zero warnings from a clean copy | No | **No**; not run |
-| The complete small game in [a first Switch game](first-game.md), `nx/engineering/examples/first-game/` (libnx only; `-lnx -lm`) | Yes: clean copy, `-Wall -O2`, zero warnings | No | **No**; not run, including audio, saving, crash dump and docked behaviour |
-| Upstream `graphics/deko3d/deko_basic` from `switch-examples` | Yes: built to `.nro` with the installed toolchain, zero warnings | No | No |
-| Command lines (`make`, `nxlink`, `uam`) | `nxlink --help` and `uam --help` read from the installed tools; `make` run on `deko_basic` | No | The `nxlink` transfer itself was not run (no console attached) |
+| Item | Builds | Host-tested | Emulator-tested (Eden 0.2.1) | Switch hardware |
+| ---- | ------ | ----------- | ---------------------------- | --------------- |
+| `examples/api-check`: every fragment on [rendering](rendering.md), [performance and porting](performance-and-porting.md), [libnx and deko3d](../homebrew/deko3d-and-libnx.md), [toolchain and workflow](../homebrew/toolchain-and-workflow.md), [lifecycle](lifecycle-and-threading.md) | Yes (a signature check; `main` never calls the fragments) | `pcm_fill` only, via `common/` | No | **No** |
+| `examples/first-game` ([page](first-game.md)) | Yes, normal and `-DFG_SELFTEST` builds | Save format and coin logic: 1,184 checks pass (`nx/tests/test_logic.c`) | Yes: all seven self-test checks pass (coin collected, save, load, coin stays collected, restart position, second save in the other slot, audio initialised); frame dump shows the expected picture | **No**: audio output, docked, suspend, power loss, real timing |
+| `examples/audout-stream` ([audio](audio.md)) | Yes, normal and `-DAS_SELFTEST` | `pcm_fill` | Yes: 5 s, 254 blocks queued, 250 returned, 0 underruns, short and silent blocks padded; **buffers were not returned until `audoutGetReleasedAudioOutBuffer` was also called** | **No**: latency, hardware behaviour |
+| `examples/memory-probe` ([memory](memory-management.md)) | Yes | No | Yes: runs and writes its report (Eden's process: 3.44 GB; values are the emulator's, not a console budget) | **No**, in either launch mode |
+| `examples/deko-renderer` ([renderer](deko3d-renderer.md)) | Yes, normal and `-DDKR_SELFTEST` | No | **No: Eden 0.2.1 aborts (exit code 3, about 9 s in) on this and on unmodified upstream `deko_basic`** | **No** |
+| Upstream `graphics/deko3d/deko_basic` | Yes, built to `.nro` with the installed toolchain | n/a | **No**: aborts in Eden as above | No |
+| Command lines (`make`, `nxlink`, `uam`) | `nxlink --help` and `uam --help` read from the installed tools; `make` run on every example | n/a | n/a | The `nxlink` transfer was not run (no console attached) |
 
-To repeat the check: install `switch-dev`, copy `nx/engineering/examples/compile-check/` to a path without spaces, and run `make`. The page fragments are shortened copies of functions in that file (for example the page's `frame()` calls `recordScene`, defined there as a stub).
+What "builds" means: the code compiles and links. It does not mean the program draws correctly or that its synchronisation is right on hardware. Treat the synchronisation examples as `[documented]` readings of the headers, not tested behaviour. The Eden abort was seen with the default Vulkan backend on an AMD GPU; a custom config could not be selected from the command line, so other backends or builds were not tried.
 
-What "builds" means here: the fragment compiles and links. It does not mean the program draws correctly or that its synchronisation is right on hardware. Treat the synchronisation and save-file examples as `[documented]` readings of the headers, not as tested behaviour.
+To repeat the builds: install `switch-dev`, set `DEVKITPRO`, and run `bash tools/build_nx.sh [output-dir]` (every example and its self-test build, failing on any warning), and `bash nx/tests/run.sh` for the host tests (needs only a host C compiler; clean under `-Wall -Wextra -Werror` and, where the compiler supports it, `-fsanitize=undefined`). To repeat an emulator run: `python tools/eden_run.py <self-test.nro> switch/<folder> <report-file>`. The CI job installs the toolchain from the `devkitpro/devkita64` image, runs both scripts, and keeps the built NRO and ELF files as artifacts.
 
 The check that the old wiki fragments were wrong was run the same way: `hidScanInput`, `hidKeysHeld`, `CONTROLLER_P1_AUTO`, `dkMemBlockUpload`, `dkCmdBufFinish`, `dkQueueSubmit` and a one-argument `dkCmdBufBindUniformBuffer` fail to compile against both the installed and the pinned headers.
+
+### What the audit changed
+
+A review of this section found, and these examples now fix: a save that dropped collected-coin state; audio padding that cast `int16_t*` to `uint32_t*` and returned without filling anything when the source was empty; unchecked `fflush`, `fsync`, `fclose`, `framebufferCreate` and `framebufferMakeLinear` results; an `nxlinkStdio()` socket never closed; frame times described as more informative than they are; an `appletLockExit` example without the matching unlock; and a compile check that read as if it covered runtime behaviour. Each is covered by a host test, a self-test check, or a changed page; no hardware step was done.
+
+### Hardware test manifest (first game)
+
+Record, per console model (Erista, Mariko), firmware, Atmosphère version and launch mode: the self-test result (`selftest.txt`); a save, quit and reload by hand; a save with the SD card write-protected or removed; power cut during a save, then load; handheld and docked output (picture and `g_docked`); Home and back, sleep and resume (frame clock, audio); controller removed and reattached mid-play; a deliberate fault (does Atmosphère's report appear, does `crash.txt`); the frame-time lines over ten minutes. Date each result and note the tester's configuration.
+
+Provenance for each claim on the NX pages should name the source type, repository or publication, exact revision and function or section, and whether Coffeepot reproduced it. Cite a commit rather than `main` for anything version-sensitive.
 
 ## Open questions
 
 - Run the examples on an Erista and a Mariko console in handheld and docked mode, and record the result here per model.
-- Add a CI job that installs `switch-dev` and compiles the examples, so this page cannot drift from the code.
+- Run the `deko3d` programs in an emulator that survives them, or on a console. The Eden abort may be specific to this version, backend or driver.
 - Re-pin when `libnx` publishes a release newer than 4.10.0 in `Changelog.md`; the installed package already reports 4.12.0.
+- Write the benchmark programs specified on [profiling](profiling-and-benchmarks.md#experiments-to-run-not-yet-written) and the hazard tests on [synchronization](gpu-memory-and-synchronization.md#tests-that-would-make-this-credible).
 
 ## Sources
 
@@ -100,3 +129,4 @@ The check that the old wiki fragments were wrong was run the same way: `hidScanI
 - [deko3d](https://github.com/devkitPro/deko3d) at the pinned commit — `include/deko3d.h`.
 - [switch-examples](https://github.com/switchbrew/switch-examples) at the pinned commit — `graphics/deko3d/deko_basic/source/main.c`, `templates/application/source/main.c`.
 - Local `pacman -Q` output and `nxlink --help` / `uam --help` from the installed devkitPro tools — toolchain versions and flags.
+- `tools/build_nx.sh`, `tools/eden_run.py`, `nx/tests/run.sh` — the build, emulator and host-test procedures.

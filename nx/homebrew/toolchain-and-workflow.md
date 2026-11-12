@@ -50,11 +50,12 @@ Two launch modes change how much memory the program gets: the Album applet versu
 
 ```c
 consoleInit(NULL);
-socketInitializeDefault();   // sockets first,
-nxlinkStdio();               // then redirect stdout and stderr to the nxlink host
+const bool sockets = R_SUCCEEDED(socketInitializeDefault());   // sockets first,
+const int nxlinkFd = sockets ? nxlinkStdio() : -1;             // then redirect stdout and stderr; negative means no host
 printf("appears in the PC terminal when started with nxlink -s\n");
-/* ... main loop ... */
-socketExit();
+/* ... main loop; keep working when nxlinkFd < 0 ... */
+if (nxlinkFd >= 0) close(nxlinkFd);                            // libnx: close the socket during cleanup
+if (sockets) socketExit();
 consoleExit(NULL);
 ```
 
@@ -64,7 +65,7 @@ consoleExit(NULL);
 nxlink -a <console-ip> -s myswitchproject.nro
 ```
 
-Verification of the program fragment: compiles, `-Wall`, no warnings; not run on a console. The command line options come from `nxlink --help` of `switch-tools` 1.13.1: `-a`/`--address` is the console's hostname or IPv4 address, `-s`/`--server` starts the output server after the upload, `-p`/`--path` sets the upload path, `--args` sends arguments to the program, `-r` sets retries `[documented]`. If you omit `-a`, `nxlink` tries to find the console itself; the old guide says to pass `-a` when it cannot `[reported]`.
+Verification of the program fragment: compiles in `api-check`, `-Wall`, no warnings; not run on a console. `nxlinkStdio()` returns the socket descriptor on success and a negative number on failure, and the socket should be closed with `close()` during cleanup `[documented]` (`libnx` `nx/include/switch/runtime/nxlink.h`). The command line options come from `nxlink --help` of `switch-tools` 1.13.1: `-a`/`--address` is the console's hostname or IPv4 address, `-s`/`--server` starts the output server after the upload, `-p`/`--path` sets the upload path, `--args` sends arguments to the program, `-r` sets retries `[documented]`. If you omit `-a`, `nxlink` tries to find the console itself; the old guide says to pass `-a` when it cannot `[reported]`.
 
 - The file you pass must be the `.nro`, not the `.elf`. The old guide reports a fatal error screen (2347-0005, 0xb5b) when something else is sent `[reported]`.
 - The upstream demonstration is `network/nxlink_stdio` in `switch-examples`: it calls `socketInitializeDefault()` then `nxlinkStdio()`, and its header comment gives the command `nxlink <-a switch_ip> nxlink_stdio.nro -s <arguments>` `[documented]` (`switch-examples` `network/nxlink_stdio/source/main.c`). The old wiki text `nxlink -s server.nro` used a file name your project will not produce.

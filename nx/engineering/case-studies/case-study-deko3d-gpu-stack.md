@@ -31,7 +31,7 @@ Creation order, each object borrowing earlier ones `[documented]`:
 | Barriers | Tiers `None`/`Tiles`/`Fragments`/`Primitives`/`Full` plus image/shader/descriptor/Zcull/L2 invalidate bits. |
 | Tiled cache | `Enable`/`Disable`/`Flush`/`FlushAlt` plus tile size; Example 08 keeps deferred G-buffers in tile memory. |
 | Clears, Zcull | Clear/discard color and depth-stencil, depth resolve; compressed targets decompressed pre-present; Zcull default-on, save/restore TODO. |
-| Capture/replay | Record raw GPU words once, replay at zero CPU cost; excludes compute, fences, indirect draws, `Full`; version-matched only. |
+| Capture/replay | Record raw GPU words once and replay them, avoiding repeated command encoding (replay itself still costs CPU time and was not measured here); excludes compute, fences, indirect draws, `Full`; version-matched only. |
 | DKSH pipeline | Native SM53 SASS only, no runtime compiler; uam compiles GLSL offline; mandatory `layout(binding=N)`, per-stage caps 16/16/32/8 UBO/SSBO/sampler/image (compute UBO 6–15 emulated). |
 | Debug/release | `-ldeko3dd` validates via debug callback; `-ldeko3d` drops checks, errors become Fatal. |
 

@@ -22,7 +22,9 @@ Read this for a worked example of barrier hygiene, shader preparation and discip
 6. **Static upload plus rings.** Static geometry uploaded once, camera and uniforms via per-frame ring with fences — never wait-idle per frame, never overwrite GPU-live memory [reported].
 7. **Resolution and clocks stated.** Handheld 720p, docked 1080p at 1.5×, auto switch on dock, dynamic resolution only below 30 fps; stock CPU 1020 MHz with handheld GPU on the 384 MHz profile (307 to 384 measured +4.7 fps in a grass scene) [reported].
 
-## What it gets wrong (limits and traps)
+## Constraints, observed problems and untested hypotheses
+
+Rows tagged `[documented]` are read from the source; `[reported]` rows are the authors' own statements; `[hypothesis]` rows are inferred from the structure and were not measured.
 
 - **Memory-mode assumption is a support trap.** Title mode or forwarder required; applet out-of-memory is the newcomer's first crash [reported].
 - **Docked and handheld tiers are thin.** Single 384 MHz handheld profile and a present-scaled docked path; no full tier matrix [reported].

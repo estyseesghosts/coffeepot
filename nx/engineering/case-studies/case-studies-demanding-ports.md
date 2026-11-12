@@ -26,7 +26,7 @@ Read this when you must choose between a Vulkan-on-NVK renderer and `deko3d` for
 - **Late-input limiter-slack plus double-buffer off.** The game's own limiter waits ~8 ms off-swap, so slack is counted at the limiter (16-frame minimum, +3 ms margin): input-to-display 34 ms to ~31 ms, 0 extra dropped frames in 150 s [reported].
 - **First-fight shader burst quantified.** ~90 shaders at ~84 ms each is ~7.6 s on the first loading screen with empty caches; cached thereafter [reported].
 
-**What it gets wrong.**
+**Constraints, observed problems and untested hypotheses.**
 
 - **Overclock dependence.** The README reports fights holding 60 fps with the CPU at 1785 MHz and the GPU at 768 MHz, "set with sys-clk", measured in October 2026; it gives no stock-clock result, so whether stock clocks hold 60 fps is unstated [reported] (`README.md`).
 - **NVK validation and descriptor overhead.** ~3 µs per pipeline bind, ~2.4–2.9 µs per draw on the A57; ~400–500 draws per frame saturated the ring thread at 18.6 ms while the GPU sat at 9.3 ms [reported].
@@ -45,7 +45,7 @@ Read this when you must choose between a Vulkan-on-NVK renderer and `deko3d` for
 - **Streaming and pacing discipline.** Texture cache capped 512 MB (LRU 120 frames); 16 MB-block sub-allocation; presenter stays immediate; GPU timestamps corrected by ×1.627 (NVK period lies); A/B by alternating every N seconds in-session with a no-op control [reported].
 - **First-race pipeline burst fixed by shipping the list.** ~59–82 ms per pipeline over 112 pipelines stuttered every fresh install; fixed by shipping a pipeline list plus background prebuild (113 of 113 in 0.3 s) [reported].
 
-**What it gets wrong.**
+**Constraints, observed problems and untested hypotheses.**
 
 - **Overclocked numbers hid the GPU limit for days** (34 fps overclocked vs 15 fps stock, bottleneck flipped CPU to GPU). Policy since: stock clocks from day one [reported].
 - **Config overriding code defaults** silently disabled changes for several builds; now every log echoes effective settings [reported].

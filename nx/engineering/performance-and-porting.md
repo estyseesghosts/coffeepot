@@ -4,7 +4,7 @@ This page is for a developer whose Switch homebrew game runs slower than it shou
 
 ## Before you start
 
-- Toolchain: devkitA64 r30-1, `libnx` 4.12.0-1, `deko3d` 0.5.0-1, checked as described on [source versions](source-versions.md). Code fragments compile with `-Wall` and no warnings; none has been run on a console.
+- Toolchain: devkitA64 r30-1, `libnx` 4.12.0-1, `deko3d` 0.5.0-1, checked as described on [source versions](source-versions.md). Code fragments compile with `-Wall` and no warnings (`nx/engineering/examples/api-check`); none has been run on a console. For a measurement method with GPU counters see [profiling and benchmarks](profiling-and-benchmarks.md).
 - Applies to retail Switch homebrew. Clock figures are stock retail clocks unless the text says overclock; they are cited to a port, not measured by this wiki (see [Stock clocks](#stock-clocks-a-port-reported-table)).
 - Start with [a first Switch game](first-game.md) if you have not built a program yet, and use [debugging](debugging.md) when something fails. Read alongside [rendering](rendering.md) for the `deko3d` frame loop and [NX CPU](../hardware/cpu.md) and [NX GPU](../hardware/gpu.md) for the hardware.
 - Most numbers below come from open-source ports. None was reproduced by Coffeepot, so each is labelled `[reported]` and names the project, its commit and the conditions its authors state.
@@ -32,7 +32,7 @@ What to do: pick one scene, one launch mode (title override or Album applet; see
 
 ## Time CPU work and GPU work separately
 
-What to do: record how long the CPU spends preparing and submitting a frame and how long the GPU takes to finish it, as two numbers. Use fences for the GPU side (see [rendering](rendering.md)) and a CPU timer for the CPU side, and keep the two buckets exclusive; do not add a bucket that already contains another.
+What to do: record how long the CPU spends preparing and submitting a frame and how long the GPU takes to execute it, as two numbers. Take the CPU side from a CPU timer and the GPU side from GPU timestamps (`dkCmdBufReportCounter`, see [profiling](profiling-and-benchmarks.md#gpu-time-from-counter-reports)). A CPU wait on a fence measures how long the CPU waited, not how long the GPU worked, so do not report it as GPU time. Keep the buckets exclusive; do not add a bucket that already contains another.
 
 - Expected result: you can say whether a slow frame is CPU-bound (CPU time near the frame budget, GPU idle) or GPU-bound.
 - How it fails: always-on timers inflate the pass they measure. If removing a timer speeds the pass up, the timer was the cost. Nested buckets that "add up" to more than the frame time are overlapping, not additive.
@@ -69,7 +69,7 @@ Verification: flag names are GCC's documented options; no PGO build was made or 
 
 What to do: if profiling shows one thread saturating a core, split the work. A single-threaded loop is a good starting point for a small game, and a separate render or audio thread without a measured bottleneck adds work and makes bugs harder to find.
 
-- Facts from the ports `[reported]`: a game gets three usable CPU cores; only thread priority `0x3B` is time-sliced (10 ms slices in SA2's notes), so a busy thread at another priority can starve threads of the same or lower priority on its core; each thread must be given an explicit core mask or it will share a core with others (`sa2-nx` `docs/porting-guide.md` line 304 and `docs/renut-cpu-work-for-banjo.md` line 114; `nfsmw-nx` `docs/platform-notes.md`, "Only thread priority 0x3B takes turns on a core").
+- Facts: `libnx` documents `0x3B` as a special priority on cores 0 to 2 that enables preemptive multithreading `[documented]` (`libnx` `kernel/thread.h`). Ports report that a game gets three usable CPU cores and that threads at other priorities are not time-sliced against each other (10 ms slices at `0x3B` in SA2's notes), so a busy thread at another priority can starve threads of the same or lower priority on its core `[reported]`; the "only" and the slice length are not in the header, and are untested here (see [lifecycle and threading](lifecycle-and-threading.md)); each thread must be given an explicit core mask or it will share a core with others (`sa2-nx` `docs/porting-guide.md` line 304 and `docs/renut-cpu-work-for-banjo.md` line 114; `nfsmw-nx` `docs/platform-notes.md`, "Only thread priority 0x3B takes turns on a core").
 - SA2 pins its game thread to core 0, its render thread to core 1 and puts other threads on cores 1-2, preferring 2 `[reported]` (`sa2-nx` `docs/deko3d-renderer-guide.md`, key `sa2_renut_core_layout`). That is a layout for a game with a heavy game thread; it is not a general rule.
 - `[hypothesis]` A lock-free queue between a simulation thread and a render thread helps when the render thread's per-draw work is large. SA2's first build of one was reported as a regression in the game thread (32.4 ms against 28.7 ms in the 2-player City Escape scene of 2,929 draws), and its author traced the push cost to cache misses on a large ring of slots; but the first figure was taken docked and the earlier one handheld, so the two numbers are not a clean comparison `[reported]` (`sa2-nx` `docs/renut-renderer.md` item 42). Measure with and without it. What would settle it: a benchmark with a producer and a consumer thread using a mutex queue, a lock-free queue and no queue, on retail clocks.
 
@@ -93,7 +93,7 @@ Each item is a reported lesson, not a rule. Check the ones that apply to your ga
 1. **Launch mode and memory.** Several ports require title override (launching in place of a full game) because the Album applet's memory budget is too small and the symptom is out-of-memory aborts `[reported]` (`srb2-switch` `README.md` line 15; `SwitchWakerHD` `README.md`; taisei warns of crashes from the photo applet; see [Atmosphere and running](../homebrew/atmosphere-and-running.md)). Log the launch mode with every test.
 2. **Pre-convert game data.** Ports ship assets converted at build time instead of decoding PNG or JSON at run time to shorten loads `[reported]` (`SwitchWakerHD` build path; `sa2-nx` installer approach). `[hypothesis]` that runtime decoding is slower on the A57 than on a PC for your assets; what would settle it: time the decode on the console.
 3. **Audio.** Ports resolve output to 48 kHz (godot_switch configures `audren` at `AudioRendererOutputRate_48kHz` with 24 voices, 2 mix buffers `[documented]`, `godot_switch` `platform/switch/audio_driver_switch.cpp`; `SwitchWakerHD` mod SDK supports 48000 Hz only `[reported]`). Mix on a thread whose work is bounded and keep long music streaming rather than resident; `[hypothesis]` that this is needed for your game.
-4. **Saves.** See [Crash-safe saves](#crash-safe-saves).
+4. **Saves.** See [Saves](#saves).
 5. **Frame pacing.** Choose between tearing and dropped frames on purpose. SA2 shows a missed 60 fps frame as soon as it is ready (50-59 fps) instead of waiting a full refresh and falling to 30 fps; the option is `sa2_vsync_relaxed`, default on `[reported]` (`sa2-nx` `README.md`). Which is right depends on your game.
 6. **Lifecycle.** See [Handheld, docked and suspend](#handheld-docked-and-suspend).
 7. **Network and logging.** Do not let a blocking socket call run on the game thread. USF4 froze after about 37 seconds because a debug-log send blocked while holding a mutex; a non-blocking socket fixed it `[reported]` (`usf4-nx` `docs/deko3d-renderer-usf4.md`, "Traps"). `nxlinkStdio` itself sets its socket to non-blocking mode `[documented]` (`libnx` `nx/source/runtime/nxlink_stdio.c`, `fcntl(... O_NONBLOCK)`), but a `printf` to a full buffer is still a cost on the frame; log sparingly.
@@ -118,7 +118,7 @@ static void onApplet(AppletHookType type, void* param)
 /* once at startup: static AppletHookCookie cookie; appletHook(&cookie, onApplet, NULL); */
 ```
 
-Verification: compiles, `-Wall`, no warnings; not run on hardware, including docked/handheld transitions and sleep.
+Verification: compiles in `api-check`, `-Wall`, no warnings; not run on hardware, including docked/handheld transitions and sleep. The full list of what to do on each transition is on [lifecycle and threading](lifecycle-and-threading.md).
 
 `appletMainLoop` returns false when an exit is requested, which lets the app clean up after the loop `[documented]` (`libnx` `nx/include/switch/services/applet.h`, `appletMainLoop` and the note at line 704). `appletGetOperationMode` returns `AppletOperationMode_Handheld` or `AppletOperationMode_Console` and is updated by `appletMainLoop` when notifications arrive `[documented]` (same header, lines 35-36 and 2760-2763). Hook types include operation mode, performance mode, focus state, exit request and resume (same header, lines 41-48).
 
@@ -126,25 +126,13 @@ Controllers: `padConfigureInput(1, HidNpadStyleSet_NpadStandard)` and `padInitia
 
 > Unknown: how a game should behave when a controller disconnects mid-play, and how touch, motion and rumble should be handled across handheld/docked transitions. The `switch-examples` `hid/` tree has `read-controls`, `touch-screen`, `sixaxis`, `vibration` and `abstracted-pad`, but this page has not worked through them. A test on hardware is needed.
 
-## Crash-safe saves
+## Saves
 
-What to do: write the new save to a temporary file, flush it to the card, then replace the old save in a way that never leaves you without a valid file.
+What to do: use an explicit, versioned, checksummed file format with two generation slots, and write each save to the slot that does not hold the newest valid one. A failed or interrupted write can then only damage the inactive slot, and the previous save still loads. Check the result of every write, flush, sync and close. The full design, the layout, the 1,184 host-side checks and what is still unverified are on [storage and saves](storage-and-saves.md); the code is `nx/engineering/examples/common/save_format.c`.
 
-```c
-FILE* f = fopen(tmp, "wb");
-if (!f) return -1;
-if (fwrite(data, 1, len, f) != len) { fclose(f); return -1; }
-fflush(f);
-fsync(fileno(f));       // push the data to the card before touching the old save
-fclose(f);
-remove(bak);            // rename() will not replace an existing destination here
-rename(cur, bak);       // fails harmlessly on the very first save
-return rename(tmp, cur);
-```
+A "temporary file plus rename" sequence needs `rename` to replace an existing file. Whether it does through `libnx`'s filesystem layer was never tested, and the earlier example's `remove(bak)` before the rename left a window with no backup. The slot design avoids depending on it.
 
-Verification: compiles, `-Wall`, no warnings. **Not run.** Two behaviours are assumed and unverified: that `rename` to an existing destination fails through libnx's filesystem layer (hence the `remove(bak)`), and that `fsync` reaches the SD card. Test both on a console, including pulling power mid-write, before relying on this.
-
-This is a file-on-SD pattern. Applications with their own save data use `fsdevMountSaveData` and must call `fsdevCommitDevice` after writing for changes to take effect `[documented]` (`switch-examples` `fs/save/source/main.c` lines 88-96). Where each kind of save lives is on the [firmware page](../software/firmware.md).
+Applications with their own system save data use `fsdevMountSaveData` and must call `fsdevCommitDevice` after writing for changes to take effect `[documented]` (`libnx` `runtime/devices/fs_dev.h`).
 
 ## Measure the way the ports learned to
 
@@ -160,13 +148,13 @@ These rules come from the postmortems and test rigs of the ports in the [case st
 
 ## Lessons for audio, memory, startup and services
 
-- **Pull audio in fixed blocks and pad explicitly.** melonDS's audio thread asks its emulated sound unit for 768-sample blocks at a 32823 Hz source rate, sleeps 10 µs while the unit has nothing, and pads a short block with the last frame before queueing it `[documented]` (`melonDS` `src/frontend/switch/main.cpp` lines 216-243; `Util_Audio.cpp` line 55). Late video therefore stretches audio rather than dropping out cleanly. The padding idiom compiles as a fragment in the compile-check program.
+- **Pull audio in fixed blocks and pad explicitly.** melonDS's audio thread asks its emulated sound unit for 768-sample blocks at a 32823 Hz source rate, sleeps 10 µs while the unit has nothing, and pads a short block with the last frame before queueing it `[documented]` (`melonDS` `src/frontend/switch/main.cpp` lines 216-243; `Util_Audio.cpp` line 55). Late video therefore stretches audio rather than dropping out cleanly. The padding idiom is `pcm_fill` in `nx/engineering/examples/common/pcm_pad.c`, host-tested (see [audio](audio.md)); a cast of `int16_t` samples to `uint32_t*` is undefined behaviour and is not used.
 - **Run the audio pump on its own thread at a deliberate priority.** godot_switch sets its audio thread to priority `0x2B` and sizes `audren` for 48 kHz, 24 voices, 2 mix buffers `[documented]` (`godot_switch` `audio_driver_switch.cpp` lines 40-45, 117); melonDS's audio thread is created at priority `0x20` on core 0 and its emulation threads at `0x30` from core 1 (`melonDS` `main.cpp` line 312, `Platform.cpp` line 80). Priority and core layout interact with the time-slicing note above; pick them on purpose and profile.
 - **Data authored for another sample rate plays at the wrong speed.** 44.1 kHz data played as 48 kHz runs 48/44.1, about 9% fast, by arithmetic; resample or declare the right rate. max_nx forces its OpenAL context to 44,100 Hz and lets the Switch mixer resample (`max_nx` `source/hooks/openal.c` line 28).
 - **Split the heap from the image and refuse the applet.** max_nx reserves a 512 MB newlib heap, gives the rest to the mapped game, and states that applet mode cannot work because nothing is left after the heap is allocated (`max_nx` `source/config.h` line 13, `README.md` lines 34-35). Decide your heap size explicitly and test it under both launch modes.
-- **Check the startup preconditions and say what is wrong.** max_nx checks each data archive and each privileged syscall and shows an on-screen error naming the missing file or call (`max_nx` `source/main.c` lines 81-95). A one-function version, `requireFile`, is in the compile-check program.
+- **Check the startup preconditions and say what is wrong.** max_nx checks each data archive and each privileged syscall and shows an on-screen error naming the missing file or call (`max_nx` `source/main.c` lines 81-95). A one-function version, `requireFile`, is in the `api-check` program.
 - **Follow a hot/warm/cold split for services.** Connect to each service once at start and close at exit (see [services and IPC](../software/services-and-ipc.md)); call per-frame services (`padUpdate`, the vsync wait, audio append, the applet loop) from the main loop; keep file opens and network checks off the frame and on a worker thread with an event for completion; keep one-time work (service connects, display layer creation, `romfs` mount) at start.
-- **Mind the focus-handling mode.** By default the system suspends the process when Home opens or the console sleeps. nxquake2 sets `AppletFocusHandlingMode_NoSuspend`, installs an applet hook and calls `appletLockExit()` so single-player can auto-pause itself and skip server timeouts across sleep `[documented]` (`nxquake2` `src/backends/nx/system.c` lines 80-90). Both calls compile in the compile-check program; the effect on hardware is untested here.
+- **Mind the focus-handling mode.** By default the system suspends the process when Home opens or the console sleeps. nxquake2 sets `AppletFocusHandlingMode_NoSuspend`, installs an applet hook and calls `appletLockExit()` so single-player can auto-pause itself and skip server timeouts across sleep `[documented]` (`nxquake2` `src/backends/nx/system.c` lines 80-90). Both calls compile in the `api-check` program; `appletUnlockExit` must be called before `main` returns, and exit is forced after 15 s `[documented]` (`libnx` `applet.h`). The effect on hardware is untested here; see [lifecycle and threading](lifecycle-and-threading.md#exit-locks).
 - **SDL may report the wrong display size.** nxquake2 notes that `SDL_GetDesktopDisplayMode` always returns 1920×1080 on Switch and so asks `appletGetOperationMode()` to choose 1920×1080 docked or 1280×720 handheld `[documented]` (`nxquake2` `src/client/vid/glimp_sdl.c` lines 724-736).
 - **Portable saves and crash logs.** nxquake2 forces portable mode so configs, saves and `crash.log` sit next to the NRO on the SD card, which makes bug reports possible `[documented]` (`nxquake2` `src/backends/unix/main.c` line 63). Strip verbose `nxlink` logging from release builds (godot_switch leaves it on).
 - **Ship a CI build.** STK builds its NRO in a devkitA64 container on every push (`stk-code` `.github/workflows/switch.yml`), which is the behaviour `tools/build_benchmarks.sh` provides here for benchmarks.
@@ -183,7 +171,7 @@ These rules come from the postmortems and test rigs of the ports in the [case st
 
 ## Technical details
 
-- Core count and priority: three usable cores, only priority `0x3B` is time-sliced `[reported]` (`sa2-nx`, `nfsmw-nx` as above).
+- Core count and priority: three usable cores `[reported]` (`sa2-nx`, `nfsmw-nx`); `0x3B` enables preemptive multithreading on cores 0 to 2 `[documented]` (`libnx` `kernel/thread.h`); that no other priority is time-sliced is a port observation `[reported]`.
 - Launch mode: the title-override and Album-applet distinction, and the 39-bit address-space default for the homebrew menu under override, are on [Atmosphere and running](../homebrew/atmosphere-and-running.md).
 - Bandwidth: 25.6 GB/s is the theoretical docked figure (1600 MHz, 64-bit bus), 21.3 GB/s the arithmetic for 1331.2 MHz; both are shared by CPU and GPU. See the arithmetic on [rendering](rendering.md).
 - Snapshot deltas, content hashing with "store cards", depth-target clipping and shader-prebuild lists are techniques from recompilation ports (SA2, USF4, Wind Waker HD). They solve problems that a recompiled game's draw stream creates, so read them in the [case studies](case-studies/case-study-sa2.md) before copying any of them to a game written natively.
@@ -201,7 +189,7 @@ These rules come from the postmortems and test rigs of the ports in the [case st
 
 - Do PGO and 2 MB pages help a minimal homebrew scene at stock clocks? Needs a same-scene benchmark with the flag on and off, clocks pinned, model recorded.
 - What queue depth between simulation and rendering keeps three cores busy without adding latency? Needs a sweep of 1-4 frames against measured input-to-display latency.
-- Does `rename`-over-existing fail on the SD card through newlib/libnx, and does `fsync` flush to the card? Needs a small test program run on hardware.
+- Does `fsync` flush to the SD card, and what survives a power cut during a save? Needs a console test; see [storage and saves](storage-and-saves.md#open-questions).
 - Is Erista or Mariko faster under sustained load at stock clocks? Unmeasured; USF4 and NFSMW call their thermal comparison anecdotal.
 
 ## Sources

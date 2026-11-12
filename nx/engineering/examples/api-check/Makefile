@@ -39,9 +39,9 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source
+SOURCES		:=	source ../common
 DATA		:=	data
-INCLUDES	:=	include
+INCLUDES	:=	include ../common
 # This compile check ships no RomFS data, so ROMFS stays unset (upstream deko_basic sets it to romfs).
 #ROMFS		:=	romfs
 

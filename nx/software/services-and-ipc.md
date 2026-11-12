@@ -39,7 +39,8 @@ Selected kernel doorways games and libnx actually use (full list lives on Switch
 | ------ | ---- | ------------ |
 | `0x01` | `SetHeapSize` | Sets the process heap size; backs `malloc` regions. |
 | `0x04` | `MapMemory` | Maps memory into the process address space. |
-| `0x08` | `CreateThread` | Starts a thread (entry function, argument, stack, priority, core). |
+| `0x08` | `CreateThread` | Creates a thread (entry function, argument, stack, priority, core) without running it. |
+| `0x09` | `StartThread` | Starts a created thread. |
 | `0x11` | `SignalEvent` | Wakes waiters on an event handle. |
 | `0x18` | `WaitSynchronization` | Sleeps until one of several handles is signaled, with timeout. |
 | `0x1F` | `ConnectToNamedPort` | Connects to a named kernel port; how `sm:` sessions begin. |
@@ -73,6 +74,20 @@ Handle and session rules:
 - Read `hid` state from shared memory in the steady state (`padUpdate` does this); reserve IPC for setup and configuration changes [documented] (`libnx` `nx/source/services/hid.c`, `nx/include/switch/runtime/pad.h`).
 
 > Unknown: per-service domain-object lifetime tables across firmware versions. SwitchBrew documents the CMIF domain mechanism; this wiki does not yet pin per-service object graphs.
+
+## Follow one request
+
+Take the supported call `psmGetBatteryChargePercentage(&percent)`, a read of the battery level.
+
+1. `psmInitialize()` connects the wrapper to the `psm` service and keeps a session handle; each `libnx` service wrapper does this once at start.
+2. `psmGetBatteryChargePercentage` encodes the command and its arguments in the service's message format and sends it with `SendSyncRequest` (SVC `0x21`).
+3. The kernel carries the message to the service process, which handles it and writes a result and the output value.
+4. The kernel returns to your thread, blocked until then; `libnx` decodes the reply and returns a `Result` and the value.
+5. `psmExit()` closes the session.
+
+`[documented]` as API (`libnx` `services/psm.h`); the message format is `[reverse-engineered]` (SwitchBrew HIPC, oldid 14205). Not every `libnx` call costs the same: a synchronous request blocks the calling thread for a round trip through another process; reading controller state with `padUpdate` reads shared memory and sends no request; waiting on a kernel event (`WaitSynchronization`, SVC `0x18`) blocks until it is signalled. Do not assume a per-frame call is cheap until you know which kind it is.
+
+A request can fail because the service is unavailable, the command does not exist on that firmware, the process lacks access, the arguments are invalid, or the service reported an error; the result's module and description say which ([failure modes](../engineering/errors-and-failure-modes.md#telling-service-failures-apart)). Use the `libnx` wrappers for ordinary work; build IPC by hand only to investigate a protocol. For that, trace a wrapper in `libnx` `nx/source/services/` against the SwitchBrew HIPC page and compare. A worked investigation is not written yet.
 
 ## Homebrew notes
 

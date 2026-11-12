@@ -42,6 +42,9 @@ STALE_PHRASES = [
     (r"\*\*results:\*\* not run on hardware", "the microbenchmarks have Old 3DS and New 3DS results"),
     (r"none has been run for this wiki, and no figure in it", "the benchmark programs that use these recipes have hardware results"),
     (r"pictures (were|are) not compared", "pictures were compared in an emulator; say that, and that hardware is owed"),
+    (r"has \*\*not been run\*\* on a console or an emulator", "the first game's self-test ran in Eden; say what was and was not run"),
+    (r"compile-check program", "the program is now examples/api-check, and only checks signatures"),
+    (r"crash-safe sequence from", "the save design is now two checksummed slots; see storage-and-saves.md"),
     (r"(membench|flushbench|drawbench|icachebench)[^.\n]{0,100}\b(not run on hardware|no results recorded)", "these have Old 3DS and New 3DS results"),
 ]
 

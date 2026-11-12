@@ -1,6 +1,6 @@
 # Case studies: open-source engine ports on Switch (reported results)
 
-SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch-specific code; demanding 3D engines boot and play but inherit the cost of the abstraction. None of the four ports below uses native `deko3d` command control; three go through SDL (srb2-switch, taisei, and SuperTuxKart's gamepad layer) and Godot has its own EGL context with no SDL. All draw through OpenGL or OpenGL ES on Mesa/Nouveau EGL, so none touches Maxwell controls (Zcull, tiling, compression) directly. srb2-switch is the exception in how it draws: it uses SDL2's software framebuffer, not GL. None of the figures were measured by Coffeepot; all are `[reported]` from the vendored trees and their READMEs, at the commits on [source versions](../source-versions.md).
+SDL plus EGL and GLES ports get 2D and modest 3D running fast with little Switch-specific code; demanding 3D engines boot and play but inherit the cost of the abstraction. None of the four ports below uses native `deko3d` command control, so none sets Maxwell features (Zcull, tiling, compression) directly. They split into three rendering paths: a CPU software renderer shown through SDL2's framebuffer (srb2-switch), an SDL window with a GL renderer on Mesa/Nouveau EGL (taisei, and SuperTuxKart for its gamepad layer), and OpenGL ES through the engine's own EGL context with no SDL (Godot). None of the figures were measured by Coffeepot; all are `[reported]` from the vendored trees and their READMEs, at the commits on [source versions](../source-versions.md).
 
 ## When is this useful?
 
@@ -10,7 +10,7 @@ Read this if you are bringing an existing SDL or OpenGL engine to the Switch wit
 
 - Projects: srb2-switch (Sonic fangame on Doom Legacy), taisei (bullet-hell shooter), stk-code (SuperTuxKart), godot_switch (Godot 3.x export target).
 - Companion pages: [rendering](../rendering.md) and [performance and porting](../performance-and-porting.md) for the deko3d path these ports do not take; [toolchain](../../homebrew/toolchain-and-workflow.md) for title override and nxlink.
-- Decision rule up front: if the game is 2D, software-rendered, or a jam prototype and 30 fps at sub-native resolve is acceptable, port via SDL plus GLES. If the goal is 60 fps 3D on **[Maxwell](../../glossary.md#maxwell)**, go deko3d and own the GPU code.
+- Decision rule up front: keep the renderer you already have until a measurement says otherwise. A 2D or software-rendered game goes through SDL as it is. For a 3D engine, profile first (CPU recording time and GPU time separately, see [performance and porting](../performance-and-porting.md)), and replace the OpenGL path with `deko3d` only if the CPU cost of the GL driver is the measured limit; no tree here records a draw-count or frame-rate threshold at which that happens.
 
 ## Per-engine snapshot
 
@@ -46,7 +46,9 @@ Read this if you are bringing an existing SDL or OpenGL engine to the Switch wit
 4. **Pre-converted assets plus sidecar data beat clever packaging** for ports: zip-with-NRO layouts are simple to ship and update [reported].
 5. **One env-var perf win is real:** taisei's `MESA_NO_ERROR=1` in release disables GL error checking to save CPU [reported].
 
-## What it gets wrong (limits of the abstraction)
+## Constraints, observed problems and untested hypotheses
+
+Rows tagged `[documented]` are read from the source; `[reported]` rows are the authors' own statements; `[hypothesis]` rows are inferred from the structure and were not measured.
 
 1. **OpenGL hides Maxwell.** All four go through Mesa/Nouveau EGL or SDL; none sets Zcull, tile modes, or cache policy explicitly. Per-draw overhead and bandwidth waste that deko3d code would attack stay invisible [reported].
 2. **No tiled-cache or bandwidth discipline.** Software upscale and full-res GLES both pay full bandwidth; there is no MSAA or compression tradeoff pass in any port tree examined.

@@ -40,17 +40,28 @@ For console modification and setup, follow [switch.homebrew.guide](https://switc
 
 ## Engineering
 
-Practical guides for writing working, fast homebrew. They build on the reference pages above and label each claim by its evidence (documented, reverse-engineered, measured, reported, hypothesis). No result on these pages is a Coffeepot measurement yet, and no code has been run on a console.
+Practical guides for writing working, fast homebrew. They build on the reference pages above and label each claim by its evidence (documented, reverse-engineered, measured, reported, hypothesis). No result on these pages is a Coffeepot measurement yet. The example programs are built with the pinned toolchain, the pure logic has host tests, and the first game, an audio stream and a memory probe ran in the Eden emulator; **nothing has been run on a console**, and the `deko3d` programs could not run in Eden at all ([verification status](engineering/source-versions.md#verification-status)).
 
-- [A first Switch game](engineering/first-game.md) — one complete, compile-checked program: input, drawing, audio, saves, logging, crash dump, frame timing.
-- [Debugging](engineering/debugging.md) — `nxlink` logging, fatal screens and `addr2line`, crash dumps, Atmosphere crash reports, hangs, GPU errors.
-- [Rendering](engineering/rendering.md) — a correct `deko3d` frame loop, per-slot fences, static upload, command capture, image layout, barriers, port lessons.
-- [Performance and porting](engineering/performance-and-porting.md) — measurement hygiene, reported speed-ups with their conditions, threads, lifecycle, saves, audio, porting checklist.
-- [Source versions](engineering/source-versions.md) — pinned commits, installed toolchain, and what each code example has been checked against.
+Start here:
+
+- [A first Switch game](engineering/first-game.md) — one complete program: input, drawing, audio, versioned saves, logging, crash dump, per-phase timing, with a scripted self-test.
+- [A native deko3d renderer](engineering/deko3d-renderer.md) — a textured, depth-tested cube through two passes with pipelined frames and GPU timing, step by step.
+- [GPU memory and synchronization](engineering/gpu-memory-and-synchronization.md) — visibility, ordering and lifetime; which flag, fence or barrier answers which.
+- [Measuring a program](engineering/profiling-and-benchmarks.md) — what to time, GPU counters, repeatable runs, correctness checks.
+
+By subsystem:
+
+- [Audio](engineering/audio.md) — `audout` streaming, `audren` in outline, padding, underruns.
+- [Lifecycle and threading](engineering/lifecycle-and-threading.md) — focus modes, suspend and exit, priorities and cores.
+- [Memory](engineering/memory-management.md) and [storage and saves](engineering/storage-and-saves.md) — the heap, kernel-reported memory, GPU blocks; RomFS, SD and save data, a crash-tolerant save format.
+- [Debugging](engineering/debugging.md) and [failure modes](engineering/errors-and-failure-modes.md) — `nxlink`, crash reports, `addr2line`, GPU errors; symptom-to-first-check table.
+- [Rendering](engineering/rendering.md), [how a draw reaches the screen](engineering/maxwell-rendering-pipeline.md) — the frame loop, image layout, barriers, the pipeline model.
+- [Performance and porting](engineering/performance-and-porting.md) and [porting existing software](engineering/porting-existing-software.md) — reported speed-ups with their conditions, port checklist, feasibility audit, build, SIMD and PGO.
+- [Source versions](engineering/source-versions.md) — pinned commits, toolchain, verification levels, what each example has and has not been checked against.
 
 ### Case studies by purpose
 
-Each page opens with *When is this useful?* so you can skip the ones that do not match your project. Figures are `[reported]` from the projects' own trees unless a page says otherwise.
+Start with [case studies by engineering question](engineering/case-studies/techniques.md). Each page opens with *When is this useful?* so you can skip the ones that do not match your project. Figures are `[reported]` from the projects' own trees unless a page says otherwise.
 
 - **Native `deko3d` and recompiled ports:** [SA2](engineering/case-studies/case-study-sa2.md), [USF4 and NFSMW](engineering/case-studies/case-studies-demanding-ports.md), [Wind Waker HD](engineering/case-studies/case-study-wind-waker-hd.md), and the overlapping [deko3d stack summary](engineering/case-studies/case-study-deko3d-gpu-stack.md).
 - **OpenGL and SDL engine ports (no frame rates stated in their trees):** [open-engine ports](engineering/case-studies/case-studies-open-engines.md), [dhewm3](engineering/case-studies/case-study-dhewm3.md), [Serious Engine](engineering/case-studies/case-study-serious-engine.md), [nxquake2](engineering/case-studies/case-study-nxquake2.md), and the overlapping [Godot and STK page](engineering/case-studies/case-study-godot-stk-engines.md).

@@ -5,7 +5,7 @@ This page is for a developer whose Switch program prints nothing, aborts with an
 ## Before you start
 
 - Toolchain: devkitA64 r30-1, `libnx` 4.12.0-1, `deko3d` 0.5.0-1 ([source versions](source-versions.md)). The small program that exercises these steps is [a first Switch game](first-game.md).
-- The `nxlink` and crash-dump fragments compile with `-Wall` and zero warnings; none has been run on a console. The fatal-screen workflow is from an archived 2022 guide and the Atmosphere source; it has not been re-run here.
+- The `nxlink` and crash-dump fragments compile with `-Wall` and zero warnings, and the first game's self-test ran in Eden; none has been run on a console, and no fault has been triggered on one. For symptom-first triage see [failure modes](errors-and-failure-modes.md). The fatal-screen workflow is from an archived 2022 guide and the Atmosphere source; it has not been re-run here.
 - Applies to homebrew run under Atmosphere. Error-screen behaviour belongs to the system software, so it can change with firmware.
 
 ## Choose a tool
@@ -14,7 +14,7 @@ This page is for a developer whose Switch program prints nothing, aborts with an
 | ------- | ---------- |
 | Want to see what the program is doing | `printf` over [`nxlink`](../homebrew/toolchain-and-workflow.md#print-debug-text-to-the-pc-with-nxlink) |
 | Error screen with a code | [Fatal error screens](#read-a-fatal-error-screen) |
-| Program disappears or returns to the menu | [Crash dump](#write-your-own-crash-dump) and [Atmosphere's crash reports](#atmospheres-crash-reports) |
+| Program disappears or returns to the menu | [Atmosphere's crash reports](#atmospheres-crash-reports) first, then a [best-effort dump](#write-a-best-effort-crash-dump) |
 | Frame stops, music or system continues | [A hang](#diagnose-a-hang) |
 | Black screen or the GPU stops answering | [GPU errors](#gpu-errors) |
 | Wrong output, no crash | [Compare with a known-good build](performance-and-porting.md#measure-the-way-the-ports-learned-to) |
@@ -39,9 +39,13 @@ Use the `.elf`, not the `.nro`. Build with `-g` so the lines exist; the template
 
 > Unknown: whether the title ID and screen layout are unchanged on current firmware. The guide is from 2022.
 
-## Write your own crash dump
+## Atmosphere's crash reports
 
-libnx calls a user-defined handler on a CPU exception if you provide an exception stack. The `exception-handler` example does this, and so does [the first-game program](first-game.md):
+Atmosphere replaces the system's crash-report module and writes a human-readable report for each crashing process to `/atmosphere/crash_reports/<timestamp>_<title ID>.log` on the SD card, with thread-info dumps under `dumps/`, and does not upload them `[documented]` (`Atmosphere` `docs/components/modules/creport.md`; `stratosphere/creport/source/creport_crash_report.cpp` lines 56, 310, 327; `docs/changelog.md` line 1558). These logs are the first place to look after a crash that left no error screen.
+
+## Write a best-effort crash dump
+
+libnx calls a user-defined handler on a CPU exception if you provide an exception stack. The `exception-handler` example does this, and so does [the first-game program](first-game.md). This is **best effort, not dependable crash capture**: the handler runs on a small dedicated stack after an arbitrary fault, and opening a file and calling `fprintf` need the filesystem service, the C runtime state and its locks to be healthy, which a fault can leave broken. It may work for many crashes and silently do nothing for others. Make Atmosphere's report (above) the primary record, keep the handler small, and do not promise more than it can deliver:
 
 ```c
 alignas(16) u8 __nx_exception_stack[0x1000];
@@ -57,11 +61,7 @@ void __libnx_exception_handler(ThreadExceptionDump* ctx)
 }
 ```
 
-Verification: compiles inside `nx/engineering/examples/first-game`, `-Wall`, no warnings; the example it comes from deliberately writes to address 8 to trigger the handler `[documented]` (`switch-examples` `exception-handler`). Not run. Keep the handler small: it runs on the faulting thread's exception stack, so avoid allocating or locking in it `[hypothesis]`. Resolve the saved `pc` against the `.elf` as above, using the load base your program printed at start.
-
-## Atmosphere's crash reports
-
-Atmosphere replaces the system's crash-report module and writes a human-readable report for each crashing process to `/atmosphere/crash_reports/<timestamp>_<title ID>.log` on the SD card, with thread-info dumps under `dumps/`, and does not upload them `[documented]` (`Atmosphere` `docs/components/modules/creport.md`; `stratosphere/creport/source/creport_crash_report.cpp` lines 56, 310, 327; `docs/changelog.md` line 1558). These logs are the first place to look after a crash that left no error screen.
+Verification: compiles inside `nx/engineering/examples/first-game`, `-Wall`, no warnings; the example it comes from deliberately writes to address 8 to trigger the handler `[documented]` (`switch-examples` `exception-handler`). Not run. Avoid allocating or locking in the handler `[hypothesis]`. Resolve the saved `pc` against the `.elf` as above, using the load base your program printed at start; keep the `.elf` that matches each released `.nro` or the address will resolve to a plausible but wrong function.
 
 ## Diagnose a hang
 
@@ -81,7 +81,7 @@ The debug library (`-ldeko3dd`) adds parameter and state checking and, per the P
 
 ## Measure while you debug
 
-The frame-time statistics in [first-game](first-game.md) (`armGetSystemTick`, printed every 120 frames) are enough to tell a CPU-bound frame (long and steady) from a hitch (rare large values). Keep timing buckets exclusive and record the launch mode and clocks with each number; see [performance and porting](performance-and-porting.md#decide-what-you-are-measuring).
+The per-phase times printed by [first-game](first-game.md) (`begin`, `draw`, `present`, `loop`) show which CPU-side call a long frame spent its time in, and a few rare large values against a steady average point to hitches. They do not separate CPU rendering from GPU execution (a presented-frame interval includes waits and scheduling) and say nothing about GPU time; for that use GPU timestamps ([profiling](profiling-and-benchmarks.md)). Keep timing buckets exclusive and record the launch mode and clocks with each number.
 
 ## Pitfalls
 

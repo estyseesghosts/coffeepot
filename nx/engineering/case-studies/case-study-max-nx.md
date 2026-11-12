@@ -45,13 +45,15 @@ On Maxwell the path is GLES2 via Nouveau Mesa [documented]. Batch discipline is 
 | Loud failure mode | Startup checks data, `.so` symptoms, and syscalls, each with an on-screen error [documented]. |
 | Memory honesty | Refuses applet mode (heap plus image cannot fit); requires title override [documented]. |
 
-## What it gets wrong (costs and traps)
+## Constraints, observed problems and untested hypotheses
+
+Rows tagged `[documented]` are read from the source; `[reported]` rows are the authors' own statements; `[hypothesis]` rows are inferred from the structure and were not measured.
 
 | Cost / trap | Detail |
 | ----------- | ------ |
 | No measured baseline | No fps, splits, or clock guidance; every knob is set blind [documented]. |
 | Privileged syscalls | Needs code-mapping syscalls; stock firmware cannot run it [documented]. |
-| Unpinned threading | Background threads can preempt render submission; no mitigation [documented]. |
+| Unpinned threading | Background threads may preempt render submission; the tree sets no priorities or affinities for them `[documented]`, and no preemption was observed or measured `[hypothesis]`. |
 | Full-rate 1080p docked | Same draws at 2.25x pixels, no dynamic resolution [documented]. |
 | Fragile coupling | Only the 1.7 `arm64-v8a` `.so` resolves; names and offsets baked in [documented]. |
 | Stubbed features | Movies, touch, vibration are stubs/TODOs; silent no-ops [documented]. |

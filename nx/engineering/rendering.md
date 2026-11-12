@@ -8,7 +8,7 @@ Every API call on this page was compiled against the installed headers (see [sou
 
 - Toolchain: devkitA64 r30-1, `libnx` 4.12.0-1, `deko3d` 0.5.0-1, `uam` 1.1.0-2, built with `-Wall` and no warnings. Source commits read are pinned on [source versions](source-versions.md).
 - Applies to the Nintendo Switch family running homebrew through `deko3d` on the NVIDIA **[Tegra X1](../glossary.md#tegra-x1)**. Model and clock differences are on the [GPU](../hardware/gpu.md) and [models](../hardware/models.md) pages.
-- Read [libnx and deko3d](../homebrew/deko3d-and-libnx.md) first for the object model, and [performance and porting](performance-and-porting.md) for how to measure.
+- Read [libnx and deko3d](../homebrew/deko3d-and-libnx.md) first for the object model, [a native renderer, step by step](deko3d-renderer.md) for a complete program, [GPU memory and synchronization](gpu-memory-and-synchronization.md) for ownership rules, and [profiling and benchmarks](profiling-and-benchmarks.md) for how to measure.
 - All code here is C and uses only the public `deko3d.h` API. The upstream examples use the C++ wrapper (`deko3d.hpp`); both call the same functions.
 
 ## Start from the upstream frame loop
@@ -50,7 +50,7 @@ static void frame(DkQueue queue, DkSwapchain swapchain, const DkCmdList bindTarg
 }
 ```
 
-Verification: compiles with devkitA64 r30-1 / `deko3d` 0.5.0-1, `-Wall`, no warnings; not run on hardware. The `bindTarget` lists are built once at setup as in `deko_basic` (lines 134-141).
+Verification: compiles in `api-check`, `-Wall`, no warnings (a signature check: the fragment lacks the shaders and render targets a real frame needs); not run on hardware. The complete working version is in `nx/engineering/examples/deko-renderer`. The `bindTarget` lists are built once at setup as in `deko_basic` (lines 134-141).
 
 - Expected result: the CPU records frame N+1 while the GPU draws frame N, and the CPU only blocks when the GPU is more than `SLOTS` frames behind.
 - Why this is the right wait: `dkQueueWaitFence` makes the **GPU** wait for a fence; it never blocks the CPU. `dkFenceWait` is the CPU-side wait `[documented]` (`Primer.md` "Fences" and "Queues": "Fences can be waited on by the GPU or CPU (using the `dkFenceWait` function)"; `dkQueueWaitFence`: "The GPU can be instructed to wait on a fence"). A fence that may be waited on before its first signal must be zero-initialised, and it must not move in memory while any command list that references it exists `[documented]` (`Primer.md` "Fences").
@@ -138,7 +138,7 @@ Binding limits per stage: 16 uniform buffers, 16 storage buffers, 32 texture bin
 
 ## Barriers, the tiled cache, compression and Zcull
 
-What to do: use the weakest barrier that orders the hazard you have. In order of cost: `DkBarrier_Tiles` (like a Vulkan subpass: ordering within a tile), `DkBarrier_Fragments` (like a render pass), `DkBarrier_Primitives` (completes earlier primitives and compute), `DkBarrier_Full` (completes everything and also disables command-list prefetch) `[documented]` (`deko3d.h` `DkBarrier`). The upstream examples show each use: `DkBarrier_Fragments` before discarding a depth buffer (`Example03_Cube.cpp` line 299), `DkBarrier_Tiles` with `DkInvalidateFlags_Image` between tiled passes (`Example08_DeferredShading.cpp` lines 353-398) and a primitives barrier between compute work (`Example09_SimpleCompute.cpp` line 9).
+What to do: name the hazard before choosing the barrier. A barrier has two independent parts: the **execution scope** (`DkBarrier_*`: what earlier work must finish) and the **cache invalidations** (`DkInvalidateFlags_*`: which caches the next reader must not trust). The header names four modes: `Tiles` (orders tile processing, like a Vulkan subpass), `Fragments` (orders fragment processing, like a render pass), `Primitives` (completes earlier primitives and compute jobs) and `Full` (completes everything and disables command-list prefetch) `[documented]` (`deko3d.h` `DkBarrier`). No source ranks them by measured cost, so do not pick one because it "seems cheapest"; list what each pass reads and writes and what the next pass reads, as in the table on [GPU memory and synchronization](gpu-memory-and-synchronization.md#barriers-by-the-hazard-they-resolve). Rendering to an image and then sampling it needs both the writes finished and the texture cache refreshed. The tiled cache, render-target compression and image layout also affect what is required. The upstream examples show each use: `DkBarrier_Fragments` before discarding a depth buffer (`Example03_Cube.cpp` line 299), `DkBarrier_Tiles` with `DkInvalidateFlags_Image` between tiled passes (`Example08_DeferredShading.cpp` lines 353-398) and a primitives barrier between compute work (`Example09_SimpleCompute.cpp` line 9).
 
 ```c
 dkCmdBufBarrier(cmdbuf, DkBarrier_Fragments, 0);
@@ -154,7 +154,7 @@ Zcull (hardware depth culling) is **on** by default: `dkQueueMakerDefaults` sets
 
 > Unknown: exactly when `dkCmdBufTiledCacheOp(Flush)` must be issued relative to sampling or presenting a tiled target. The header names the operations and the Primer lists them without semantics. Example08 enables the tiled cache around its deferred pass; an experiment that omits the flush and reads the target back would show whether it is required.
 
-- Expected result: fewer pipeline drains than a `Full` barrier everywhere.
+- Expected result: no `Full` barrier where a narrower dependency would do (the saving was not measured here).
 - How it fails: a `Full` barrier between every pass serialises the GPU; too weak a barrier gives one-frame-old or half-written data in the next pass. The debug library (`-ldeko3dd`) adds "parameter and state checking" and warning/error messages `[documented]` (`deko3d` `README.md`); whether it detects a missing barrier is not stated there.
 
 ## Do not read the frame back to answer a gameplay question
@@ -209,7 +209,7 @@ Each item names the port that hit it. All are `[reported]` unless a header or Pr
 if (dkQueueIsInErrorState(queue)) { /* save now; then dkQueueDestroy and exit */ }
 ```
 
-Verification: compiles in the compile-check program, `-Wall`, no warnings; not run on hardware.
+Verification: compiles in the `api-check` program, `-Wall`, no warnings; not run on hardware.
 
 **Prove each side of an A/B actually draws.** USF4's first renderer comparison ran the native renderer without its shader package beside the NRO; it issued 0 draws, presented black screenshots, and "won" at 60 fps. The rule it adopted is a screenshot plus a draw count for every presented frame before any comparison (`usf4-nx` `docs/deko3d-renderer-usf4.md`).
 

@@ -45,7 +45,7 @@ Core assignment:
 | 0–2 | Game threads |
 | 3 | System services and kernel background work |
 
-Assignment is [reported] (ports as above). Only thread priority `0x3B` is time-sliced on a core, with a 10 ms slice, per one port's notes [reported] (`sa2-nx` `docs/porting-guide.md`).
+Assignment is [reported] (ports as above). `libnx` documents `0x3B` as a special priority on cores 0 to 2 that enables preemptive multithreading (`0x3F` on core 3) [documented] (`nx/include/switch/kernel/thread.h`). That threads at other priorities are not time-sliced, and the 10 ms slice, are port observations [reported] (`sa2-nx` `docs/porting-guide.md`); see [lifecycle and threading](../engineering/lifecycle-and-threading.md#threads).
 
 Frame budget: at the 1020 MHz game clock, one 60 fps frame is ~17M cycles per core (1020M ÷ 60), shared by all threads on that core. This is arithmetic from the reported clock above, not a new measurement — actual game throughput is lower because of memory waits and system activity.
 

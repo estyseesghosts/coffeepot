@@ -162,6 +162,11 @@ Storing an image in small square blocks (on the 3DS, 8×8 pixels, with pixels in
 ### Hardware performance counters
 Counters built into a processor that count events such as clock cycles, cache misses or mispredicted branches while code runs. They show *why* code is slow rather than only *how long* it takes. See [CTR CPU optimisation](ctr/engineering/cpu-optimization.md#hardware-performance-counters).
 
+<a name="pcm"></a>
+
+### PCM (pulse-code modulation)
+Uncompressed digital audio: a stream of sample values, one per channel per time step. On the Switch's `audout` it is signed 16-bit, 48,000 samples per second, two channels. See [audio on Switch homebrew](nx/engineering/audio.md).
+
 <a name="adpcm"></a>
 
 ### ADPCM

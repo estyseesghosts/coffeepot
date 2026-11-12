@@ -44,7 +44,9 @@ Title override is the key CPU/memory interaction. `libstratosphere/source/cfg/cf
 | NAND backup plus emuMMC | sysNAND stays clean while tests run on a redirect copy (Hekate backup per Homebrew-Guide) `[documented]`. |
 | `dns.mitm` defaults plus cheat gating | Telemetry filter survives forgotten custom lists; cheats bind to matching build IDs `[documented]`. |
 
-## What it gets wrong (costs and traps)
+## Constraints, observed problems and untested hypotheses
+
+Rows tagged `[documented]` are read from the source; `[reported]` rows are the authors' own statements; `[hypothesis]` rows are inferred from the structure and were not measured.
 
 | Cost / trap | Detail |
 | ----------- | ------ |
