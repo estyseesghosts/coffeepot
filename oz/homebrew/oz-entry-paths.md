@@ -17,6 +17,7 @@ For a research result, record console model, firmware, game and version, process
 | Game-hosted app | [Documented] CivHomebrew requires an established CivSwitch setup using the physical Switch 1 edition of Civilization VII, version 1.0.0; check upstream for the console firmware and host requirements. | Runs CivSwitch JavaScript applications in the host environment. The project's `.civapp` format is not an NX `.nro`. |
 | Game save and script runtime | [Documented] The [Balatro project](https://github.com/Luminger/balatro-switch-rce) describes a Lua environment entered through game save data; obtaining and installing the required save is a separate prerequisite. | Runs within the game process. Its permissions and library access are the host's, not a general system loader. |
 | Privileged native session | [Reverse-engineered] ns2jb demonstrated a tethered SmileBASIC-to-system-process chain on Switch 2 firmware 23.0.1. | Native execution in the demonstrated process contexts, not a kernel or boot compromise. The filesystem escalation was patched in 23.5.0; other versions require separate verification. |
+| Application-slot takeover | [Hypothesis] Investigate ns2jb loader substitution with a native application descriptor on a supported 23.0.1 session. | Hardware process creation, foreground status, resource budget and lifecycle are unverified; see [Path B1](#path-b1-investigate-an-nx-like-application-takeover). |
 | Game plus a new service flaw | [Hypothesis] The demonstrated ns2jb chain makes this a credible *class* of research. No new post-patch escalation is established here. | A separate reachable flaw and a reliable way to use the resulting privileges would still be required. |
 | Compatibility or hardware research | [Hypothesis] Compatibility layers and boot interfaces are distinct potential research surfaces. | Neither an NX compatibility feature nor NX hardware tooling establishes an OZ exploit. |
 
@@ -45,6 +46,64 @@ A host-based runtime can be useful even if no process boundary is crossed. [Hypo
 5. **Turn a result into a developer contract.** Publish a small reproducible example, required toolchain versions, expected output, known failure modes, and separate build and physical-hardware verification. Keep native code, game-hosted code and host-PC helpers clearly identified.
 
 [Reported] The fork's README describes a hardware test with failed acquisition attempts before a successful run; it also describes layout changes associated with a microSD Express support update. These observations are not a reliability estimate for every console. See the [project inventory](project-inventory.md) for other launchers and their stated scope.
+
+## Path B1: investigate an NX-like application takeover
+
+[Hypothesis] The most direct candidate for an NX-like experience on 23.0.1 is to investigate whether the demonstrated loader substitution can start a custom executable as a native OZ application using that application's existing signed metadata. This has **not** been demonstrated by Coffeepot or established by the sources reviewed. The ns2jb author describes substituting an executable while preserving signed metadata and demonstrates ordinary system-module execution; an application launch has additional process-manager, resource and lifecycle requirements. See [ns2jb](ns2jb.md) for the actual chain.
+
+On NX, Atmosphère title override runs homebrew in place of a full application rather than an applet. That provides an application-class budget, not all physical system memory or unrestricted hardware control. A port reports roughly 3 GB of heap on NX, not all 4 GB; see [Atmosphère and running](../../nx/homebrew/atmosphere-and-running.md) and [NX memory](../../nx/hardware/memory.md). On OZ the target is a **measured native application budget**, not a promise of all 12 GB of physical memory.
+
+### Gate 1: reproduce the existing helper
+
+Use the exact supported firmware, entry, fork and instructions for [ns2jb](ns2jb.md). Reproduce the unmodified `ro`-policy helper and its cleanup on a research console. Record process identity, launch result, session state, failures and restoration. Keep an independent known-good control; do not alter the only working configuration while investigating a different target.
+
+**Pass:** Repeated fresh launches demonstrate the documented helper and cleanup under recorded conditions. **Failure means:** Investigate acquisition, layout, connection or cleanup first; it says nothing about whether an application target can work.
+
+### Gate 2: compare the application policy and launch context
+
+With researcher-owned material and supported read access, compare one native application's signed program descriptor with the `ro` helper's descriptor: process type, service permissions, system calls, address-space type, core affinity and priorities. Inspect how an ordinary title reaches the application process manager, obtains its resource limit and becomes foreground. Distinguish metadata that describes allowed resources from allocations actually granted by the running system.
+
+[Reported] The saved Eglantine-related Eden experiment examined four native executables and observed a 39-bit address-space type, core mask `0x3f` and priorities 28–59. The samples and local experiment do not establish a universal policy or an OZ hardware result; see [CPU and memory](../hardware/cpu-and-memory.md). A game's descriptor is not a general-purpose grant of every system capability.
+
+**Pass:** A documented comparison and identified path for observing application creation and its resource limit. **Blocker:** If access to the target descriptor or the appropriate process-manager operation is denied, identify the missing privilege; a readable descriptor alone cannot create a process.
+
+### Gate 3: test a minimal application-slot launch
+
+[Hypothesis] If the existing authorized research session can supply a replacement executable for a valid native application descriptor and the process manager permits an application launch, test a minimal custom program for that *one* researcher-owned title. Reproduce the ordinary title launch as a control. Record the process-manager result, process identity, signed descriptor, foreground status, actual memory limit and allocation results, thread/core permissions, service access and orderly termination. Do not infer an application-class allocation merely from a 39-bit virtual address space.
+
+**Pass:** A reproducible physical-console log showing that the custom executable actually occupies an application context, receives a measured application-class budget and exits so the normal title can launch again. Record all firmware and tool revisions, repetitions and cleanup. **If it starts under `ro` or a different context:** that is useful native execution, but it is not application takeover. **If creation or foreground activation fails:** preserve the exact stage and result; the selected session may lack permissions, or additional lifecycle and process-manager work may be needed. No reviewed source establishes that changing the target descriptor alone is sufficient.
+
+### Gate 4: make the application usable
+
+Only after measuring the application context, bring up one subsystem at a time: runtime entry and logging; heap and threads; application-manager lifecycle; controller input; a display clear and triangle; audio; application-owned save data; suspend, resume and clean exit. For each, compare against the same runtime's existing supported example and log the first failure. [OZ graphics services](../software/services.md) and [GPU](../hardware/gpu.md) describe why the graphics memory, synchronization and presentation stack requires separate work from NX.
+
+**Pass:** A small complete program runs on hardware with the measured budget, accepts input, draws, plays audio, saves and exits, with suspend/resume behavior documented. A successful CPU-only launch does not prove the graphics services, application lifecycle or save system work. The [benchmark plan](../engineering/benchmark-plan.md) records how to measure without treating emulator timings as hardware performance.
+
+### Gate 5: loader, applications and recovery
+
+Once a repeatable application process exists, define a small homebrew loader and application ABI: executable format and relocation, imports, startup arguments, memory ownership, service and GPU resource ownership, error reporting and exit. First use a minimal test application; record the toolchain versions and build, emulator and hardware status separately. Compatibility with NX `.nro` and `libnx` is a later porting task, not a property of the executable file extension.
+
+Add title selection, application launch interception and recovery only after the manual control is repeatable. Record what remains in memory, what is restored, and what requires re-acquiring ns2jb after a host disconnect or cold boot. The saved ns2jb demonstration uses a constrained helper and cleanup; it is not a general title-takeover loader. [Path B](#path-b-work-within-the-demonstrated-native-session) describes its control and failure boundaries.
+
+### What an Atmosphère-like environment adds
+
+[Documented] On NX, Atmosphère combines boot components, a secure monitor, system modules and application-level features; see [Atmosphère and running](../../nx/homebrew/atmosphere-and-running.md). An OZ project can pursue individual features without assuming that an NX component or its privileges port unchanged:
+
+| Feature goal | Separate OZ question | Current evidence |
+| ------------ | -------------------- | ---------------- |
+| Application-slot loader | Can a supported session start a custom program as a foreground application with the target's real budget? | [Hypothesis] Gate 3; not demonstrated in this wiki. |
+| Homebrew ABI and libraries | Can the actual process initialize input, audio, storage, display and GPU safely? | [Hypothesis] Needs per-interface hardware tests and a working loader. |
+| Content overlays | Can a compatible held filesystem session redirect the desired title's content and cleanly restore state? | [Reported] [ns2jb-modloader](https://github.com/SebaaMG/ns2jb-modloader) describes a specific session-based implementation; see [project inventory](project-inventory.md). |
+| More reliable or untethered startup | Can the required session be acquired and recovered without the host connection? | Unknown; the published ns2jb demonstration is tethered. A game-save trigger does not establish system-wide persistence. |
+| Kernel or early-boot modifications | Is an independently demonstrated path available with the required privilege and startup point? | Not established by ns2jb; a new boundary would have to be demonstrated. Kernel access, secure-monitor access and persistent boot control are distinct. |
+
+[Hypothesis] A useful application loader and some overlay features might be achievable without duplicating every NX boot component. Conversely, a feature that requires kernel or early-boot authority cannot be assumed available from a filesystem or ordinary system-module compromise. On 23.5.0 the documented filesystem escalation is patched; a new or different verified entry would be needed for this research on that firmware.
+
+### Use emulation to prepare, hardware to decide
+
+The supplied private `switch2/NX2_NOTES.md` describes a local Eden-derived Switch 2 experiment; it says that work was not upstreamed or pushed. The file is not part of the published wiki. It can guide a researcher toward metadata parsing, application startup and graphics initialization questions, but the recorded runs used automatic success stubs and include deliberately approximate behavior. Do not attribute all local changes to upstream Eglantine or treat a simulated process launch as a hardware authorization result.
+
+Use the emulator to construct a minimal test and locate the first missing initialization step. Then run the equivalent supported probe on hardware and compare process identity, return codes, memory allocation, event order and output. Retain emulator commit, configuration, enabled stubs and firmware context. A matching result is evidence only for the tested operation; emulator frame times are never console measurements. See [differential research](../engineering/research-questions.md#9-which-emulator-assumptions-match-hardware).
 
 ## Path C: investigate a new service boundary
 
@@ -86,91 +145,19 @@ Use a researcher-owned NX test program or suitable host that can run an equivale
 
 ## Research leads: where to look next
 
-The leads below are a prioritized research agenda, not known OZ vulnerabilities. They are grounded in published work, but Coffeepot cannot establish that other researchers have not already tested a particular idea. Start with an entry and a documented control that actually work on the target. For every candidate, write down **attacker-controlled input → first parser → process and permissions → next boundary → intended homebrew result**. Stop when any required step is unavailable; do not count an interface name as reachability.
+These are hypotheses and research priorities, not claims of new or untried vulnerabilities. The detailed controls and reporting requirements are on the [research questions page](../engineering/research-questions.md). For each idea, establish the entry, reachable interface, receiving process, required privileges and useful result before investing in a chain.
 
-### 1. Preserve an old application runtime and build inside it
+| Lead | Evidence and first useful investigation | What remains unproved |
+| ---- | -------------------------------------- | -------------------- |
+| Capability-rich game host | [Documented] CivSwitch and Balatro provide different game-process entries. Test a host's input, rendering, audio, networking and save interfaces using a harmless sample; compare supported game and firmware versions. | A game entry is not a system escape. An old title or embedded runtime is not necessarily vulnerable or launchable on every firmware. |
+| Alternate entry to a known escalation | [Documented] [IZCIVSwitch](https://github.com/byizmysh/IZCIVSwitch/blob/main/DISCLAIMER.md) describes combining Civ7 entry with the known ns2jb filesystem stage. Compare which requests each entry can actually make. | Reusing the same escalation does not make its patched `fs` flaw work on 23.5.0. Different entry paths may have different privileges. |
+| Driver and buffer boundaries | [Reverse-engineered] Historical NX [nvhax research](https://hexkyz.blogspot.com/2018/12/the-switch-memoir.html) found a pointer contract problem in a driver service. Start with a reachable, documented OZ interface and map client, service and buffer ownership; compare normal completion and supported cleanup. | No analogous OZ defect is established. A crash or permission error is not proof of a controlled write. |
+| Patch and neighboring contracts | [Reverse-engineered] SwitchBrew records the ns2jb filesystem fix in 23.5.0. Compare the documented old and new behavior, then examine related reachable operations using a disposable filesystem and bounded, valid controls. | A changed check does not establish a second vulnerability, affected version or usable escalation. |
+| Object identity across components | [Reverse-engineered] The ns2jb author describes a loader/filesystem trust boundary after `fs` compromise. Trace who supplies a researcher's own test object's identity, permissions and content through each supported operation. | A rename or different result is not proof of an authorization bypass; a test requiring an already-privileged `fs` session is not an unprivileged entry. |
+| Asynchronous ownership | [Hypothesis] For a documented operation reachable from the chosen host, compare completion, permitted cancellation and clean close; log event order and buffer ownership. | A timeout or delayed event may be expected. A usable escalation requires a separately demonstrated defect, control and privilege. |
+| Independently reachable input | [Documented] Historical PS4 [PPPwn](https://github.com/TheOfficialFloW/PPPwn) and NX wireless research illustrate different input boundaries. Inventory only interfaces actually present and reachable on the researcher's OZ device; begin with a normal exchange and documented controls. | The PS4 protocol and vulnerability are not evidence of an OZ equivalent. An accessible parser is not an exploit or homebrew loader. |
 
-**Why consider it:** [Documented] CivSwitch and Balatro both demonstrate game-process entry through different application surfaces. On PS4, [Vue After Free](https://github.com/Vuemony/vue-after-free) is a historical example of an old application retaining a vulnerable embedded runtime; that is not evidence that any particular OZ title has the same defect.
-
-**First investigation:** Catalogue games already available to the researcher that contain an interpreter, user-content pipeline or embedded web interface. For each version, record how the input enters, whether a user can supply it without prior privileged access, what the runtime can express and whether the program can save its own state. Inspect upstream engine documentation and independently obtainable symbols or version information when available; do not equate an engine name with a vulnerable build.
-
-**Experiment and decision:** Use a harmless marker program or a supported content example to map input, display, input devices, audio, networking and storage. Record what survives a game restart and what requires a companion computer. A host with a usable scripting interface may already support a game or utility; a parser that only crashes provides no such environment. A vulnerability in an installed game may survive a system update, but the platform may block the title or the game's own update may change it.
-
-**Practical next step:** Extend an existing `.civapp` or Lua sample with a capability manifest and a deterministic save/reload test. This is a lower-cost route to game-scoped homebrew than assuming a native system escape. A successful test demonstrates only the tested host and version.
-
-### 2. Separate entry delivery from escalation
-
-**Why consider it:** [Documented] The [IZCIVSwitch project](https://github.com/byizmysh/IZCIVSwitch/blob/main/DISCLAIMER.md) describes using a Civ7 entry with the known ns2jb filesystem stage. That is an example of changing the initial host while reusing an existing escalation, not a new 23.5.0 escape. The [CivSwitch project](https://github.com/Gezine/CivSwitch) describes its own game entry.
-
-**First investigation:** Compare a game-hosted script runtime, a game with a native-call bridge and a system-process session as distinct rows. For each, record whether it can express a service request, acquire the same service, construct the documented inputs and obtain the same response. Record save installation and computer or accessory requirements independently from the console-side capability.
-
-**Experiment and decision:** Run the same harmless read-only operation through each supported interface; compare actual identity, request and result rather than assuming a shared service name implies identical behavior. If one host cannot express a request, a documented bridge or different host would be needed before testing that route. A surviving game entry on 23.5.0 does not restore the patched `fs` stage.
-
-**Useful artifact:** A compatibility matrix that tells a future developer which entries can host an application, which can reach a candidate boundary and which merely improve delivery. Pin project commits and firmware; do not generalize from one fork's supported version range.
-
-### 3. Check driver assumptions at the process boundary
-
-**Why consider it:** [Reverse-engineered] On NX, [hexkyz's nvhax research](https://hexkyz.blogspot.com/2018/12/the-switch-memoir.html) describes a driver interface whose pointer assumptions changed when the implementation ran in a separate service process. It required several additional primitives to reach process takeover. This is a historical analogy, not a claim that the same command, bug or memory model exists on OZ.
-
-**First investigation:** Starting from a documented graphics or other device interface reachable by the chosen entry, map the calling process, service, transport and allocation ownership. Use the selected runtime's existing sample to identify where data is copied, mapped or returned; distinguish a client address, a handle, a shared-buffer offset and a value interpreted by the service. The OZ [graphics services](../software/services.md) page and the upstream launcher are starting points, not proof of permission.
-
-**Experiment and decision:** With a valid request and researcher-owned buffer, vary supported lengths and lifetimes within the documented client contract. Compare normal completion, documented cancellation and orderly teardown. If the game cannot reach the interface, or the only description is from an emulator stub, record that blocker and choose another candidate. An output difference or crash is not an arbitrary-write primitive.
-
-**Useful artifact:** A diagram of buffer ownership and a minimal valid client with results per context and firmware. This is valuable to driver and homebrew authors even if no security defect is found.
-
-### 4. Follow a patch to neighboring contracts
-
-**Why consider it:** [Reverse-engineered] SwitchBrew documents the 23.5.0 fix for the ns2jb filesystem path-normalization issue. That is an OZ-specific starting point. The PS4 pOOBs4 history illustrates the method of comparing versions to understand a check; it is not evidence that the same filesystem defect exists on OZ. See [pOOBs4](https://github.com/ChendoChap/pOOBs4) and the [SwitchBrew flaw registry](https://switchbrew.org/wiki/Switch_System_Flaws).
-
-**First investigation:** Use legally obtained, version-identified material and available public analyses to identify which input, length, allocation and consuming operation the known fix changes. Build an offline model of the documented path contract. List other operations that accept related path representations, then verify which are actually reachable from the chosen host and which filesystem types and flags apply.
-
-**Experiment and decision:** On separately available supported setups, compare a bounded set of valid and rejected path forms in a disposable filesystem, using a known-good control. Check the exact error and resolved object where observable. Review neighboring length calculations and normalization stages offline; a firmware difference or patched function is a lead, not proof that an adjacent code path is faulty or reachable.
-
-**Useful artifact:** A versioned path-handling table, minimized test corpus and explicit list of unchecked or inaccessible operations. Do not update a console merely to obtain the comparison.
-
-### 5. Ask whether two components agree on the object
-
-**Why consider it:** [Reverse-engineered] The [ns2jb author](https://pepsipu.com/blog/2026-10-switch2-jailbreak-ns2jb/) describes a loader and filesystem boundary where authenticated metadata and the executable filesystem were supplied through separate interactions after `fs` compromise. On PS4, [CTurt's emulator research](https://cturt.github.io/mast1c0re-2.html) shows another kind of cross-process shared-memory trust. Neither example establishes an unprivileged OZ bypass.
-
-**First investigation:** Choose a researcher-owned test resource and diagram who supplies its name, handle, metadata, permissions and content. Identify the first validation and the later consumer, and whether they refer to the same object or separate representations. Determine whether the host can observe either boundary without already possessing the privilege the proposed chain is supposed to obtain.
-
-**Experiment and decision:** With a supported API and disposable files, compare a stable control with a documented close/reopen or rename between *separate* operations. Record the object identity only where the API exposes it, authorization results and data read. Do not claim a check/use flaw merely because a name changes or a load fails. If testing requires privileged filesystem impersonation, label that as a prerequisite and do not sell it as a game-sandbox entry.
-
-**Useful artifact:** A sequence diagram and a list of identities and permissions that can be verified on hardware. An unresolved identity link is a research question, not proof that a forged object will load.
-
-### 6. Audit asynchronous resource ownership
-
-**Why consider it:** [Documented] PS4 research includes distinct object-lifetime defects and network-parser exploits such as [PPPwn](https://github.com/TheOfficialFloW/PPPwn); their causes and affected interfaces are platform-specific. The general lesson is to ask who owns a request, handle or buffer across completion, cancellation and process exit.
-
-**First investigation:** Select an OZ operation that the actual host can invoke and whose ordinary completion is understood. Diagram creation, submission, completion, cancellation and destruction, including event and buffer ownership. Prefer source or a published interface description and identify whether the worker is in the caller, a service or the kernel.
-
-**Experiment and decision:** Compare a successful control with one documented cancellation or close transition per run. Log event order, request state and cleanup using bounded waits; repeat after clean restart. If a timeout makes the operation's outcome unknown, do not repeat it against the same resources. A failed handle lookup or delayed event may be intended behavior; demonstrate a contract violation before assigning cause.
-
-**Useful artifact:** A lifecycle state machine and a reproducible test that improves clients and emulators. Finding a race would still leave reachability, control, privilege and reliability to establish separately.
-
-### 7. Look for independently reachable input, but do not assume PS4 paths exist
-
-**Why consider it:** [Documented] [PPPwn](https://github.com/TheOfficialFloW/PPPwn) reached a PS4 network parser without a browser entry. NX research also documented Bluetooth and local-wireless bugs in different services; consult the [SwitchBrew flaw registry](https://switchbrew.org/wiki/Switch_System_Flaws) for platform and version scope. These are examples of *how to select an input boundary*, not evidence that OZ has PPPoE, the same vulnerable code or a usable equivalent.
-
-**First investigation:** Inventory input the OZ device deliberately accepts in the researcher's own controlled environment: a documented local connection, an owned controller, a game-hosted file or a supported accessory. Identify the first parsing component and whether the input needs pairing, user action, a specific title or a privileged client. Inspect public protocol documentation and the implementation's version provenance before choosing a target.
-
-**Experiment and decision:** Capture a normal exchange with owned devices and compare it with its documented format. Reproduce benign, bounded variations in a local harness or test environment and log acceptance and rejection; do not test other people's devices or online services. If the relevant feature or parser cannot be reached, mark the route blocked. A reachable parser is not evidence of memory corruption or of a path to load homebrew.
-
-**Useful artifact:** An annotated protocol/state diagram and a regression corpus that another researcher can reproduce. A meaningful route would still require demonstrating the affected process and a way to run useful code under its actual restrictions.
-
-### 8. Rank the next step by the missing dependency
-
-[Hypothesis] The practical route with the best near-term return is to combine a capability-rich existing game host with a reusable probe suite. It can support sandboxed applications now and expose measurable service boundaries for later research. A separate bug may never be found; the application and test results remain useful.
-
-| Observation | Next engineering question | Do not conclude |
-| ----------- | ------------------------- | --------------- |
-| A host runs a script | Which input, rendering, audio and save APIs are actually exposed? | That the host loads arbitrary native programs. |
-| A service session opens | Which documented commands are authorized and what process handles them? | That every command is allowed or that the service has useful extra privileges. |
-| A malformed request crashes | Which component failed, and does a minimal input reproduce it after a clean restart? | That the researcher has a controllable memory primitive. |
-| A service process is controlled | What permissions, recovery and loader interfaces are actually available? | That the kernel, secure monitor or boot chain is controlled. |
-| An emulator gives a convenient result | Does equivalent hardware produce the same result? | That the emulator's stub is the console's contract. |
-
-This ranking reflects usefulness and reachability, not a numerical probability. For an experiment's exact controls and expected artifacts, use the [research questions](../engineering/research-questions.md) rather than treating these hypotheses as completed findings.
+The same host can be useful as a game-scoped development environment even if no escalation is found. A reusable capability probe, a minimal reproducer and negative results are valuable outcomes in their own right. [Hypothesis] For an NX-like environment, the application-slot experiment in [Path B1](#path-b1-investigate-an-nx-like-application-takeover) is the most direct next test on a supported ns2jb session.
 
 ## Path E: investigate hardware separately
 
@@ -211,6 +198,4 @@ Do not infer that an application-process entry grants kernel privileges, that a 
 - [HBLauncher](https://github.com/ravensclawx/HBLauncher) — native launcher and project-specific application examples.
 - [IZCIVSwitch disclaimer](https://github.com/byizmysh/IZCIVSwitch/blob/main/DISCLAIMER.md) — project-described Civ7 entry and reuse of the known filesystem stage.
 - [The Switch: a memoir](https://hexkyz.blogspot.com/2018/12/the-switch-memoir.html) — historical NX driver process and pointer-boundary research.
-- [CTurt: mast1c0re compiler attack](https://cturt.github.io/mast1c0re-2.html) — historical PS4 cross-process trust-boundary analysis, not an OZ result.
-- [Vue After Free](https://github.com/Vuemony/vue-after-free) — historical PS4 example of a preserved application runtime, not an OZ result.
-- [pOOBs4](https://github.com/ChendoChap/pOOBs4) and [PPPwn](https://github.com/TheOfficialFloW/PPPwn) — historical PS4 patch analysis and network entry methodology, not OZ vulnerabilities.
+- [PPPwn](https://github.com/TheOfficialFloW/PPPwn) — historical PS4 network entry methodology, not an OZ vulnerability.

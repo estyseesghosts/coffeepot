@@ -18,7 +18,7 @@ A repository containing a launcher, an emulator or a GPU example is not evidence
 
 | Project | What it provides | Assessment |
 | ------- | ---------------- | ---------- |
-| [ns2jb](https://gitlab.com/pepsipu/ns2jb) and [kurumuz/ns2jb](https://gitlab.com/kurumuz/ns2jb) | The privileged native execution chain, its native probes and its debug logs | The strongest evidence for native execution on 23.0.1; the maintained fork documents reliability improvements and firmware-specific memory layouts. Patched as a system escape in 23.5.0 |
+| [ns2jb](ns2jb.md) and [kurumuz/ns2jb](https://gitlab.com/kurumuz/ns2jb) | The privileged native execution chain, its native probes and its debug logs | The strongest evidence for native execution on 23.0.1; the maintained fork documents reliability improvements and firmware-specific memory layouts. Patched as a system escape in 23.5.0 |
 | [HBLauncher](https://github.com/ravensclawx/HBLauncher) | A native AArch64 launcher, an application ABI, examples and Vulkan-backed rendering | An experimental native development environment. It operates inside a privileged, externally established session rather than providing an unrestricted loader, and public issue reports document SDK symbol-resolution failures |
 | [IZ2S Platform](https://github.com/byizmysh/IZ2S-Platform) | A PC-managed launcher and modular applications | Experimental, with varying hardware verification |
 | [libnx-ounce](https://github.com/alula/libnx-ounce) | A fork of the original Switch's `libnx` userland library, ported | A concrete starting point for native API portability, but not a complete or generally supported SDK |

@@ -18,56 +18,7 @@ The [OZ entry paths guide](oz-entry-paths.md) walks through development and rese
 
 ### The first public chain
 
-[Reverse-engineered] The ns2jb chain published on October 21, 2026 runs in four stages:
-
-1. **A Switch game.** SmileBASIC 4 has a 32-bit integer overflow in its interpreter's array-remove operation that yields arbitrary memory reads and writes, and with them code execution inside the game.
-2. **The Switch 2 filesystem service.** A heap buffer overflow in `nn::fs::PathNormalizer::Normalize` turns the game's access into privileged memory reads and writes, and with them filesystem access.
-3. **The Switch 2 program loader.** The exploit replaces the filesystem object that serves executable code, so `ldr` launches a custom native program. Nintendo's loader still validates signed metadata; `fs` supplies the executable content, and after compromising `fs` the exploit substitutes the content while preserving valid signed metadata.
-4. **Native system-module execution.** AArch64 code runs with `ro` permissions, and `fs` is patched and inspected.
-
-#### How the interpreter overflow works
-
-[Reverse-engineered] The interpreter's `REMOVE` command checks `position + count <= array.length` before shifting the remaining elements left, but the sum is a signed 32-bit value and can wrap to a negative number, which still passes the check.
-
-On a string array `R` of length four, `REMOVE R,&H60000000,&H3FFFFFFF` makes `position + count` wrap to `0x9fffffff`. As a negative signed 32-bit integer that is less than `array.length`, so the check passes, and the multiplications by the element size wrap too. The interpreter ends up performing `memmove(backing, backing - 8, 32)`, pulling the eight bytes that precede the array into it.
-
-That is the useful part: the eight bytes preceding any SmileBASIC array hold a pointer to the array itself. After the `REMOVE`, treating `R[0]` as a string therefore treats the array's backing store as string data, which is how a memory read and write primitive is obtained.
-
-The command does report an out-of-memory error, but that does not matter, because the copy has already happened.
-
-#### How the filesystem overflow works
-
-[Reverse-engineered] A path containing a parent-directory component with a backslash, such as `/..\`, reaches a helper that allocates a temporary heap buffer of `0x301` bytes and copies the path into it without checking the length. SwitchBrew's system flaws page describes the same defect from the service side: when path normalization needs to replace a parent directory path, the temporary buffer is fixed at `0x301` bytes while the source path can be up to `PointerBufferSize`, which in `fs` is `0x800` bytes. That is a heap buffer overflow of up to `0x4FF` bytes.
-
-Two conditions gate the copy. The underlying filesystem must allow backslashes in paths (`PathFlags_AllowBackslash`), and in retail only the save-data filesystem does. And exploiting the bug needs a suitable victim allocation and specific heap grooming, which is what makes the chain as fragile as it is; the published research used the `nn::fssystem::BlockCacheBufferedStorage` cache entries as the victim object.
-
-[Reverse-engineered] Once the overflow lands, the process has "FullPermission" and can perform privileged filesystem actions, including dumping internal storage and the ordinary system-module code.
-
-[Reverse-engineered] This is not a signature-forging or a kernel exploit. It is a trust-boundary failure between two privileged system services.
-
-[Reported] The chain also explains why original Switch research mattered: the filesystem API, executable loader, signed metadata and service model were similar enough that Switch 1 reverse engineering made the Switch 2 chain much faster to construct.
-
-[Reported] The original write-up describes the research method as well as the result. The author built a harness around a Switch 1 and a Switch 2 so that the analysis could run unattended; the hardware included JetKVM devices that send controller inputs over USB and return video over HDMI, and a button press was needed to restart the console when it crashed. A large language model was given the goal of jailbreaking the console, and its route through the WebKit browser engine was abandoned in favour of the interpreter overflow described above.
-
-### Why the chain is fragile
-
-[Reverse-engineered] The maintained kurumuz fork of ns2jb documents that the filesystem exploit is extremely timing-sensitive, with success rates as low as roughly 20%. It also documents two observed memory layouts, including a change that followed a microSD Express support update. A layout change can invalidate a working chain even when the console's features have not changed.
-
-[Reverse-engineered] The published demo requires SmileBASIC 4.4.9, system software 23.0.1, Node.js 22 or newer on macOS or Linux, and over 20 MiB free in the SmileBASIC save. The host computer and console must be on the same reachable network; the connection uses port 39380.
-
-The fork describes a native probe that runs two small functions inside `fs`, checks their results and restores the original instructions. Its documented console-side steps are:
-
-```basic
-LOAD "TXT:NS2"
-RUN
-REMOVE NSR,&H60000000,&H3FFFFFFF
-```
-
-That `REMOVE` is the interpreter overflow described above, applied to a different array: the wrapped `position + count` is what produces the read and write primitive, and the "Out of memory" message it prints is expected rather than a failure. It is entered only once per application process. The program then runs the `V=START(...)` line the host prints. Restarting the console restores the original `ro` process, so the demo is not persistent and does not install custom firmware.
-
-[Reported] The fork documents a hardware test of the probe and its cleanup. Acquisition is timing-sensitive; consult its logs for the exact revision and test conditions.
-
-[Reverse-engineered] The demo's native helper is written in Zig 0.15.2 and built with the engine's own script.
+[Reverse-engineered] ns2jb combined a SmileBASIC game entry, an `fs` filesystem-service flaw and a loader trust-boundary attack to demonstrate native system-process execution on 23.0.1. See [ns2jb](ns2jb.md) for the full engineering walkthrough, requirements, demonstrated uses and limits.
 
 ### Other entry points
 
@@ -78,7 +29,7 @@ That `REMOVE` is the interpreter overflow described above, applied to a differen
 | [CivSwitch](https://github.com/Gezine/CivSwitch) | Civilization VII chat XSS and JavaScript-engine exploitation | Game-level code, a network loader, a save-based launcher |
 | [Balatro RCE](https://github.com/Luminger/balatro-switch-rce) | The LÖVE runtime loads save files ahead of the game's original Lua files | A Lua console, native function calls within the game, FTP |
 | [Artemis launcher](https://github.com/alula/switch-artemis-launcher) | Crafted visual-novel save data | Lua execution and HTTP-based tools |
-| [ns2jb](https://gitlab.com/pepsipu/ns2jb) | Integer overflow followed by the system filesystem exploit | Privileged native execution on 23.0.1 |
+| [ns2jb](ns2jb.md) | Integer overflow followed by the system filesystem exploit | Privileged native execution on 23.0.1 |
 
 [Reverse-engineered] CivSwitch is significant because it does not depend on keeping an already-installed, delisted eShop application. It uses the original Switch physical cartridge of Civilization VII, version 1.0.0, and its first stage uses JavaScript running inside the game's embedded interface. Originally a Raspberry Pi Pico acted as a USB keyboard to type the payload into multiplayer chat; [CivSwitchLDN](https://github.com/ItsNerisma/CivSwitchLDN) delivers it over local wireless instead.
 
@@ -86,28 +37,11 @@ That `REMOVE` is the interpreter overflow described above, applied to a differen
 
 [Reverse-engineered] Nintendo has delisted SmileBASIC 4, which affects the availability of the first chain's entry point.
 
-### The 23.5.0 patch
+### Firmware and native execution
 
-[Reverse-engineered] Firmware 23.5.0 fixes the path-normalization overflow described above. The temporary buffer is now allocated with the size of the source path, up to a maximum of `0x600` bytes, so the copy can no longer overrun it. SwitchBrew's system flaws page records the flaw as fixed in 23.5.0, with the result described as an `fs`-sysmodule heap buffer overflow allowing arbitrary read and write.
+[Reverse-engineered] SwitchBrew records the filesystem flaw as fixed in 23.5.0. This blocks the documented escalation, not every game entry or potential future path; see [ns2jb](ns2jb.md) and [firmware](../software/firmware.md).
 
-Because the flaw is in `fs` itself, the fix is not a per-title patch. The patch targets `fs`, rather than the games' own vulnerabilities; 23.5.0 removes the documented `fs` escalation step, not the possibility of another escape.
-
-[Reported] The same conclusion was reached independently by the community through reverse engineering, relayed by Nintendo Life, GameGaz and IT之家, and attributed to the Alula and OatmealDome communities. This is a community conclusion rather than a vendor statement, although in this case the technical fix is independently documented.
-
-The practical result is a split:
-
-- On 23.0.1, game-contained execution could escalate to a privileged system process.
-- On 23.5.0, these game entry points alone remain in their host process; the documented `fs` escape is patched. Later firmware and other chains require separate verification.
-
-Some game-sandbox projects remain available; check each project's supported game and firmware in the [inventory](project-inventory.md). The [firmware page](../software/firmware.md) has the dates and the reasoning.
-
-### What native execution does and does not give you
-
-[Reverse-engineered] The ns2jb chain runs AArch64 code with `ro` permissions inside a system process. That is more than a game sandbox and less than a custom firmware. The levels are separated on the [security page](../software/security.md).
-
-[Reported] The ns2jb author describes an initial game exploit, a filesystem-service vulnerability and a loader trust-boundary attack, ending in code running with system-process privileges. The original write-up's 23.0.1 claim is dated 21 October 2026; do not infer support for a later firmware from it.
-
-[Reported] [HBLauncher](https://github.com/ravensclawx/HBLauncher) offers an experimental native application interface and examples; use its current build and setup instructions, not NX instructions by analogy. Its public issue reports include a hardware failure on firmware 23.0.1 where the launcher failed to resolve `GetNpadState` despite a successful bootstrap and host communication, which is the kind of failure a development guide should anticipate.
+[Reported] [HBLauncher](https://github.com/ravensclawx/HBLauncher) offers an experimental native application interface and examples. Its prerequisites and application ABI are project-specific; a successful exploit bootstrap does not establish that every import or subsystem works.
 
 ## Technical details
 

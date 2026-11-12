@@ -34,6 +34,7 @@ Nintendo Switch 2 is Nintendo's hybrid handheld and TV console, released in 2025
 ## Homebrew
 
 - [State and workflow](homebrew/state-and-workflow.md) — choose a sandbox or native environment, find its actual prerequisites and test a small program.
+- [ns2jb](homebrew/ns2jb.md) — the 23.0.1 game-to-system-process chain, capabilities and limits.
 - [OZ entry paths](homebrew/oz-entry-paths.md) — demonstrated ways to run homebrew and practical research directions.
 - [Why NX entry paths differ](homebrew/nx-entry-paths.md) — software chains, recovery-mode hardware and the boundaries they depended on.
 - [Project inventory](homebrew/project-inventory.md) — what exists, what it provides and how well it has been tested.
