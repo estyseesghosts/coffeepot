@@ -49,6 +49,26 @@ nav = [
   { "Home" = "README.md" },
   { "Global glossary" = "glossary.md" },
   { "Contributing" = "AGENTS.md" },
+  { "Nintendo Switch 2 (OZ)" = [
+    { "Overview" = "oz/index.md" },
+    { "OZ glossary" = "oz/glossary.md" },
+    { "Hardware" = [
+      { "CPU and memory" = "oz/hardware/cpu-and-memory.md" },
+      { "GPU" = "oz/hardware/gpu.md" },
+      { "Display, input and storage" = "oz/hardware/devices.md" },
+    ] },
+    { "Software" = [
+      { "System and security" = "oz/software/system.md" },
+      { "Switch compatibility mode" = "oz/software/compatibility.md" },
+    ] },
+    { "Homebrew" = [
+      { "Environments and workflow" = "oz/homebrew/state-and-workflow.md" },
+    ] },
+    { "Engineering" = [
+      { "NX comparison and porting" = "oz/engineering/nx-comparison.md" },
+      { "Graphics and performance" = "oz/engineering/graphics-and-performance.md" },
+    ] },
+  ] },
   { "Nintendo 3DS (CTR)" = [
     { "Overview" = "ctr/index.md" },
     { "CTR glossary" = "ctr/glossary.md" },
