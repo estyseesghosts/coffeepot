@@ -19,6 +19,25 @@ This is a source-level porting checklist, not a tested build recipe. No example 
 | Storage | NX internal flash and SD; system-managed saves. | UFS and microSD Express; system-managed access remains context-dependent. | Preserve the distinction between content, temporary files and saves; test commit and recovery in the selected host. |
 | Compatibility | Original execution target. | Compatibility modules adapt many NX titles ([details](../software/compatibility.md)). | A working NX title under compatibility is valuable evidence for that path only, not proof of native OZ behavior. |
 
+## What carries over
+
+[Reported] A survey of public Switch 2 work rates reuse of original Switch technology as follows:
+
+| Area | Reuse | Explanation |
+| ---- | ----- | ----------- |
+| ARM64 programming | High | Same instruction-set family, different microarchitecture |
+| Horizon concepts | High | Services, IPC, SVCs, processes and permissions remain recognizable |
+| RomFS/ExeFS concepts | High | Existing filesystem and executable abstractions remain relevant |
+| Switchbrew research | High | Directly useful for understanding new services and vulnerabilities |
+| Existing game logic | High | Portable C and C++ code generally survives |
+| `libnx` source | Partial | Active experimental ports exist, but not full compatibility |
+| Atmosphère source | Partial | Individual libraries and modules can be adapted |
+| deko3d and Maxwell GPU code | Low | Switch 2 uses Ampere and newer graphics interfaces |
+| Existing `.nro` binaries | Not generally drop-in | No equivalent unrestricted native homebrew environment |
+| fusee-gelee and hekate boot methods | None | No equivalent publicly released Switch 2 boot compromise |
+
+The strongest evidence of practical reuse is [libnx-ounce](https://github.com/alula/libnx-ounce), a fork of the original Switch's `libnx`, and [Ozone](https://github.com/alula/Ozone), which attempts to port parts of Atmosphère. Ozone's README explicitly says it is not full Switch 2 custom firmware and very likely never will be.
+
 ## Port in small steps
 
 1. Build portable logic separately and run its existing host tests. Preserve deterministic input and expected output.
@@ -32,12 +51,20 @@ This is a source-level porting checklist, not a tested build recipe. No example 
 
 [Reported] Eglantine's sampled native binaries use a `0x3f` affinity mask, not a universal six-core promise. [Reverse-engineered] Compatibility hooks adapt timing and other behavior; use the runtime's time API rather than treating raw counter ticks as a portable time unit. The comparison uses the references linked from the table, not new Coffeepot measurements.
 
+Two changes are worth calling out because they break tooling rather than game code:
+
+- The original Switch's removable-storage content used NAX0; Switch 2 uses NAX1, and content directories use the newer `.nca.CONCAT` naming.
+- The internal storage layout is a four-LUN UFS arrangement rather than the original Switch's eMMC layout.
+
+Both are on the [devices page](../hardware/devices.md).
+
 ## Pitfalls
 
 - **Build succeeds but launch fails:** check application format, ABI and entry point for the selected launcher, not just CPU architecture.
 - **Service call fails:** record the result and check process permissions and interface version before assuming the service is absent.
 - **GPU hangs or corrupts output:** check resource lifetime, visibility and synchronization in the actual backend; NX barriers are not automatically an OZ contract.
 - **Different speed or timing:** check output mode, workload and timing source before changing simulation behavior.
+- **Timing drifts:** under compatibility mode the system tick differs from the original Switch's; see [compatibility mode](../software/compatibility.md).
 
 ## Open questions
 
@@ -49,3 +76,5 @@ Per-runtime memory limits, supported graphics APIs, stable profiling tools and m
 - [SwitchBrew T239](https://switchbrew.org/wiki/Switch_2:_Tegra_T239) — hardware comparison.
 - [Eglantine NX2 notes](https://github.com/Eglantine-Community/Eglantine/blob/nx2/NX2_NOTES.md) — sampled native process capabilities.
 - [ns2jb research](https://pepsipu.com/blog/2026-10-switch2-jailbreak-ns2jb/) — execution context.
+- [libnx-ounce](https://github.com/alula/libnx-ounce) — a port of the original Switch's userland library.
+- [Ozone](https://github.com/alula/Ozone) — Atmosphère component porting and its stated limits.

@@ -56,17 +56,23 @@ nav = [
       { "CPU and memory" = "oz/hardware/cpu-and-memory.md" },
       { "GPU" = "oz/hardware/gpu.md" },
       { "Display, input and storage" = "oz/hardware/devices.md" },
+      { "Controllers" = "oz/hardware/controllers.md" },
     ] },
     { "Software" = [
       { "System and security" = "oz/software/system.md" },
+      { "Firmware" = "oz/software/firmware.md" },
+      { "Security model" = "oz/software/security.md" },
+      { "Graphics and system services" = "oz/software/services.md" },
       { "Switch compatibility mode" = "oz/software/compatibility.md" },
     ] },
     { "Homebrew" = [
       { "Environments and workflow" = "oz/homebrew/state-and-workflow.md" },
+      { "Project inventory" = "oz/homebrew/project-inventory.md" },
     ] },
     { "Engineering" = [
       { "NX comparison and porting" = "oz/engineering/nx-comparison.md" },
       { "Graphics and performance" = "oz/engineering/graphics-and-performance.md" },
+      { "Benchmark plan" = "oz/engineering/benchmark-plan.md" },
     ] },
   ] },
   { "Nintendo 3DS (CTR)" = [

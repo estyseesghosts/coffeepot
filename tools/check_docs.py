@@ -27,7 +27,7 @@ ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 EXTERNAL = "--external" in sys.argv[1:]
 ROOT = os.path.abspath(ARGS[0] if ARGS else os.path.join(os.path.dirname(__file__), ".."))
 SKIP_DIRS = {".git", "private_please_gitignore", "build"}
-CONSOLE_DIRS = {"ctr", "nx"}
+CONSOLE_DIRS = {"ctr", "nx", "oz"}
 
 
 # Statements that were true until results arrived and are false now. A page that repeats one needs updating.
