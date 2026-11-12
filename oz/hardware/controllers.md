@@ -8,7 +8,7 @@ Input reaches a game through Horizon's input services and the runtime the game i
 
 ## How it works
 
-The Joy-Con 2 are identified on the bus by a new set of HID input report identifiers, and they carry their own radio, motion sensors and magnetometer. Unlike the original Joy-Con, they also support mouse input, which is exposed through the same controller path rather than as a separate device type.
+The Joy-Con 2 are identified on the bus by a new set of HID input report identifiers, and they carry their own radio, motion sensors and magnetometer. Unlike the original Joy-Con, they also support mouse input, whose exposure to software depends on the input API and execution environment.
 
 ## Technical details
 
@@ -25,7 +25,7 @@ The Joy-Con 2 are identified on the bus by a new set of HID input report identif
 | Amplifier | Analog Devices MAX98388 | Analog Devices MAX98388 |
 | NFC | — | NXP Semiconductors PN71602 |
 
-The right-hand controller carries the near-field communication chip that the original Switch's right Joy-Con did not.
+The right-hand controller carries a near-field communication chip. The original Switch right Joy-Con also supports NFC.
 
 ### Input reports
 

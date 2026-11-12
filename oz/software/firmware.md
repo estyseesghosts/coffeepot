@@ -8,7 +8,7 @@ Firmware starts the boot chain and then Horizon; the chain itself is described o
 
 ## How it works
 
-Firmware ships in two forms: a version installed on the console, and a version that a packaged title or cartridge was built against. A title declares the SDK version it expects, and the console's own version decides which protections and which service behaviour apply.
+The installed system version and the SDK version used to build a title are different things. Both can affect behavior: the system supplies services and enforcement, while the title contains code built against a particular SDK.
 
 ## Technical details
 
@@ -46,12 +46,12 @@ The source table also carries a build-date column, which is empty for every vers
 
 This is the flaw the first public Switch 2 exploit chain used to escalate out of a game and into a privileged system process, so 23.5.0 removes that escalation path.
 
-[Reported] Nintendo did not publish a patch note describing the change. Community reverse engineering and reporting from late November 2026 reached the same conclusion independently, relayed by Nintendo Life, GameGaz and IT之家, and attributed to the Alula and OatmealDome communities. Reporting dates the update to November 9; SwitchBrew's version table dates it to November 10, 2026 (UTC).
+[Reported] Nintendo did not publish a patch note describing the change. Community reverse engineering and reporting in November 2026 reached the same conclusion independently, relayed by Nintendo Life, GameGaz and IT之家, and attributed to the Alula and OatmealDome communities. Reporting dates the update to November 9; SwitchBrew's version table dates it to November 10, 2026 (UTC).
 
 The game-level vulnerabilities themselves survive. The distinction that matters in practice:
 
-- Before 23.5.0, a chain starting in a game could escalate to a privileged system process.
-- From 23.5.0, the known game entry points are confined to the game process they started in.
+- On 23.0.1, the published chain starting in a game escalated to a privileged system process.
+- On 23.5.0, the documented `fs` escalation is patched. A game entry alone still runs with its host process permissions; other chains and later versions require separate verification.
 
 > Unknown: Nintendo's own account of what 23.5.0 changed has not been published, so the intent behind the fix is inferred from the change itself rather than documented.
 

@@ -40,9 +40,9 @@ The services in the middle layer are on the [graphics and system services page](
 
 These are values extracted from particular SDK builds, not a hardware specification. The same research notes that some resource limits are obtained dynamically from the GPU, so static analysis of an SDK build cannot establish everything.
 
-[Reverse-engineered] The GPU itself is relatively well established: a 1,536-core Ampere GPU with dedicated ray-tracing and tensor hardware. These are arithmetic lanes, not independent CPU cores; counts alone do not predict frame rate. Clock, power, memory traffic and the work submitted all matter.
+[Reverse-engineered] The GPU itself is relatively well established: a 1,536-core Ampere GPU; NVIDIA separately confirms dedicated ray-tracing and tensor hardware for Switch 2. The 1,536 count refers to shader arithmetic cores, not the specialized units or independent CPU cores; counts alone do not predict frame rate. Clock, power, memory traffic and the work submitted all matter.
 
-[Documented] NVIDIA's GA102 whitepaper is useful background, but it describes a different implementation. Its cache capacities, unit counts and desktop API support cannot be transplanted to T239. The whitepaper also covers two quite different Ampere families: GA10x, the gaming parts with RT cores, and GA100, the datacenter parts without. An A100 optimization guide does not describe a Switch 2.
+[Documented] NVIDIA's GA102 whitepaper is useful background, but it describes a different implementation. Its cache capacities, unit counts and desktop API support cannot be transplanted to T239. Ampere includes different gaming and datacenter implementations; an A100 optimization guide is not a T239 specification.
 
 ### Telling limits apart
 

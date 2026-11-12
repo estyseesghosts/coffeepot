@@ -21,7 +21,7 @@ This is a source-level porting checklist, not a tested build recipe. No example 
 
 ## What carries over
 
-[Reported] A survey of public Switch 2 work rates reuse of original Switch technology as follows:
+The following is a qualitative porting assessment, not a measurement of source compatibility:
 
 | Area | Reuse | Explanation |
 | ---- | ----- | ----------- |
@@ -34,7 +34,7 @@ This is a source-level porting checklist, not a tested build recipe. No example 
 | Atmosphère source | Partial | Individual libraries and modules can be adapted |
 | deko3d and Maxwell GPU code | Low | Switch 2 uses Ampere and newer graphics interfaces |
 | Existing `.nro` binaries | Not generally drop-in | No equivalent unrestricted native homebrew environment |
-| fusee-gelee and hekate boot methods | None | No equivalent publicly released Switch 2 boot compromise |
+| Fusée Gelée and Hekate | Not transferable as a boot path | Fusée Gelée targets the T210 boot ROM; Hekate is a separate NX payload. See [entry paths](../homebrew/nx-entry-paths.md). |
 
 The strongest evidence of practical reuse is [libnx-ounce](https://github.com/alula/libnx-ounce), a fork of the original Switch's `libnx`, and [Ozone](https://github.com/alula/Ozone), which attempts to port parts of Atmosphère. Ozone's README explicitly says it is not full Switch 2 custom firmware and very likely never will be.
 

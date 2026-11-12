@@ -34,19 +34,22 @@ Nintendo Switch 2 is Nintendo's hybrid handheld and TV console, released in 2025
 ## Homebrew
 
 - [State and workflow](homebrew/state-and-workflow.md) — choose a sandbox or native environment, find its actual prerequisites and test a small program.
+- [OZ entry paths](homebrew/oz-entry-paths.md) — demonstrated ways to run homebrew and practical research directions.
+- [Why NX entry paths differ](homebrew/nx-entry-paths.md) — software chains, recovery-mode hardware and the boundaries they depended on.
 - [Project inventory](homebrew/project-inventory.md) — what exists, what it provides and how well it has been tested.
 
 ## Engineering
 
 - [NX comparison and porting](engineering/nx-comparison.md) — similarities, differences and a migration checklist.
 - [Graphics and performance](engineering/graphics-and-performance.md) — how to investigate an Ampere workload without assuming desktop features or unsupported APIs.
+- [Research questions](engineering/research-questions.md) — proposed hardware experiments and useful results for future investigation.
 - [Benchmark plan](engineering/benchmark-plan.md) — what a Switch 2 benchmark suite should measure and how.
 
 ## Notes and open questions
 
 The execution paths described here are version-sensitive. No OZ example or benchmark in Coffeepot has been built or run on hardware. Published hardware capacities do not establish per-process budgets, sustained clocks, or access from a particular launcher. Record the console, firmware, entry point and project revision with every result.
 
-Firmware 23.5.0 patched the system-level exploit, so the privileged native environment described here was demonstrated on 23.0.1 and is not expected to work on current firmware; the [homebrew page](homebrew/state-and-workflow.md) has the detail, and the [firmware page](software/firmware.md) has the dates.
+Firmware 23.5.0 patched the system-level exploit, so the privileged native environment described here was demonstrated on 23.0.1 and its documented `fs` escape is patched in 23.5.0; the [homebrew page](homebrew/state-and-workflow.md) has the detail, and the [firmware page](software/firmware.md) has the dates.
 
 ## Sources
 

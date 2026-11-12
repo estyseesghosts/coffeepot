@@ -22,7 +22,7 @@ The kernel manages processes, memory and threads; system processes provide servi
 
 [Reverse-engineered] A listed call is not proof that a given process can invoke it. Consult the kernel reference for signatures and check return values and permissions on the exact firmware.
 
-For GPU memory especially, understanding why these interfaces exist matters as much as their signatures. The original Switch's model did not need an explicit attribute-setting step or a separate sharable-memory lock, and the difference is what a native port has to accommodate.
+For GPU memory especially, understanding why these interfaces exist matters as much as their signatures. Their presence does not establish that every allocation or homebrew graphics runtime must invoke them directly; check the selected runtime and its driver interface.
 
 ### Process metadata
 

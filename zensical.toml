@@ -67,11 +67,14 @@ nav = [
     ] },
     { "Homebrew" = [
       { "Environments and workflow" = "oz/homebrew/state-and-workflow.md" },
+      { "OZ entry paths" = "oz/homebrew/oz-entry-paths.md" },
+      { "Why NX entry paths differ" = "oz/homebrew/nx-entry-paths.md" },
       { "Project inventory" = "oz/homebrew/project-inventory.md" },
     ] },
     { "Engineering" = [
       { "NX comparison and porting" = "oz/engineering/nx-comparison.md" },
       { "Graphics and performance" = "oz/engineering/graphics-and-performance.md" },
+      { "Research questions" = "oz/engineering/research-questions.md" },
       { "Benchmark plan" = "oz/engineering/benchmark-plan.md" },
     ] },
   ] },

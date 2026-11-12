@@ -28,31 +28,31 @@ The software environment that adapts original Switch titles to Switch 2. It is n
 
 ### Cortex-A78C
 
-The Arm processor core used in the Switch 2's main chip, eight of which run at up to 1 GHz in the retail console. It is a successor to the Cortex-A57 of the original Switch; see [CPU and memory](hardware/cpu-and-memory.md).
+The Arm processor core identified in the Switch 2's main chip; community research identifies eight cores. It is a successor to the Cortex-A57 of the original Switch; see [CPU and memory](hardware/cpu-and-memory.md).
 
 <a name="ampere"></a>
 
 ### Ampere
 
-The NVIDIA GPU architecture used in the Switch 2's main chip, a successor to the [Maxwell](../nx/glossary.md#maxwell) GPU of the original Switch. "Ampere" also names an unrelated datacenter GPU family, so desktop Ampere specifications do not automatically describe this console; see [GPU](hardware/gpu.md).
+The NVIDIA GPU architecture used in the Switch 2's main chip, a successor to the [Maxwell](../nx/glossary.md#maxwell) GPU of the original Switch. Ampere includes distinct gaming and datacenter implementations, so desktop specifications do not automatically describe this console; see [GPU](hardware/gpu.md).
 
 <a name="npdm"></a>
 
 ### NPDM
 
-The Nintendo Program Descriptor Meta, the metadata blob that describes a program to Horizon: its address space, its core affinity mask, the services it may use, the system calls it may make and its resource limits. Reading a program's NPDM is how you learn what it is actually permitted to do; see [system and security](software/system.md).
+The Nintendo Program Descriptor Meta, the metadata blob that describes a program to Horizon: its address space, its core affinity mask, the services it may use, the system calls it may make and its resource limits. The NPDM is a starting point for determining permissions; the kernel and compatibility environment can modify effective capabilities; see [system and security](software/system.md).
 
 <a name="acid"></a>
 
 ### ACID
 
-Application Cache ID, the identifier Horizon uses to find an application's cached content and data. Its layout is version-dependent, so a parser written for one console generation may misread another's; see [system and security](software/system.md).
+A signed access-control descriptor within program metadata, containing authorization information and capabilities. Its layout differs across console generations, so parsers must account for the version; see [system and security](software/system.md).
 
 <a name="nro"></a>
 
 ### NRO
 
-The Nintendo Relocatable Object, the executable container format used by homebrew on the original Switch. No unrestricted Switch 2 environment loads `.nro` files; see [homebrew environments and workflow](homebrew/state-and-workflow.md).
+The Nintendo Relocatable Object, the executable container format used by homebrew on the original Switch. A file in this format still needs a compatible loader and execution environment; see [homebrew environments and workflow](homebrew/state-and-workflow.md).
 
 <a name="romfs"></a>
 
@@ -100,7 +100,7 @@ Nintendo's graphics interface for the original Switch, a predecessor of NVN2. Un
 
 ### Synchronization point (syncpoint)
 
-A kernel object that lets one processing unit signal that it has finished work another is waiting on. Switch 2 graphics work uses these to order GPU queues against the display; see [graphics services](software/services.md).
+A hardware synchronization counter used to coordinate work across engines. The available interface and its semantics depend on the runtime; see [graphics services](software/services.md).
 
 <a name="gameshare"></a>
 

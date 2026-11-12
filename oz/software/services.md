@@ -8,7 +8,7 @@ The kernel, the process model and the system calls are on the [system and securi
 
 ## How it works
 
-Most Horizon services are unchanged in shape from the original Switch. A program opens a session to a service by name, then issues commands with a handle and a request structure; the service enforces the caller's capabilities from the requesting process's [NPDM](../glossary.md#npdm).
+Horizon retains named services and session-based requests. Service-manager access controls and individual services restrict what a caller can do; effective permissions depend on the process and environment, not merely a service name.
 
 Switch 2 adds services that did not exist on the original Switch, and SwitchBrew documents them separately from the original Switch's service list. Several are exclusive to Switch 2.
 
@@ -20,20 +20,12 @@ Switch 2 adds services that did not exist on the original Switch, and SwitchBrew
 
 | Service | Purpose |
 | ------- | ------- |
-| `vi2:v`, `vi2:m1`, `vi2:m2`, `vi2:nv` | Display and video input on Switch 2; the successor to the original Switch's display service |
-| `vic:u` | Video input and related camera handling |
-| `syncpt:s`, `syncpt:v` | Synchronization points for the system and for video work |
+| `vi2:v`, `vi2:m1`, `vi2:m2`, `vi2:nv` | SwitchBrew lists these VI2 service names; the saved page does not document their individual roles |
+| `vic:u` | Listed on the VI2 page; individual role not established there |
+| `syncpt:s`, `syncpt:v` | Listed synchronization-related service names; permissions and individual roles require verification |
 | `gsv` | The graphics service, described below |
-| `adraw` | An additional drawing or addressable render path |
-| `t23x` firewalls | Per-GPU firewall rules controlling which processing units may reach the GPU |
-| `bch`, `bct`, `mb1-bct` | Boot chain hash and boot configuration tables, read from the boot chain |
-| `psc-bl` | The PSC-BL bootloader stage |
-| `da9092` | An audio codec component |
-| `max77851` | The power management and audio amplifier device |
-| `camera`, `capture2` | Camera and screen capture services |
-| `dt`, `ts`, `bpmp` | Device tree, thermal and power management services |
-| `imf`, `lrp`, `speech` | Imaging, lighting and speech services |
-| `pro controller`, `setting applet`, `system settings` | Controller, and system settings applets |
+| `adraw` | A graphics-related interface with framebuffer and image commands |
+| Camera and capture services | Separate SwitchBrew pages describe camera and capture interfaces; availability varies by process |
 
 The list is a documentation boundary, not a capability statement. A service being documented does not mean a homebrew process may open it: service access control is enforced per process, and an ordinary game or sandbox program will be refused most of these.
 
@@ -53,7 +45,7 @@ Its documented commands fall into groups:
 | Synchronization | `SyncptSession` with `Ping`; `GetEventIdRange`, `CreateEvent`; `RequestKUserWorkerSession`, `GetKUserWorkerSession` |
 | Debug | `CreateDebugSyncDevice`, `DestroyDebugSyncDevice`, `CreateDebugSyncCounter`, `DestroyDebugSyncCounter`, `ReportDebugSyncCounterValue` |
 
-The `KUserWorkerSession` exposes `CreateGpuMemory` and `DestroyGpuMemory`, which is where GPU-visible memory is allocated. The `DisplaySession` and `VideoDecoderCreatorSession` and `VideoEncoderCreatorSession` groups cover presentation and the hardware video paths.
+The documented `KUserWorkerSession` includes commands named `CreateGpuMemory` and `DestroyGpuMemory`; their existence does not establish a general allocation recipe. The `DisplaySession` and `VideoDecoderCreatorSession` and `VideoEncoderCreatorSession` groups cover presentation and the hardware video paths.
 
 [Reverse-engineered] Eglantine's Switch 2 notes describe separate interfaces for `gsv`, `gpu` and `vi2`, and identify work on GPU memory registration, synchronization points and Ampere command processing. They also record the interface-level detail that GPU memory carries attributes, and that the switch's GPU is shared with the display path, so synchronization points have to order work across both.
 
@@ -63,7 +55,7 @@ The `KUserWorkerSession` exposes `CreateGpuMemory` and `DestroyGpuMemory`, which
 
 [Documented] GameChat is the Switch 2's system-level voice, video and screen-sharing feature, described on the [devices page](../hardware/devices.md). It is not a service a game opens directly; it is built out of several.
 
-[Reported] Eglantine's notes show the pieces a retail title touches while GameChat is present. The `chat:u` service is registered from the friends process, and a title that runs `nn::chat::Initialize` at boot waits for it. GameChat's own module, program ID `2162-0001`, initializes through `nn::chat::gsv::Initialize`, which sends the `gsv` command pair `1201` then `1202`; the second must return a session, and on that session a TIPC command returns an identifier that must not exceed `0x3ff`.
+[Reported] Eglantine's notes show the pieces a retail title touches while GameChat is present. A title that runs `nn::chat::Initialize` waited for `chat:u` in the emulator; the developers registered a substitute from their emulated friends process. Their trace identifies GameChat's own module with error `2162-0001`; that module initializes through `nn::chat::gsv::Initialize`, which sends the `gsv` command pair `1201` then `1202`; the emulator implementation supplies a session for the second; the observed client checks an identifier against `0x3ff`.
 
 [Reported] The same notes record the camera path: `nn::camera::sdk::CreateCameraContext` sends `gsv` `601` then `602`, and the second must return the camera context session. GameChat's local camera video storage is three 384 × 216 images in format `0x38`, and their buffer size is negotiated with `gsv` `1291` and `1211`.
 
@@ -73,7 +65,7 @@ These are observations from an emulator implementation, which is a primary sourc
 
 Treat "the service exists" and "my process may use it" as separate questions, and log the answer to both. When a session request fails, record the service name, the process type and the returned result before changing anything: an unavailable service, a denied capability and a changed protocol all present as a failed call.
 
-GPU memory is the usual first thing a native program reaches for and the usual first thing that fails. Establish allocation, visibility and synchronization from the runtime you are actually in, using its own examples, before writing a renderer; see [graphics and performance](../engineering/graphics-and-performance.md).
+GPU memory allocation and visibility are important early checks for a native renderer. Establish allocation, visibility and synchronization from the runtime you are actually in, using its own examples, before writing a renderer; see [graphics and performance](../engineering/graphics-and-performance.md).
 
 ## Sources
 

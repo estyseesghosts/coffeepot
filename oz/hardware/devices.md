@@ -53,9 +53,9 @@ This matters beyond parsing: the microSD Express support update described in the
 
 | Release | What it holds |
 | ------- | ------------- |
-| Ordinary game card | The full game data |
+| Ordinary game card | Game data on the card; updates or additional downloads can still be required |
 | Game-Key Card | An authorization key rather than the full game data; the game must still be downloaded, but the card remains necessary to launch it |
-| Switch 2 Edition release | A release specifically for the newer console |
+| Switch 2 Edition | A version enhanced for Switch 2; distribution can vary by release |
 
 [Documented] The Game-Key Card flow is: insert the card, download the game, then play by inserting the card again as with any physical release. An internet connection is needed only for the first launch, after which the game starts offline, but the card must be in the console to run it at all. A Nintendo Account is not required to download the data, and the free space needed is stated on the card's packaging.
 
@@ -69,17 +69,15 @@ The Game-Key Card distinction is the interesting one for tooling: it separates t
 
 [Documented] GameChat is a Switch 2 feature for voice chat, video chat, screen sharing and playing together with friends. A group of up to twelve can take part in a room, and up to four of them can share video or their screen at once. Video chat needs a compatible USB camera, sold separately as the Nintendo Switch 2 Camera; voice chat uses the console's built-in microphone. The C button on Joy-Con 2, the Pro Controller and the GameCube Controller opens the C menu that drives the whole feature, and the HOME menu is the fallback for controllers without one.
 
-[Documented] GameShare runs software together over the internet through GameChat. A Switch 2 console is required both to host and to join a GameShare session over the internet; a Nintendo Switch console can only join one hosted by a Switch 2, over local wireless.
+[Documented] GameShare also supports local play. Over the internet it uses GameChat and requires Switch 2 consoles at both ends; an original Switch can join a compatible Switch 2 host over local wireless.
 
 [Documented] GameChat requires a Nintendo Switch Online membership and a persistent internet connection, with a connection test during setup. During the GameChat open-access period, from June 5, 2025 to March 31, 2026, it could be used without a membership.
 
-These are platform features rather than APIs, but they matter to the systems they use: GameChat holds microphone, camera and screen-capture resources for as long as a room is open, and the underlying services are a research question rather than a documented interface. See the [graphics and system services page](../software/services.md).
+These are platform features rather than APIs, but they matter to the systems they use: The underlying microphone, camera and screen-capture interfaces exposed to a game or homebrew runtime require separate verification. See the [graphics and system services page](../software/services.md).
 
 ## Homebrew notes
 
 Use the runtime's input abstraction first, handle controller disconnects and test both orientations and modes. For raw controller experiments, see the [controllers page](controllers.md).
-
-For raw storage experiments, ndeadly's research documents controller IDs and protocol details; USB and Bluetooth transport and initialization must be considered separately.
 
 Use the runtime's save API where available and confirm commit behavior rather than treating internal flash as a writable directory. Where a tool extracts packaged content, check whether it obtained the content by asking the console's own filesystem services to load it or by defeating the package encryption on its own; the distinction determines what the tool can and cannot do. See the [project inventory](../homebrew/project-inventory.md) for the tools that do each.
 

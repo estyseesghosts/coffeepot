@@ -29,7 +29,7 @@ The right way to find out what a process may do is to read its [NPDM](../glossar
 
 ### Memory encryption
 
-[Reverse-engineered] The T239 appears to support memory encryption, similar to the T234 used in NVIDIA's Orin products. Memory in certain carveout regions is encrypted by the memory controller, transparently on write and read. Application memory is not encrypted, presumably because encryption costs latency.
+[Reverse-engineered] The T239 appears to support memory encryption, similar to the T234 used in NVIDIA's Orin products. Memory in certain carveout regions is encrypted by the memory controller, transparently on write and read. SwitchBrew reports application memory is not encrypted and suggests a possible performance reason; that rationale is not verified.
 
 This is a security property rather than a performance one, and it is described in full on the [security page](../software/security.md).
 
@@ -37,7 +37,7 @@ This is a security property rather than a performance one, and it is described i
 
 [Reported] The same Eglantine notes identify newer atomic and authenticated-return instructions in the sampled executables. A port or emulator must implement the instructions its actual binary uses, not the instruction set the marketing name implies.
 
-[Documented] The A78C implements Armv8.3-A pointer authentication and Armv8.6-A enhanced pointer authentication. A port that assumed a plain AArch64 binary would fail at the first authenticated return.
+[Documented] The A78C implements Armv8.3-A pointer authentication and Armv8.6-A enhanced pointer authentication. An emulator or translator that does not correctly implement an instruction used by the binary can fail; ordinary AArch64 code need not contain authenticated returns.
 
 ### Researching the chip further
 
@@ -45,7 +45,7 @@ This is a security property rather than a performance one, and it is described i
 
 ### Moving code from the original Switch
 
-The original Switch's processor is a Cortex-A57, so an existing NX port is already written for a different microarchitecture. [Documented] The A78C differs in ways that matter to CPU-heavy code:
+The original Switch's processor is a Cortex-A57, so an existing NX port is already written for a different microarchitecture. When moving between the two CPUs, revisit these topics and measure the workload:
 
 | Subject | What to revisit |
 | ------- | --------------- |
@@ -60,7 +60,7 @@ The original Switch's processor is a Cortex-A57, so an existing NX port is alrea
 
 Query available memory and thread permissions through the chosen runtime; do not hard-code a retail title's budget. Measure thread scaling and contention on hardware, including handheld and docked conditions, before increasing worker counts.
 
-Retune the worker count rather than assuming all eight cores are usable. A process with a six-core mask and six busy workers behaves differently from one that has eight, and the difference shows up as contention rather than as an error.
+Retune the worker count rather than assuming all eight cores are usable. Oversubscribing permitted cores can cause contention; an attempt to set an unauthorized affinity can instead fail.
 
 ## Sources
 

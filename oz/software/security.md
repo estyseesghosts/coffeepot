@@ -13,15 +13,15 @@ Each protection below constrains a different actor.
 | Protection | What it constrains |
 | ---------- | ----------------- |
 | Pointer authentication (PAC) | Code that tries to hijack a return address or a pointer that holds one |
-| Execute-only memory (XOM) | Code that tries to read another module's instructions as data |
+| Execute-only memory (XOM) | Code that tries to read execute-only instructions as data |
 | Control-flow integrity (CFI) | Code that tries to call through a corrupted function or vtable pointer |
 | ASLR, KASLR, PASLR | An attacker who knows where something is loaded and wants it to stay there |
 | RelRo | An attacker who wants to overwrite the relocation table |
 | Memory encryption | An attacker who can read or write the external memory bus |
-| Signed executable metadata | Anyone who wants to modify an executable and have it still run |
+| Signed executable metadata | Unauthorized changes to signed metadata; executable content also depends on the loader and filesystem trust boundary |
 | Service access control | A process that wants a service it was not granted |
 
-[Reverse-engineered] Switchbrew's security mitigations page records the version at which each of these arrived. The Switch 2 has no analogue of the original Switch's early boot compromises, so the boot chain below the operating system is the part of the system that has held.
+[Reverse-engineered] Switchbrew's security mitigations page records the version at which each of these arrived. The sources reviewed do not establish a public Switch 2 boot-chain compromise comparable to Fusée Gelée. This does not prove the boot chain cannot be compromised; see [NX entry paths](../homebrew/nx-entry-paths.md).
 
 ## Technical details
 
@@ -55,16 +55,16 @@ Each protection below constrains a different actor.
 
 | Mechanism | Where it is used and how it fails |
 | --------- | --------------------------------- |
-| `nncfi` | Software branch-target identification. The validation checks for a `bti c` or `bti j` instruction at the branch address; on failure it jumps to the undefined instruction `0x000080C0` plus the offending register. Because indirect branches now require `bti c`, it also blocks calling any function that starts with `bti`. It reads from `.text`, so it can only be used when `.text` is readable and executable. |
+| `nncfi` | Software branch-target identification. The validation checks for a `bti c` or `bti j` instruction at the branch address; on failure it jumps to the undefined instruction `0x000080C0` plus the offending register. The check constrains eligible indirect-branch targets; consult the source for the branch-type distinctions. It reads from `.text`, so it can only be used when `.text` is readable and executable. |
 | clang CFI | Switch 2 system modules are compiled with `--fsanitize=cfi-icall` and `--fsanitize=cfi-vcall`, giving runtime checks on function and vtable pointers. PAC is not used alongside this, and a failure raises an undefined-instruction exception. |
 
 ### Memory encryption
 
 [Reverse-engineered] The T239 appears to support memory encryption, similar to the T234 used in NVIDIA's Orin products. Memory in certain carveout regions is encrypted: the memory controller encrypts on write and decrypts on read, so an attacker sniffing the external memory bus sees only ciphertext.
 
-Application memory is not encrypted, presumably because encryption costs latency.
+[Reverse-engineered] SwitchBrew reports that application memory is not encrypted; it suggests performance as a possible reason, not a verified design rationale.
 
-The tweak is likely per physical address, so an attacker with control of the external memory bus cannot relocate data from one address to another. There is no memory authentication, however: after external tampering the CPU reads back garbled plaintext, and earlier values could in principle be replayed to the same address.
+SwitchBrew considers a per-physical-address tweak likely; if so, relocating ciphertext would not preserve the plaintext. The source reports no memory authentication: after external tampering the CPU reads back garbled plaintext, and earlier values could in principle be replayed to the same address.
 
 ### The boot chain and fuses
 
@@ -84,7 +84,7 @@ The boot chain that consumes these fuses is described on the [firmware page](fir
 
 ### Five levels of compromise
 
-[Reverse-engineered] It helps to separate the levels. They are independent, and a result at one level says nothing about the next.
+[Reverse-engineered] It helps to separate the levels. They describe distinct capabilities: a result at one level does not automatically establish the next.
 
 | Level | State as of November 12, 2026 |
 | ----- | ---------------------------- |
@@ -92,7 +92,7 @@ The boot chain that consumes these fuses is described on the [firmware page](fir
 | Privileged system-module execution | Demonstrated on 23.0.1 by the ns2jb chain, before it was patched in 23.5.0. It gives broader service access and filesystem operations. |
 | Kernel control | Not publicly established through the released chain. |
 | Boot-chain and secure-monitor control | No publicly established compromise comparable to the original Switch's earliest boot exploits. |
-| Persistent unrestricted custom firmware | Requires the levels above plus reliable initialization and compatibility with the system's boot and security model. |
+| Persistent unrestricted custom firmware | Not established by ns2jb; a persistent design would require an appropriate trusted or exploitable startup path and implementation. Kernel control and boot control are distinct and are not universally required by every possible CFW design. |
 
 > Unknown: The boundaries between the last three levels are not publicly documented in enough detail to say precisely what a kernel-level compromise would yield.
 

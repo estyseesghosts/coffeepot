@@ -6,7 +6,7 @@ Switch 2 can run many original Switch games using a compatibility environment. T
 
 [Reverse-engineered] SwitchBrew describes compatibility modules named `nnCompatTrampoline`, `nnCompatThin` and `nnCompat`. They adapt selected interfaces and can apply title-specific behavior. Compatibility is therefore more than simply running the same CPU instructions on a newer processor.
 
-Nintendo does not generally replace the original game binary. Instead it inserts compatibility libraries into the game process and selectively overrides functions through dynamic linking. Most SDK functions remain compatible enough that they need no replacement; the overrides are mostly in graphics, where the calls have to be translated to the new GPU, but there are also overrides for timing, saves and audio.
+Nintendo does not generally replace the original game binary. Instead it inserts compatibility libraries into the game process and selectively overrides functions through dynamic linking. The documented overrides include graphics, timing, saves and audio; their presence does not establish that every other SDK function is unchanged.
 
 ## Technical details
 
@@ -21,7 +21,7 @@ Nintendo does not generally replace the original game binary. Instead it inserts
 
 [Reverse-engineered] There are no known differences in service access control or filesystem permissions.
 
-Note what the core mask change does and does not mean. The process is allowed six cores, but the game does not get to use six cores: the `nnCompatThin` wrapper intercepts `nn::os::GetThreadAvailableCoreMask()` and ANDs the resolved mask with `7` before returning it. The game therefore still believes it has three cores, and it schedules onto three, even though the system would allow six.
+Note what the core mask change does and does not mean. The documented compatibility mask grants cores 0–5, while the `nnCompatThin` wrapper masks the result of `nn::os::GetThreadAvailableCoreMask()` to cores 0–2. Code relying on that query sees three; this observation alone does not prove that every thread or direct system call is restricted to three.
 
 ### Module structure
 
@@ -35,7 +35,7 @@ Note what the core mask change does and does not mean. The process is allowed si
 
 [Reverse-engineered] The system places an additional information block in the `ProgramArgument` parameter of the process. This block carries per-game overrides that customize the compatibility hooks.
 
-To retrieve it, `nnCompatThin` intercepts `nnosInitialize` and takes the pointer from there. An ordinary game never reads the program parameter, so it does not notice that it was passed one.
+To retrieve it, `nnCompatThin` intercepts `nnosInitialize` and takes the pointer from there. The source identifies this as the mechanism used by the compatibility module; it does not establish how every game handles its program arguments.
 
 ### Per-title configuration
 
@@ -65,7 +65,7 @@ This is the clearest evidence that compatibility is not entirely generic: a titl
 | Special-casing save access | Accounts for synchronization differences |
 | Changing selected audio behaviour | Adapts to different devices and runtime rules |
 
-[Reverse-engineered] One detail is worth stating precisely. The original Switch's GPU timestamp clock runs at 19.2 MHz and the Switch 2's at 31.25 MHz, and the compatibility hooks account for the difference. A program that derives elapsed time by counting raw ticks will get the wrong answer, and the ratio between the two rates is large enough to matter.
+[Reverse-engineered] One detail is worth stating precisely. SwitchBrew identifies a clock-frequency adjustment in `NvOsGetTimeMS`; the precise counter and frequency must be verified before converting raw timestamps. Code using raw GPU timestamps must use the correct frequency for its environment; this is distinct from assuming that the CPU system counter has the same frequency.
 
 ## Homebrew notes
 

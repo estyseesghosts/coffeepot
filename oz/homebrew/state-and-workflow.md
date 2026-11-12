@@ -6,7 +6,7 @@ As of 12 November 2026, Switch 2 homebrew spans several different execution envi
 
 Choose a project and read its current prerequisites before changing firmware or buying a game. Record the exact console firmware, game and game version, entry point, host computer, launcher revision and application revision. Availability and version support change; the project itself is the authority for its setup.
 
-The specific projects that exist, and how well each has been tested, are catalogued on the [project inventory](project-inventory.md).
+The [OZ entry paths guide](oz-entry-paths.md) walks through development and research in these environments. The specific projects that exist, and how well each has been tested, are catalogued on the [project inventory](project-inventory.md).
 
 ## How it works
 
@@ -55,7 +55,7 @@ Two conditions gate the copy. The underlying filesystem must allow backslashes i
 
 [Reverse-engineered] The published demo requires SmileBASIC 4.4.9, system software 23.0.1, Node.js 22 or newer on macOS or Linux, and over 20 MiB free in the SmileBASIC save. The host computer and console must be on the same reachable network; the connection uses port 39380.
 
-The demo runs two small native functions inside `fs`, checks their results and restores the original instructions. The console-side steps are:
+The fork describes a native probe that runs two small functions inside `fs`, checks their results and restores the original instructions. Its documented console-side steps are:
 
 ```basic
 LOAD "TXT:NS2"
@@ -65,7 +65,7 @@ REMOVE NSR,&H60000000,&H3FFFFFFF
 
 That `REMOVE` is the interpreter overflow described above, applied to a different array: the wrapped `position + count` is what produces the read and write primitive, and the "Out of memory" message it prints is expected rather than a failure. It is entered only once per application process. The program then runs the `V=START(...)` line the host prints. Restarting the console restores the original `ro` process, so the demo is not persistent and does not install custom firmware.
 
-[Reported] The demo was physically tested on October 21, 2026: both instruction challenges, the restoration and the cleanup passed. Acquisition is timing-sensitive; the run described passed on the third fresh boot, and the first two attempts stopped at validation checks and cleaned up after themselves.
+[Reported] The fork documents a hardware test of the probe and its cleanup. Acquisition is timing-sensitive; consult its logs for the exact revision and test conditions.
 
 [Reverse-engineered] The demo's native helper is written in Zig 0.15.2 and built with the engine's own script.
 
@@ -90,16 +90,16 @@ That `REMOVE` is the interpreter overflow described above, applied to a differen
 
 [Reverse-engineered] Firmware 23.5.0 fixes the path-normalization overflow described above. The temporary buffer is now allocated with the size of the source path, up to a maximum of `0x600` bytes, so the copy can no longer overrun it. SwitchBrew's system flaws page records the flaw as fixed in 23.5.0, with the result described as an `fs`-sysmodule heap buffer overflow allowing arbitrary read and write.
 
-Because the flaw is in `fs` itself, the fix is not a per-title patch. The game-level entry points that reach it survive, because the games' own vulnerabilities are unaffected; what 23.5.0 removes is the system's ability to be escaped from.
+Because the flaw is in `fs` itself, the fix is not a per-title patch. The patch targets `fs`, rather than the games' own vulnerabilities; 23.5.0 removes the documented `fs` escalation step, not the possibility of another escape.
 
 [Reported] The same conclusion was reached independently by the community through reverse engineering, relayed by Nintendo Life, GameGaz and IT之家, and attributed to the Alula and OatmealDome communities. This is a community conclusion rather than a vendor statement, although in this case the technical fix is independently documented.
 
 The practical result is a split:
 
 - On 23.0.1, game-contained execution could escalate to a privileged system process.
-- On 23.5.0 and later, the known entry points are confined to the game process they started in.
+- On 23.5.0, these game entry points alone remain in their host process; the documented `fs` escape is patched. Later firmware and other chains require separate verification.
 
-Game-sandbox homebrew remains usable, and the [project inventory](project-inventory.md) records which projects still work on current firmware. The [firmware page](../software/firmware.md) has the dates and the reasoning.
+Some game-sandbox projects remain available; check each project's supported game and firmware in the [inventory](project-inventory.md). The [firmware page](../software/firmware.md) has the dates and the reasoning.
 
 ### What native execution does and does not give you
 
@@ -123,7 +123,7 @@ For a game-sandbox program, remember that it is the host game's process: its per
 
 A process exploit does not automatically provide unrestricted service access, kernel control, persistence or a stable graphics API. Exploit attempts and firmware changes can lose access or data; keep independent backups and follow the original project's instructions.
 
-There is no publicly released Switch 2 equivalent of the original Switch's fusee-gelee orhekate boot compromises, and no unrestricted `.nro` loader. A port that assumes either has no target.
+No publicly established Switch 2 equivalent of the original Switch's Fusée Gelée boot-ROM exploit is documented in the sources reviewed. Hekate is a bootloader, not itself the exploit. See [why NX entry paths differ](nx-entry-paths.md) for the hardware and software dependencies.
 
 Exploit attempts and firmware changes can leave a console in a state the user cannot recover from. This wiki has not verified these projects on hardware.
 
