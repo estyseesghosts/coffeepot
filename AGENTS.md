@@ -25,7 +25,7 @@ tools/
 site/                        # generated site output (not committed)
 ```
 
-Current scope is two platforms: `ctr/` (Nintendo 3DS family) and `nx/` (Nintendo Switch family). Add a new top-level platform directory only for a distinct hardware platform, using its established codename or short kebab-case name (e.g. `ctr`, `nx`).
+Current scope is three platforms: `ctr/` (Nintendo 3DS family), `nx/` (Nintendo Switch family) and `oz/` (Nintendo Switch 2 family). Add a new top-level platform directory only for a distinct hardware platform, using its established codename or short kebab-case name (e.g. `ctr`, `nx`, `oz`).
 
 File names are kebab-case: `arm9-cpu.md`, `nand-filesystem.md`, `boot9strap.md`. One topic per file.
 
