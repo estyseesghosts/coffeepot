@@ -52,6 +52,20 @@ Why this might matter on an Old 3DS: the instruction cache is 16 KB per core and
 
 > Unknown: whether the New 3DS behaves the same for the instruction-cache effect. The source reports its New 3DS stereo result as "neutral" and gives no instruction-cache data for it; the L2 cache on the New 3DS ([ARM11 MPCore](../../hardware/arm11-mpcore.md)) is the obvious reason it might differ, which is a `[hypothesis]`.
 
+### A second report: a GPU-native renderer for a DS game
+
+`[reported]` The kohjoh port of Pokémon HeartGold (private repository, no public revision yet; `docs/architecture.md`, `docs/status.md`, read 2026-11-13) replaces a CPU software renderer with GPU drawing of the DS's 2D layers and 3D scene. Every result below was checked in Azahar against reference renders, not on an Old 3DS, except where marked; the project's Old 3DS re-test of the same code was still pending when the notes were written. Design points that carry over to other tile- and sprite-based sources:
+
+- **One publish point.** The game loop runs on one thread; at the DS V-blank it publishes one coherent snapshot (registers, palettes, sprite table, video memory banks, per-line registers, last 3D scene), and the renderer reads nothing from emulated memory afterwards. This removed the drawer/game races of the earlier thread-split port.
+- **Texture atlas slots reused only on byte equality.** Each DS 8×8 tile is expanded through its palette into one 8×8 tile of a 1024×1024 RGBA5551 atlas. A slot is reused only if its source bytes are identical and its palette version is unchanged: no write tracking and no hashing.
+- **Stencil bits carry blend and window membership.** Layers are drawn in DS priority order; stencil bits mark blend-target membership (an alpha blend takes two draws) and window regions, and brightness effects are full-screen passes. This needs a render target created with a stencil buffer ([2D rendering](rendering-2d.md#layers-and-composition)).
+- **Retained layers and whole-screen skip.** A background or sprite layer is retained when its registers, palette, map or sprite table, extended palettes and the character bytes it read are byte-identical. In one Goldenrod window, 557 of 600 bottom-screen pictures needed no draw or transfer at all.
+- **Per-line register changes become spans.** A frame whose registers change mid-frame is drawn as spans of identical lines, not per line. The project's feared "retention cliff" under scanline effects did not occur in one idle Goldenrod window (one span a frame); walking and route scenes were unmeasured.
+- **Matrix palette for 3D.** Vertices stay in object space; each batch carries up to 16 clip matrices, each multiplied by one fixup matrix (viewport, widescreen scale, screen rotation, depth range), and the vertex shader transforms on the GPU. Matrix stacks, lighting and geometry tests stay on the CPU because the game reads their results back.
+- **Unsupported effects are counted, not dropped.** Fog, toon shading, edge marking and shadow volumes were counted when used so a missing effect cannot hide.
+
+Costs the project recorded (Azahar instruction counts, Goldenrod at rest): logic 25.6 to 13.7 ms per frame over its optimisation sessions, of which a display-list replay cache gave the largest single step (21.0 to 13.8 ms) once command streams stopped being split mid-command ([porting](../porting.md#lessons-from-eleven-source-read-ports)). These are emulator instruction counts, a floor rather than an estimate for an Old 3DS ([debugging](../debugging.md#calibrate-the-emulators-clock-before-reading-its-timings)). On the Old 3DS the same port's profiled build ran Route 34 near 30 FPS and Goldenrod at about half speed before several later fixes, as its own log reported.
+
 ## Draw-call and command-buffer optimisation
 
 What citro3d does on each action is listed in [what a draw call costs](gpu-rendering.md#what-a-draw-call-costs). The techniques below remove a specific cost named in that table, so each can be checked against the source.
@@ -236,6 +250,7 @@ Method rules for all: Old 3DS first, then New 3DS (New 3DS results are never mer
 
 ## Sources
 
+- kohjoh project notes (private repository, no public revision yet; `docs/architecture.md`, `docs/status.md`, read 2026-11-13) — renderer design and Azahar results.
 - [G-Diffuser: Road to 60, All Over Again](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` Old 3DS renderer account; fetched November 2026; entries dated 2026-09-07 to 2026-10-26.
 - [G-Diffuser `docs/NATIVE-RENDERER.md`](https://github.com/cruxxxxxx/gdx-3ds/blob/main/docs/NATIVE-RENDERER.md) — `[reported]` configuration levers, retained meshes, flush and submission behaviour.
 - [citro3d](https://github.com/devkitPro/citro3d) at `9f21cf7` — `source/renderqueue.c`, `base.c`, `texture.c`, `immediate.c`, `attribs.c`.

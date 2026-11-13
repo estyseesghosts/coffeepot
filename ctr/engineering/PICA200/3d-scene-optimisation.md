@@ -26,6 +26,7 @@ All of these are `[hypothesis]` for the Old 3DS as to how much they save: the te
 Practical points that follow from known costs:
 
 - Cull at the level of objects or meshes (chunks of terrain), not triangles. Per-triangle CPU culling costs more than sending the triangles `[hypothesis]`.
+- **A census can show the opportunity before you build the cull.** In an offline analysis of one captured Goldenrod field frame from the kohjoh DS port (14,030 submitted vertices, 8,370 triangles, 124 batches, 122 of them with a single matrix), transforming the captured vertices with their recorded clip matrices and testing whole triangles against the widened view showed 89.0% of triangles trivially outside it, and 72 of the 124 batches (3,720 triangles) lay wholly outside one frustum plane. The test is conservative and ignores occlusion and face culling; it is one frame, it was not run on hardware, and no cull had been built or timed when the notes were written. It supports culling at the batch level with cached bounding boxes, not per triangle [reported: kohjoh project notes, 2026-11-13, private repository; `docs/chatlog06.md`, an AI-assisted analysis of a captured frame]. A port from a console that rejects polygons before storing them (the DS does) will submit far more hidden geometry than the original, so look for this in any such port.
 - Each surviving object is at least one draw call, so culling and [batching](gpu-rendering.md) interact: more, smaller chunks cull better but batch worse. The right chunk size is a measurement.
 - Keep the visible list in a flat array of indices into struct-of-arrays data, so the cull loop touches few cache lines ([CPU optimisation](../cpu-optimization.md), [memory and cache](../memory-and-cache.md)).
 - For stereo, cull once with a frustum wide enough for both eyes ([stereo engineering](stereo-engineering.md#what-the-second-eye-costs)).
@@ -166,6 +167,7 @@ Nothing on that page states a performance result, an ordering rule or a culling 
 
 ## Sources
 
+- kohjoh project notes (private repository, no public revision yet; `docs/chatlog06.md`, read 2026-11-13) — frustum census of one captured DS-port frame.
 - [3dbrew: GPU/Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers) — early depth registers (local mirror in `private_please_gitignore/3dbrew`).
 - [3dbrew: Nintendo OpenGL](https://www.3dbrew.org/wiki/Nintendo_OpenGL) — retail OpenGL wrapper notes, fetched 2026-11-11.
 - [citro3d](https://github.com/devkitPro/citro3d) — `source/effect.c`, `source/base.c`.

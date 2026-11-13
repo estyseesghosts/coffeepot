@@ -25,7 +25,7 @@ Hardware reference: [CPU](../hardware/cpu.md). Measuring whole frames: [performa
 | --------- | -------------- | ----------- |
 | `/` and `%` by a variable | Library call (`__aeabi_idiv`, `__aeabi_uidivmod`), tens of cycles | Divide once outside the loop and multiply by the reciprocal; use shifts and masks for powers of two; keep running counters instead of computing `i % n` |
 | `double` arithmetic, double literals (`0.5`), `sqrt`, `sin` | Half-rate multiply, slow divide/sqrt, conversions; libm `double` functions | `float`, `0.5f`, `sqrtf`, `sinf`; compile with `-Wdouble-promotion` |
-| 64-bit integer division or modulo | Library call (`__aeabi_ldivmod`) | Avoid in hot code; convert ticks to time once per report |
+| 64-bit integer division or modulo | Library call (`__aeabi_ldivmod`) | Avoid in hot code; convert ticks to time once per report. Example: a DS geometry box test that divided in 64-bit cost about 5,300 ticks per call in an Old 3DS profile, the single most expensive opcode in the port's decoder [reported: kohjoh project notes, 2026-11-13, private repository; docs/worklog/2026-11-12.md; Old 3DS log from a profiling build] |
 | Random access over more than 16 KB | L1 misses go to FCRAM (no L2 on Old 3DS) | Smaller data types, structure-of-arrays for hot fields, sort or bucket work by memory locality |
 | Large lookup tables | Each lookup can miss the cache | Measure against computing the value; keep tables small |
 | Unpredictable branches in inner loops | Mispredictions | Branch-free arithmetic (conditional execution, `min`/`max`, masks), or sort data so branches go the same way in runs |
