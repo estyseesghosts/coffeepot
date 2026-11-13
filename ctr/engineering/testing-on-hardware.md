@@ -73,6 +73,18 @@ A fixture can prove an optimization correct on constructed input without proving
 
 Keep baseline binaries immutable in separate output directories. Record their hashes alongside the save, script, configuration and model for each run; check the runtime banner and feature activation in every log. Confirm flags reached the library that contains the optimized code. Test PROFILE versus OFF with a matched, repeated A/B rather than attributing an unmatched difference to instrumentation.
 
+### Rules for an emulator test harness
+
+Lessons from the kohjoh port's Azahar scripts [reported: kohjoh project notes, 2026-11-13, private repository; `docs/lessons.md`]:
+
+- **The test owns its input.** Live keyboard input on the emulator window was combined with the scripted input and made a run diverge from its script. Ignore live input while a script runs.
+- **Run one harness at a time.** A launcher that kills the emulator on exit also killed the emulator of any other run in progress (three lost runs).
+- **Give a run an explicit end.** A launcher with no hold or screenshot list ended after about two seconds; require one.
+- **Pace as the player does.** Frame skipping was disabled while a script ran, so pacing bugs appeared only without a script; run a scripted and an unscripted pass.
+- **After any build-system change, rerun the whole smoke set** (intro, save load, input), not just the feature you touched.
+- **Commit each verified step.** Several verified improvements sat uncommitted while riskier work piled on top; gate risky features behind a build switch so the main branch always builds and runs.
+- **Keep one tree per branch.** A shared vendored checkout carried another branch's patch; the patch checker detected missing patches but not extra ones. Re-create the checkout after switching branches.
+
 ### Integrated game-system checks
 
 Individual renderer, audio and file tests do not prove the combined program works under load. With a reproducible scene, load a second area while sound plays; request HOME or sleep during loading; resume and check whether application-owned caches or targets need rebuilding; exercise slow and failed writes; and close with producer/consumer queues active. Check input and simulation progression throughout, and verify any worker cancellation and shutdown ordering. The required behavior depends on the application's ownership design; do not assume every target is lost or retained on resume. Record failures and target model separately. These integrated tests have not been run for the wiki's examples.
@@ -175,6 +187,7 @@ When you have results, add them to the relevant page with the console model, sys
 
 ## Sources
 
+- kohjoh project notes (private repository, no public revision yet; `docs/lessons.md`, `docs/testing.md`, read 2026-11-13) — emulator harness rules.
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — application template used to build the benchmark.
 - [libctru](https://github.com/devkitPro/libctru) — `os.h` (tick constants), `svc.h`, `services/gspgpu.h`, `services/apt.h`, `allocator/linear.h`, `gfx.h` (wide mode on the original 2DS).
 - [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (the whole-heap flush the benchmark reproduces).

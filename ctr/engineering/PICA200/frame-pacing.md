@@ -134,6 +134,9 @@ See the [rendering trade-off case studies](../case-studies/case-studies-renderin
 - **Vsync through a library, no governor.** DXX's `gr_flip` blits and calls `SDL_Flip`; Quake2CTR's loop has an empty `Sys_Sleep` and swaps through picaGL. Neither skips frames, so a missed vsync is a visible hitch `[documented]` ([DXX](../case-studies/case-study-dxx-3ds.md), [Quake2CTR](../case-studies/case-study-quake2ctr.md)).
 - **Fixed-rate logic.** The Sonic CD port adds frame limiting to its fixed-timestep engine `[reported]` (README credits). With a fixed logic rate, slow drawing shows as stutter rather than slow motion `[hypothesis]`.
 
+- **An uncapped "skip when behind" rule starves the screen.** The kohjoh DS port skipped a picture whenever it was two refreshes behind. A game running only slightly over budget was then always behind: an Old 3DS log showed the game at about half speed but only about 4 pictures a second shown (1,606 of 2,206 pictures skipped), which looked like a much slower game. Skip at most one picture in a row; the fix is the same rule sm64ds-enhanced uses above [reported: kohjoh project notes, 2026-11-13, private repository; Old 3DS log, build and firmware not recorded in the notes; `docs/lessons.md`].
+- **Lock emulated V-blanks to the real counter.** The same port generates the DS's V-blank events in software. A frame that overran lost that V-blank for good, so music drifted ahead of the picture. Locking the emulated count to the real V-blank counter and letting late frames catch up fixed the drift, in the project's own report; it was not re-confirmed on hardware at the time of the notes [reported: same source].
+
 ## Technical details
 
 - `C3D_FrameBegin(u8 flags)`: `C3D_FRAME_SYNCDRAW` = bit 0, `C3D_FRAME_NONBLOCK` = bit 1; returns `false` if already inside a frame or (non-blocking) if the GPU queue has not finished.
@@ -157,5 +160,6 @@ See the [rendering trade-off case studies](../case-studies/case-studies-renderin
 
 - [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (`C3D_FrameBegin`, `C3D_FrameSync`, `C3D_FrameRate`, `C3D_FrameCounter`, queue callback), `include/c3d/renderqueue.h`.
 - [libctru](https://github.com/devkitPro/libctru) — `services/gspgpu.h` (events, `gspWaitForVBlank`), `os.h` (tick rate), `source/ndsp/ndsp.c` (sound frame length).
+- kohjoh project notes (private repository, no public revision yet; `docs/lessons.md`, read 2026-11-13) — uncapped present skip and V-blank locking.
 - [G-Diffuser: Road to 60, All Over Again](https://hypnotize.works/gdx-3ds/postmortem/native.html) — `[reported]` synchronous-logging hitches and the effect of an asynchronous log (its game only).
 - [GBATEK](https://problemkaputt.de/gbatek.htm) — DS display timing (59.8261 Hz) for ports.

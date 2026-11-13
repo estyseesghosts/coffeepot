@@ -151,6 +151,27 @@ To find the guilty draw, bisect: skip half the draws in a frame and see whether 
 
 Treat it as a correctness and debugging tool, not as evidence of speed: its CPU, memory, cache and GPU costs do not model the hardware, and it is more forgiving of some GPU misconfigurations (a program that runs in an emulator can still hang a real console) [hypothesis based on how high-level GPU emulation works; record concrete cases in Open questions]. Always confirm on a console, and on an [Old 3DS](../glossary.md#old-new-3ds) if you target one ([testing on hardware](testing-on-hardware.md)).
 
+### Calibrate the emulator's clock before reading its timings
+
+Run a short loop of known instruction count and compare it with the tick counter. The kohjoh DS port did this with a 4-instruction loop and found that its Azahar build advanced `svcGetSystemTick` by one tick per instruction, so its "milliseconds" were instruction counts. They are useful for A/B comparison of the same code path, and they are a floor, not an estimate, for an Old 3DS: the emulator does not charge instruction-cache misses or the stack spills and stalls of a hot loop [reported: kohjoh project notes, 2026-11-13, private repository; Azahar, version not recorded in the notes; `docs/testing.md` "Calibration"]. Print the measured ticks per instruction in your own log so a different emulator build is noticed.
+
+### Sample the program counter through Azahar's GDB stub
+
+The same project enabled Azahar's GDB stub (`use_gdbstub=true` in its configuration, a TCP port of your choice), halted the program at a fixed interval (about 1,500 samples at 20 ms), read the program counter and link register, and printed a histogram by function from the ELF symbols. It found every hotspot the project later fixed, including one outside the renderer (Pokémon data decryption on every field frame) that no one had predicted [reported: kohjoh project notes, 2026-11-13, `tools/azahar/gdbprof.py`]. Two limits from the same notes:
+
+- **Samples land on translated-block boundaries,** so tight loops are over-represented. Use the histogram to find *where* time goes and an in-program stage timer to decide *how much*.
+- **Print partial results when the emulator closes mid-run,** or a scripted run that ends early loses every sample.
+
+Run one such harness at a time: the project's launcher killed every Azahar process on exit, so a second concurrent run silently ended the first (three lost runs).
+
+### Give the emulator every part the console runs
+
+A thread that cannot start in the emulator is invisible to every emulator profile. kohjoh's software sound mixer runs on its own thread through ndsp, and Azahar had no DSP firmware, so `ndspInit` failed and the mixer never ran under test; on an Old 3DS the same mixer took 20-30% of the application core. Staging `dspfirm.cdc` in Azahar's emulated SD card (`sdmc/3ds/`) fixed the blind spot ([audio](audio.md#before-you-start)) [reported: kohjoh project notes, 2026-11-13; hardware figure from the project's own Old 3DS log].
+
+### Split the pipeline at a dump before toggling render state
+
+Four experiments (culling, depth test, alpha test, blend) changed nothing about a collapsed model in the kohjoh port. Dumping the decoded scene and projecting it on the CPU with a small reference script showed in one step that 41 clip matrices per frame were all zero: the geometry was wrong, not the GPU state. Dump the data at each stage boundary and check it against a reference renderer before changing GPU state [reported: kohjoh project notes, 2026-11-13, `docs/lessons.md`]. An independent reference (the project used the public GBATEK description of the DS, and the melonDS emulator as a second opinion) also found a tile row-order error in one comparison after guesses had failed ([2D rendering](PICA200/rendering-2d.md#pitfalls-from-a-ds-port)).
+
 ## Lessons from ported games
 
 - **Watch for a hang from a thread that outranks the game.** sm64ds-enhanced found that a hang froze the picture while music kept playing and the log stopped, because the log writer ran below the spinning game thread. Its watchdog runs one priority above the game thread, wakes each second, and if the frame counter has not moved for 4 seconds (and the game is not in HOME, sleep or its menu) prints a `[hang]` report with the current phase, scene and stack words and flushes the SD log itself; it repeats every 10 seconds and prints "went on" if the game recovers, and can be turned off with `GAME3DS_WATCHDOG=0` `[documented]` (`port3ds/game/watchdog3ds.cpp`, [case study](case-studies/case-study-sm64ds-enhanced.md)). Look the stack words up with `addr2line` against the ELF.
@@ -175,7 +196,8 @@ Treat it as a correctness and debugging tool, not as evidence of speed: its CPU,
 
 ## Open questions
 
-- Azahar's GDB support for homebrew (inherited from Citra's GDB stub) has not been checked for this page.
+- Azahar's GDB stub is used for PC sampling by one project ([above](#sample-the-program-counter-through-azahars-gdb-stub)); Coffeepot has not reproduced it, and the stub's behaviour with threads and breakpoints has not been checked here.
+- The one-tick-per-instruction calibration comes from one Azahar build whose version the source does not record; whether other builds or the Old 3DS profile differ is unchecked.
 - No catalogue yet of GPU configurations that work in Azahar but hang hardware; contributions should include a minimal reproducer.
 
 ## Sources
@@ -186,4 +208,5 @@ Treat it as a correctness and debugging tool, not as evidence of speed: its CPU,
 - [3ds-hbmenu](https://github.com/devkitPro/3ds-hbmenu) — netloader (Y button), `-a` fallback.
 - [citro3d](https://github.com/devkitPro/citro3d) — `renderqueue.c` (`C3D_FRAME_NONBLOCK`), `base.h` (default command buffer size).
 - [3ds-examples](https://github.com/devkitPro/3ds-examples) — `network/sockets` (socket buffer setup), `network/3dslink-demo`.
+- kohjoh project notes (private repository, no public revision yet; `docs/lessons.md`, `docs/testing.md`, read 2026-11-13) — emulator calibration, GDB PC sampling, missing-DSP blind spot, dump-before-toggling.
 - [Azahar](https://github.com/azahar-emu/azahar) — emulator; history from [Recalbox: Azahar, the new 3DS emulator to replace Citra](https://recalbox.com/blog/2025-03-18-azahar-citra-emulateur-3ds-retrogaming-actualite).

@@ -55,6 +55,21 @@ echo "$DEVKITARM"
 
 The shell usually exposes devkitPro under `/opt/devkitpro`, even though the Windows installation is in `C:\devkitPro`. Those paths are mapped by MSYS2; do not change them to Windows-style paths inside a Makefile.
 
+**Large or unusual builds under MSYS2.** The standard template builds fine in this shell. A project that drives GCC through its own scripts (a vendored SDK, response files, a Python build driver) met these failures; each is specific to devkitPro's MSYS2 as the kohjoh port used it [reported: kohjoh project notes, 2026-11-13, private repository; Windows 11, devkitPro MSYS2, versions not recorded in the notes; `docs/troubleshooting.md`]:
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `git-remote-https.exe: error while loading shared libraries` | The MSYS2 `git` has a broken HTTPS helper. | Put Git for Windows' `cmd` directory first on `PATH` inside the MSYS2 shell. |
+| `Cannot create temporary file in C:\Windows\` | `TMP`/`TEMP` are dropped from child processes, so native GCC falls back to `C:\Windows`. | Export them in the build script. |
+| `ld: cannot find /c/Users/.../x.o` | Native `ld` reads paths inside `@response` files literally; MSYS converts only command-line arguments. | Write `C:/...` paths in response files. |
+| Headers "not found", or `mkdir: cannot create directory '/home'` | MSYS2 Python resolves the working directory as `/home/<user>/...`, which native tools cannot use; glued arguments such as `-idirafter/c/...` are not converted. | Pass absolute `/c/...` paths and give `-idirafter` and its path as separate arguments. |
+| `ar: Argument list too long` | Very deep output paths. | Build under a short path inside the repository. |
+| Edits to a linked SDK directory have no effect | MSYS2 Python's `symlink_to` silently *copies* directories. | Create real junctions with `cmd.exe //c mklink //J` (MSYS rewrites a bare `/c`). |
+| An SDK change has no effect | A failed library build silently falls back to a prebuilt library at link time. | Search the build log for `error:` before testing any library change. |
+| A source file turns "binary" in git, or a string holds a stray tab | A Python edit passed through an unquoted shell heredoc turned `\0`, `\t`, `\r` into real control bytes. | Write scripts to a file with raw strings, or use an editor tool; scan for NUL and CR after scripted edits. |
+
+After any change to the build system, rerun a save-and-load check and a short input test: the junction change above broke save detection and was only noticed later.
+
 If you prefer WSL2, use the **Ubuntu/Debian** instructions instead. Do not mix the Windows devkitPro installation with WSL's Linux toolchain in one build.
 
 ### macOS
@@ -403,6 +418,7 @@ If a project still fails, first build **the untouched `templates/application` ex
 
 ## Sources
 
+- kohjoh project notes (private repository, no public revision yet; `docs/troubleshooting.md`, read 2026-11-13) — MSYS2 build failures for script-driven builds.
 - [devkitPro getting started](https://devkitpro.org/wiki/Getting_Started) — installer and pacman setup
 - [devkitPro/3ds-examples](https://github.com/devkitPro/3ds-examples) — template project and examples
 - [libctru](https://github.com/devkitPro/libctru) — library and `3dslink` tooling

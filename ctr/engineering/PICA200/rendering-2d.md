@@ -643,6 +643,13 @@ A tile layer is a grid of quads whose texture coordinates point at tiles in an a
 - **Seams**: with bilinear filtering or non-integer scroll positions, neighbouring atlas tiles bleed into each other. Use `--border edge` padding, nearest filtering (`C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST)`), and integer positions for pixel art.
 - **Repeating backgrounds** (sky, parallax layers): one quad with `C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT)` and scrolled texture coordinates draws an endless layer. Repeat requires a standalone power-of-two texture, not a sub-image of an atlas.
 
+### Pitfalls from a DS port
+
+Two atlas defects found by the kohjoh DS-to-3DS port, both visible only against a reference image [reported: kohjoh project notes, 2026-11-13, private repository; checked in Azahar, not on an Old 3DS; `docs/troubleshooting.md`]:
+
+- **Row order inside a tile.** Within each 8×8 [tiled](../../../glossary.md#tiling) block the rows run top row first; a converter that assumed the opposite showed every tile with its eight rows reversed. A comparison with an independently rendered reference found it at once, after guesses had not. Check the swizzle against `tex3ds` output, as in the [layout table](#what-the-gpu-accepts) above.
+- **One-pixel gaps between tile rows.** With nearest sampling, a texture coordinate at v = 1.0 of a tile rounded, in float24, into the neighbouring (often transparent) atlas tile. The project computed texture coordinates in 1/16-texel units and inset each tile edge by 1/16 texel. This is a cheaper alternative to border padding when tiles are packed tightly; the inset's visual effect on scaled output was not evaluated.
+
 ### Layers and composition
 
 - Draw layers back to front: far backgrounds, tile layers, sprites, foreground, UI. Opaque layers may instead use the depth buffer in any order, since larger z is in front ([section 2](#2-screens-coordinates-and-depth)); translucent sprites normally need an order compatible with blending. Cut-outs can use depth tests and depth writes, but equal-depth ties and original priority rules still need an explicit policy.
@@ -826,6 +833,7 @@ The tile renderer (30 configurations: four strategies, texture, shape, bottom-sc
 
 ## Sources
 
+- kohjoh project notes (private repository, no public revision yet; `docs/troubleshooting.md`, read 2026-11-13) — tile row order and tile-edge texcoord inset in a DS port.
 - [devkitPro camera framebuffer example](https://github.com/devkitPro/3ds-examples/blob/be2001fee08cf8ec7d3366e095e83f6f75da8942/camera/image/source/main.c) — direct CPU access to screen framebuffers.
 - [GBATEK: DS video registers](https://mgba-emu.github.io/gbatek/#ds-video-stuff) — display timing and register behavior; consult the DS video section.
 - [citro2d](https://github.com/devkitPro/citro2d) — `include/c2d/base.h`, `sprite.h`, `spritesheet.h`, `text.h`, `font.h` (installed 1.7.0 headers read locally); `source/base.c` (batching; not cloned here, behaviour read from the compiled `libcitro2d.a`).

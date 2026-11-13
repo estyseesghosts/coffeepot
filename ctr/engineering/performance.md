@@ -99,6 +99,15 @@ With those three sources you can fill in this table for any frame; it is the sta
 
 Write down whether each counter counts attempts, completed work, skipped work or presented frames; inspect every increment site before dividing two counters. Define intervals as disjoint or explicitly nested and do not add a child timer to its parent. A wall-clock interval includes preemption and waits. Publish a complete duration to other threads with appropriate synchronization rather than exposing a transient unsigned subtraction. HGSS found all three pitfalls while diagnosing an Old 3DS port; see the [case study](case-studies/case-study-hgss-port.md#establish-the-bottleneck-and-validate-the-counters) [reported: project worklog, November 2026].
 
+### Probes, samples and denominators: four traps from a DS port
+
+The kohjoh DS port hit each of these while profiling [reported: kohjoh project notes, 2026-11-13, private repository; Old 3DS hardware logs and Azahar runs, as stated per item; `docs/lessons.md`, `docs/testing.md`]:
+
+- **A tick probe is not free.** A `svcGetSystemTick` pair around each geometry opcode cost about 390-440 ticks per probe on an Old 3DS (the measured cost of timing an empty opcode), which dominated short opcodes. Subtract the probe cost, or prefer sampling ([debugging](debugging.md#sample-the-program-counter-through-azahars-gdb-stub)). Nested callbacks inside a timed region (DMA completion handlers) inflated the interval and also misled.
+- **"Uninstrumented" builds can still carry probes.** One probe in an H-blank loop ignored the project's "profiling off" switch, so the default build made about 800 tick reads per frame. Make probes opt-in at compile time, record the switch in a build-info file, and check the log banner of each run.
+- **Divide by the right frame count.** A per-frame average divided by *presented* frames overstated per-game-frame cost once the renderer skipped pictures, and an early note concluded "near full speed" for a window that ran at half speed. Divide by the count of the thing you are averaging (game ticks for logic cost, pictures for draw cost) and print both counts.
+- **Count where the work goes before building a cache.** The kohjoh display-list cache replayed 4% of geometry words in its first measurement. A guessed cause (lists left open) explained 13%; a coverage counter then showed 65% of words were split mid-command by the DS SDK's 118-word DMA bursts. The fix (submitting the buffer in one transfer) lifted the hit rate to 74% in Azahar. Measure the opportunity first, and attribute misses by reason code, not by guess.
+
 ## Finding the bottleneck
 
 | Observation | Likely bottleneck | Next step |
@@ -252,6 +261,7 @@ None of the eleven ports reviewed in the [case studies](case-studies/case-study-
 
 ## Sources
 
+- kohjoh project notes (private repository, no public revision yet; `docs/lessons.md`, `docs/testing.md`, read 2026-11-13) — probe costs, opt-in probes, counter denominators, cache coverage measurement.
 - [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (frame begin/end, timers, V-blank counters, frame-rate limiter, linear-heap flush), `include/c3d/renderqueue.h`.
 - [libctru](https://github.com/devkitPro/libctru) — `os.h` (clocks, `TickCounter`), `services/gspgpu.h` (perf log), `thread.h` (cores, priorities), `services/apt.h`, `source/system/syscalls.c` (FPSCR), `source/services/gspgpu.c`, `svc.h`.
 - [Luma3DS](https://github.com/LumaTeam/Luma3DS) — `sysmodules/loader/source/hbldr.c` (3DSX exheader: clock/L2 flags off, core-1 limit 89, core 2 access), `sysmodules/pm/source/reslimit.c` (scheduler and CPU-time notes).
