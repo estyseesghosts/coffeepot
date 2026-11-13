@@ -6,6 +6,8 @@ none of this research is my own and i do not assume credit for any of the work p
 
 To prepare a 3DS for homebrew, follow the [3DS Hacks Guide](https://3ds.hacks.guide/). Once your console is ready, start building with Coffeepot’s [3DS development workflow](ctr/homebrew/development-workflow.md). You can also use an emulator while setting up the toolchain.
 
+Complain about this project: [on discord](https://discord.gg/wJNprjYCun)
+
 ## Platforms
 
 - [Nintendo 3DS family (CTR)](ctr/index.md) — processors, GPU, memory, firmware, OS, security and the homebrew scene.
