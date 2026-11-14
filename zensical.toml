@@ -161,6 +161,7 @@ nav = [
       { "Source versions and verification" = "ctr/engineering/source-versions.md" },
       { "Benchmark suite" = "ctr/benchmarks/README.md" },
       { "Tile renderer experiment" = "ctr/benchmarks/tile-renderer/README.md" },
+      { "PICA Lab (GPU measurements)" = "ctr/benchmarks/pica-lab/README.md" },
       { "PICA200 and GPU" = [
         { "GPU rendering" = "ctr/engineering/PICA200/gpu-rendering.md" },
         { "Asset pipeline" = "ctr/engineering/PICA200/asset-pipeline.md" },

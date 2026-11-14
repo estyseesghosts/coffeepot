@@ -1,0 +1,718 @@
+[    0.820] Output: sdmc:/3ds/pica-lab/run_005 (+ .zip)
+[    5.513] === RUN ALL: 6 families ===
+[    5.526] [1/6] selftest    start
+[    5.688] case 0000 selftest  clear 0 pixels=0 h=37949DC5
+[    5.872] case 0001 selftest  rect 1 pixels=11000 h=542C0625
+[    6.048] case 0002 selftest  rect 2 pixels=11000 h=542C0625
+[    6.079] Self-test: PASS
+[    6.093] [1/6] selftest    done: 3 cases, 0.6s
+[    6.131] [2/6] raster+edge start
+[    6.271] case 0003 raster    forward 0 pixels=6144 h=2CF9DCC5
+[    6.433] case 0004 raster    forward 1 pixels=6144 h=2CF9DCC5
+[    6.599] case 0005 raster    forward 2 pixels=6144 h=2CF9DCC5
+[    6.761] case 0006 raster    forward 3 pixels=6144 h=2CF9DCC5
+[    6.921] case 0007 raster    forward 4 pixels=6144 h=2CF9DCC5
+[    7.083] case 0008 raster    forward 5 pixels=6144 h=2CF9DCC5
+[    7.234] case 0009 raster    forward 6 pixels=6144 h=2CF9DCC5
+[    7.384] case 0010 raster    forward 7 pixels=6144 h=2CF9DCC5
+[    7.535] case 0011 raster    forward 8 pixels=6144 h=2CF9DCC5
+[    7.684] case 0012 raster    forward 9 pixels=6176 h=BE477AC5
+[    7.836] case 0013 raster    forward 10 pixels=6176 h=BE477AC5
+[    8.000] case 0014 raster    forward 11 pixels=6176 h=BE477AC5
+[    8.151] case 0015 raster    forward 12 pixels=6176 h=BE477AC5
+[    8.313] case 0016 raster    forward 13 pixels=6176 h=BE477AC5
+[    8.475] case 0017 raster    forward 14 pixels=6176 h=BE477AC5
+[    8.637] case 0018 raster    forward 15 pixels=6176 h=BE477AC5
+[    8.788] case 0019 raster    forward 16 pixels=6176 h=BE477AC5
+[    8.954] case 0020 raster    forward 17 pixels=6176 h=BE477AC5
+[    9.103] case 0021 raster    forward 18 pixels=6176 h=BE477AC5
+[    9.254] case 0022 raster    forward 19 pixels=6176 h=BE477AC5
+[    9.405] case 0023 raster    forward 20 pixels=6176 h=BE477AC5
+[    9.554] case 0024 raster    forward 21 pixels=6176 h=BE477AC5
+[    9.707] case 0025 raster    forward 22 pixels=6176 h=BE477AC5
+[    9.862] case 0026 raster    forward 23 pixels=6176 h=BE477AC5
+[   10.024] case 0027 raster    forward 24 pixels=6176 h=BE477AC5
+[   10.191] case 0028 raster    forward 25 pixels=6208 h=4F9227C5
+[   10.342] case 0029 raster    forward 26 pixels=6208 h=4F9227C5
+[   10.487] case 0030 raster    forward 27 pixels=6208 h=4F9227C5
+[   10.647] case 0031 raster    forward 28 pixels=6208 h=4F9227C5
+[   10.812] case 0032 raster    forward 29 pixels=6208 h=4F9227C5
+[   10.962] case 0033 raster    forward 30 pixels=6208 h=4F9227C5
+[   11.166] case 0034 raster    forward 31 pixels=6208 h=4F9227C5
+[   11.302] case 0035 raster    forward 32 pixels=6080 h=288E09C5
+[   11.480] case 0036 raster    forward 33 pixels=6080 h=288E09C5
+[   11.631] case 0037 raster    forward 34 pixels=6080 h=288E09C5
+[   11.780] case 0038 raster    forward 35 pixels=6080 h=288E09C5
+[   11.933] case 0039 raster    forward 36 pixels=6080 h=288E09C5
+[   12.082] case 0040 raster    forward 37 pixels=6080 h=288E09C5
+[   12.231] case 0041 raster    forward 38 pixels=6080 h=288E09C5
+[   12.382] case 0042 raster    forward 39 pixels=6080 h=288E09C5
+[   12.533] case 0043 raster    forward 40 pixels=6080 h=288E09C5
+[   12.714] case 0044 raster    forward 41 pixels=6112 h=5AD584C5
+[   12.870] case 0045 raster    forward 42 pixels=6112 h=5AD584C5
+[   13.018] case 0046 raster    forward 43 pixels=6112 h=5AD584C5
+[   13.167] case 0047 raster    forward 44 pixels=6112 h=5AD584C5
+[   13.324] case 0048 raster    forward 45 pixels=6112 h=5AD584C5
+[   13.486] case 0049 raster    forward 46 pixels=6112 h=5AD584C5
+[   13.636] case 0050 raster    forward 47 pixels=6112 h=5AD584C5
+[   13.802] case 0051 raster    forward 48 pixels=6112 h=5AD584C5
+[   13.954] case 0052 raster    forward 49 pixels=6112 h=5AD584C5
+[   14.109] case 0053 raster    forward 50 pixels=6112 h=5AD584C5
+[   14.269] case 0054 raster    forward 51 pixels=6112 h=5AD584C5
+[   14.422] case 0055 raster    forward 52 pixels=6112 h=5AD584C5
+[   14.571] case 0056 raster    forward 53 pixels=6112 h=5AD584C5
+[   14.720] case 0057 raster    forward 54 pixels=6112 h=5AD584C5
+[   14.888] case 0058 raster    forward 55 pixels=6112 h=5AD584C5
+[   15.055] case 0059 raster    forward 56 pixels=6112 h=5AD584C5
+[   15.206] case 0060 raster    forward 57 pixels=6144 h=7789DCC5
+[   15.356] case 0061 raster    forward 58 pixels=6144 h=7789DCC5
+[   15.505] case 0062 raster    forward 59 pixels=6144 h=7789DCC5
+[   15.665] case 0063 raster    forward 60 pixels=6144 h=7789DCC5
+[   15.860] case 0064 raster    forward 61 pixels=6144 h=7789DCC5
+[   16.018] case 0065 raster    forward 62 pixels=6144 h=7789DCC5
+[   16.258] case 0066 raster    forward 63 pixels=6144 h=7789DCC5
+[   16.410] case 0067 raster    reverse 63 pixels=6144 h=7789DCC5
+[   16.561] case 0068 raster    reverse 62 pixels=6144 h=7789DCC5
+[   16.711] case 0069 raster    reverse 61 pixels=6144 h=7789DCC5
+[   16.860] case 0070 raster    reverse 60 pixels=6144 h=7789DCC5
+[   17.014] case 0071 raster    reverse 59 pixels=6144 h=7789DCC5
+[   17.177] case 0072 raster    reverse 58 pixels=6144 h=7789DCC5
+[   17.328] case 0073 raster    reverse 57 pixels=6144 h=7789DCC5
+[   17.479] case 0074 raster    reverse 56 pixels=6112 h=5AD584C5
+[   17.647] case 0075 raster    reverse 55 pixels=6112 h=5AD584C5
+[   17.797] case 0076 raster    reverse 54 pixels=6112 h=5AD584C5
+[   17.948] case 0077 raster    reverse 53 pixels=6112 h=5AD584C5
+[   18.096] case 0078 raster    reverse 52 pixels=6112 h=5AD584C5
+[   18.259] case 0079 raster    reverse 51 pixels=6112 h=5AD584C5
+[   18.422] case 0080 raster    reverse 50 pixels=6112 h=5AD584C5
+[   18.585] case 0081 raster    reverse 49 pixels=6112 h=5AD584C5
+[   18.754] case 0082 raster    reverse 48 pixels=6112 h=5AD584C5
+[   18.900] case 0083 raster    reverse 47 pixels=6112 h=5AD584C5
+[   19.048] case 0084 raster    reverse 46 pixels=6112 h=5AD584C5
+[   19.198] case 0085 raster    reverse 45 pixels=6112 h=5AD584C5
+[   19.349] case 0086 raster    reverse 44 pixels=6112 h=5AD584C5
+[   19.499] case 0087 raster    reverse 43 pixels=6112 h=5AD584C5
+[   19.649] case 0088 raster    reverse 42 pixels=6112 h=5AD584C5
+[   19.799] case 0089 raster    reverse 41 pixels=6112 h=5AD584C5
+[   19.956] case 0090 raster    reverse 40 pixels=6080 h=288E09C5
+[   20.117] case 0091 raster    reverse 39 pixels=6080 h=288E09C5
+[   20.268] case 0092 raster    reverse 38 pixels=6080 h=288E09C5
+[   20.419] case 0093 raster    reverse 37 pixels=6080 h=288E09C5
+[   20.564] case 0094 raster    reverse 36 pixels=6080 h=288E09C5
+[   20.721] case 0095 raster    reverse 35 pixels=6080 h=288E09C5
+[   20.889] case 0096 raster    reverse 34 pixels=6080 h=288E09C5
+[   21.037] case 0097 raster    reverse 33 pixels=6080 h=288E09C5
+[   21.296] case 0098 raster    reverse 32 pixels=6080 h=288E09C5
+[   21.442] case 0099 raster    reverse 31 pixels=6208 h=4F9227C5
+[   21.612] case 0100 raster    reverse 30 pixels=6208 h=4F9227C5
+[   21.772] case 0101 raster    reverse 29 pixels=6208 h=4F9227C5
+[   21.924] case 0102 raster    reverse 28 pixels=6208 h=4F9227C5
+[   22.072] case 0103 raster    reverse 27 pixels=6208 h=4F9227C5
+[   22.223] case 0104 raster    reverse 26 pixels=6208 h=4F9227C5
+[   22.373] case 0105 raster    reverse 25 pixels=6208 h=4F9227C5
+[   22.525] case 0106 raster    reverse 24 pixels=6176 h=BE477AC5
+[   22.675] case 0107 raster    reverse 23 pixels=6176 h=BE477AC5
+[   22.830] case 0108 raster    reverse 22 pixels=6176 h=BE477AC5
+[   22.975] case 0109 raster    reverse 21 pixels=6176 h=BE477AC5
+[   23.123] case 0110 raster    reverse 20 pixels=6176 h=BE477AC5
+[   23.276] case 0111 raster    reverse 19 pixels=6176 h=BE477AC5
+[   23.436] case 0112 raster    reverse 18 pixels=6176 h=BE477AC5
+[   23.593] case 0113 raster    reverse 17 pixels=6176 h=BE477AC5
+[   23.743] case 0114 raster    reverse 16 pixels=6176 h=BE477AC5
+[   23.895] case 0115 raster    reverse 15 pixels=6176 h=BE477AC5
+[   24.044] case 0116 raster    reverse 14 pixels=6176 h=BE477AC5
+[   24.200] case 0117 raster    reverse 13 pixels=6176 h=BE477AC5
+[   24.345] case 0118 raster    reverse 12 pixels=6176 h=BE477AC5
+[   24.495] case 0119 raster    reverse 11 pixels=6176 h=BE477AC5
+[   24.651] case 0120 raster    reverse 10 pixels=6176 h=BE477AC5
+[   24.813] case 0121 raster    reverse 9 pixels=6176 h=BE477AC5
+[   24.964] case 0122 raster    reverse 8 pixels=6144 h=2CF9DCC5
+[   25.128] case 0123 raster    reverse 7 pixels=6144 h=2CF9DCC5
+[   25.281] case 0124 raster    reverse 6 pixels=6144 h=2CF9DCC5
+[   25.431] case 0125 raster    reverse 5 pixels=6144 h=2CF9DCC5
+[   25.583] case 0126 raster    reverse 4 pixels=6144 h=2CF9DCC5
+[   25.746] case 0127 raster    reverse 3 pixels=6144 h=2CF9DCC5
+[   25.928] case 0128 raster    reverse 2 pixels=6144 h=2CF9DCC5
+[   26.096] case 0129 raster    reverse 1 pixels=6144 h=2CF9DCC5
+[   26.391] case 0130 raster    reverse 0 pixels=6144 h=2CF9DCC5
+[   26.521] case 0131 edge      normal_diag 0 pixels=16384 h=E6A39DC5
+[   26.671] case 0132 edge      reverse_diag 1 pixels=16384 h=E6A39DC5
+[   26.824] case 0133 edge_cov  diagA_xy_0.000000 0 pixels=16384 h=45949DC5
+[   26.843] cover 0133 diagA_xy_0.000000 gaps=0 overlaps=0
+[   27.011] case 0134 edge_cov  diagA_xy_0.015625 1 pixels=16384 h=45949DC5
+[   27.029] cover 0134 diagA_xy_0.015625 gaps=0 overlaps=0
+[   27.190] case 0135 edge_cov  diagA_xy_0.062500 2 pixels=16384 h=45949DC5
+[   27.207] cover 0135 diagA_xy_0.062500 gaps=0 overlaps=0
+[   27.356] case 0136 edge_cov  diagA_xy_0.125000 3 pixels=16384 h=45949DC5
+[   27.374] cover 0136 diagA_xy_0.125000 gaps=0 overlaps=0
+[   27.530] case 0137 edge_cov  diagA_xy_0.250000 4 pixels=16384 h=45949DC5
+[   27.549] cover 0137 diagA_xy_0.250000 gaps=0 overlaps=0
+[   27.708] case 0138 edge_cov  diagA_xy_0.375000 5 pixels=16384 h=45949DC5
+[   27.733] cover 0138 diagA_xy_0.375000 gaps=0 overlaps=0
+[   27.893] case 0139 edge_cov  diagA_xy_0.500000 6 pixels=16384 h=45949DC5
+[   27.912] cover 0139 diagA_xy_0.500000 gaps=0 overlaps=0
+[   28.075] case 0140 edge_cov  diagA_xy_0.750000 7 pixels=16384 h=0A949DC5
+[   28.093] cover 0140 diagA_xy_0.750000 gaps=0 overlaps=0
+[   28.242] case 0141 edge_cov  diagA_x_0.000000 8 pixels=16384 h=45949DC5
+[   28.263] cover 0141 diagA_x_0.000000 gaps=0 overlaps=0
+[   28.429] case 0142 edge_cov  diagA_x_0.015625 9 pixels=16384 h=45949DC5
+[   28.453] cover 0142 diagA_x_0.015625 gaps=0 overlaps=0
+[   28.608] case 0143 edge_cov  diagA_x_0.062500 10 pixels=16384 h=45949DC5
+[   28.627] cover 0143 diagA_x_0.062500 gaps=0 overlaps=0
+[   28.783] case 0144 edge_cov  diagA_x_0.125000 11 pixels=16384 h=45949DC5
+[   28.804] cover 0144 diagA_x_0.125000 gaps=0 overlaps=0
+[   28.962] case 0145 edge_cov  diagA_x_0.250000 12 pixels=16384 h=45949DC5
+[   28.980] cover 0145 diagA_x_0.250000 gaps=0 overlaps=0
+[   29.128] case 0146 edge_cov  diagA_x_0.375000 13 pixels=16384 h=45949DC5
+[   29.151] cover 0146 diagA_x_0.375000 gaps=0 overlaps=0
+[   29.313] case 0147 edge_cov  diagA_x_0.500000 14 pixels=16384 h=45949DC5
+[   29.330] cover 0147 diagA_x_0.500000 gaps=0 overlaps=0
+[   29.478] case 0148 edge_cov  diagA_x_0.750000 15 pixels=16384 h=45949DC5
+[   29.496] cover 0148 diagA_x_0.750000 gaps=0 overlaps=0
+[   29.651] case 0149 edge_cov  diagB_xy_0.000000 16 pixels=16384 h=45949DC5
+[   29.669] cover 0149 diagB_xy_0.000000 gaps=0 overlaps=0
+[   29.828] case 0150 edge_cov  diagB_xy_0.015625 17 pixels=16384 h=45949DC5
+[   29.846] cover 0150 diagB_xy_0.015625 gaps=0 overlaps=0
+[   29.994] case 0151 edge_cov  diagB_xy_0.062500 18 pixels=16384 h=45949DC5
+[   30.014] cover 0151 diagB_xy_0.062500 gaps=0 overlaps=0
+[   30.163] case 0152 edge_cov  diagB_xy_0.125000 19 pixels=16384 h=45949DC5
+[   30.182] cover 0152 diagB_xy_0.125000 gaps=0 overlaps=0
+[   30.330] case 0153 edge_cov  diagB_xy_0.250000 20 pixels=16384 h=45949DC5
+[   30.358] cover 0153 diagB_xy_0.250000 gaps=0 overlaps=0
+[   30.515] case 0154 edge_cov  diagB_xy_0.375000 21 pixels=16384 h=45949DC5
+[   30.533] cover 0154 diagB_xy_0.375000 gaps=0 overlaps=0
+[   30.681] case 0155 edge_cov  diagB_xy_0.500000 22 pixels=16384 h=45949DC5
+[   30.699] cover 0155 diagB_xy_0.500000 gaps=0 overlaps=0
+[   30.850] case 0156 edge_cov  diagB_xy_0.750000 23 pixels=16384 h=0A949DC5
+[   30.869] cover 0156 diagB_xy_0.750000 gaps=0 overlaps=0
+[   31.021] case 0157 edge_cov  diagB_x_0.000000 24 pixels=16384 h=45949DC5
+[   31.045] cover 0157 diagB_x_0.000000 gaps=0 overlaps=0
+[   31.195] case 0158 edge_cov  diagB_x_0.015625 25 pixels=16384 h=45949DC5
+[   31.212] cover 0158 diagB_x_0.015625 gaps=0 overlaps=0
+[   31.371] case 0159 edge_cov  diagB_x_0.062500 26 pixels=16384 h=45949DC5
+[   31.390] cover 0159 diagB_x_0.062500 gaps=0 overlaps=0
+[   31.588] case 0160 edge_cov  diagB_x_0.125000 27 pixels=16384 h=45949DC5
+[   31.608] cover 0160 diagB_x_0.125000 gaps=0 overlaps=0
+[   31.773] case 0161 edge_cov  diagB_x_0.250000 28 pixels=16384 h=45949DC5
+[   31.797] cover 0161 diagB_x_0.250000 gaps=0 overlaps=0
+[   32.127] case 0162 edge_cov  diagB_x_0.375000 29 pixels=16384 h=45949DC5
+[   32.146] cover 0162 diagB_x_0.375000 gaps=0 overlaps=0
+[   32.290] case 0163 edge_cov  diagB_x_0.500000 30 pixels=16384 h=45949DC5
+[   32.308] cover 0163 diagB_x_0.500000 gaps=0 overlaps=0
+[   32.479] case 0164 edge_cov  diagB_x_0.750000 31 pixels=16384 h=45949DC5
+[   32.498] cover 0164 diagB_x_0.750000 gaps=0 overlaps=0
+[   32.658] case 0165 edge_cov  fan_xy_0.000000 32 pixels=16384 h=45949DC5
+[   32.682] cover 0165 fan_xy_0.000000 gaps=0 overlaps=0
+[   32.839] case 0166 edge_cov  fan_xy_0.015625 33 pixels=16384 h=45949DC5
+[   32.859] cover 0166 fan_xy_0.015625 gaps=0 overlaps=0
+[   33.007] case 0167 edge_cov  fan_xy_0.062500 34 pixels=16384 h=45949DC5
+[   33.026] cover 0167 fan_xy_0.062500 gaps=0 overlaps=0
+[   33.176] case 0168 edge_cov  fan_xy_0.125000 35 pixels=16384 h=45949DC5
+[   33.194] cover 0168 fan_xy_0.125000 gaps=0 overlaps=0
+[   33.358] case 0169 edge_cov  fan_xy_0.250000 36 pixels=16384 h=45949DC5
+[   33.375] cover 0169 fan_xy_0.250000 gaps=0 overlaps=0
+[   33.525] case 0170 edge_cov  fan_xy_0.375000 37 pixels=16384 h=45949DC5
+[   33.544] cover 0170 fan_xy_0.375000 gaps=0 overlaps=0
+[   33.693] case 0171 edge_cov  fan_xy_0.500000 38 pixels=16384 h=45949DC5
+[   33.713] cover 0171 fan_xy_0.500000 gaps=0 overlaps=0
+[   33.882] case 0172 edge_cov  fan_xy_0.750000 39 pixels=16384 h=45949DC5
+[   33.902] cover 0172 fan_xy_0.750000 gaps=0 overlaps=0
+[   33.920] [2/6] raster+edge done: 170 cases, 27.8s
+[   34.120] [3/6] tev         start
+[   34.261] case 0173 tev       constant_rgb 0 pixels=0 h=37949DC5
+[   34.410] case 0174 tev       constant_rgb 1 pixels=36864 h=E74BDDC5
+[   34.560] case 0175 tev       constant_rgb 2 pixels=36864 h=27839DC5
+[   34.733] case 0176 tev       constant_rgb 3 pixels=36864 h=8793DDC5
+[   34.896] case 0177 tev       constant_rgb 4 pixels=36864 h=09A49DC5
+[   35.046] case 0178 tev       constant_rgb 5 pixels=36864 h=AA3BDDC5
+[   35.215] case 0179 tev       constant_rgb 6 pixels=36864 h=88539DC5
+[   35.369] case 0180 tev       constant_rgb 7 pixels=36864 h=6D23DDC5
+[   35.531] case 0181 tev       constant_rgb 8 pixels=36864 h=E4B49DC5
+[   35.680] case 0182 tev       constant_rgb 9 pixels=36864 h=C8EBDDC5
+[   35.830] case 0183 tev       constant_rgb 10 pixels=36864 h=30239DC5
+[   35.981] case 0184 tev       constant_rgb 11 pixels=36864 h=DEB3DDC5
+[   36.137] case 0185 tev       constant_rgb 12 pixels=36864 h=D3C49DC5
+[   36.299] case 0186 tev       constant_rgb 13 pixels=36864 h=9EDBDDC5
+[   36.448] case 0187 tev       constant_rgb 14 pixels=36864 h=79739DC5
+[   36.599] case 0188 tev       constant_rgb 15 pixels=36864 h=5103DDC5
+[   36.754] case 0189 tev       constant_rgb 16 pixels=36864 h=B3D49DC5
+[   36.767] [3/6] tev         done: 17 cases, 2.6s
+[   36.992] [4/6] blend       start
+[   37.129] case 0190 blend     alpha 0 pixels=36864 h=47261DC5
+[   37.295] case 0191 blend     alpha 1 pixels=36864 h=394F1DC5
+[   37.479] case 0192 blend     alpha 2 pixels=36864 h=8BAF1DC5
+[   37.646] case 0193 blend     alpha 3 pixels=36864 h=B6041DC5
+[   37.804] case 0194 blend     alpha 4 pixels=36864 h=91861DC5
+[   37.972] case 0195 blend     alpha 5 pixels=36864 h=BE5D1DC5
+[   38.121] case 0196 blend     alpha 6 pixels=36864 h=FABD1DC5
+[   38.271] case 0197 blend     alpha 7 pixels=36864 h=7EC41DC5
+[   38.425] case 0198 blend     alpha 8 pixels=36864 h=D5E61DC5
+[   38.570] case 0199 blend     alpha 9 pixels=36864 h=D7CF1DC5
+[   38.722] case 0200 blend     alpha 10 pixels=36864 h=1B4D1DC5
+[   38.910] case 0201 blend     alpha 11 pixels=36864 h=57DFDDC5
+[   39.107] case 0202 blend     alpha 12 pixels=36864 h=3C009DC5
+[   39.327] case 0203 blend     alpha 13 pixels=36864 h=58A7DDC5
+[   39.525] case 0204 blend     alpha 14 pixels=36864 h=2BA89DC5
+[   39.744] case 0205 blend     alpha 15 pixels=36864 h=580FDDC5
+[   39.924] case 0206 blend     alpha 16 pixels=36864 h=33D49DC5
+[   39.972] [4/6] blend       done: 17 cases, 3.0s
+[   40.269] [5/6] perf        start
+[   40.283] perf: 11 variants x 40 reps (+4 warmup), perflog on
+[   41.811] case 0207 perf      empty 0 gpu_ms=0.236864 p3d_us=0 cmdbuf=0%
+[   41.865] case 0208 perf      tri192_d1 0 gpu_ms=0.233768 p3d_us=92 cmdbuf=0%
+[   41.910] case 0209 perf      tri192_d64 0 gpu_ms=0.238110 p3d_us=88 cmdbuf=0%
+[   41.994] case 0210 perf      tri768_d1 0 gpu_ms=0.581235 p3d_us=422 cmdbuf=2%
+[   42.044] case 0211 perf      tri768_d16 0 gpu_ms=0.567942 p3d_us=418 cmdbuf=0%
+[   42.094] case 0212 perf      tri768_d64 0 gpu_ms=0.575469 p3d_us=421 cmdbuf=1%
+[   42.145] case 0213 perf      tri768_d256 0 gpu_ms=0.569568 p3d_us=421 cmdbuf=2%
+[   42.228] case 0214 perf      tri3072_d1 0 gpu_ms=1.883557 p3d_us=1739 cmdbuf=9%
+[   42.279] case 0215 perf      fill1_d1 0 gpu_ms=0.444218 p3d_us=302 cmdbuf=0%
+[   42.329] case 0216 perf      fill16_d1 0 gpu_ms=5.208833 p3d_us=5065 cmdbuf=0%
+[   42.385] case 0217 perf      fill16_d16 0 gpu_ms=5.213332 p3d_us=5065 cmdbuf=0%
+[   42.466] case 0218 perf      fill16_d16 1 gpu_ms=5.213988 p3d_us=5069 cmdbuf=1%
+[   42.529] case 0219 perf      fill16_d1 1 gpu_ms=5.212079 p3d_us=5063 cmdbuf=1%
+[   42.580] case 0220 perf      fill1_d1 1 gpu_ms=0.442688 p3d_us=301 cmdbuf=0%
+[   42.630] case 0221 perf      tri3072_d1 1 gpu_ms=1.896082 p3d_us=1744 cmdbuf=0%
+[   42.680] case 0222 perf      tri768_d256 1 gpu_ms=0.569039 p3d_us=419 cmdbuf=0%
+[   42.763] case 0223 perf      tri768_d64 1 gpu_ms=0.567383 p3d_us=420 cmdbuf=9%
+[   42.814] case 0224 perf      tri768_d16 1 gpu_ms=0.573641 p3d_us=428 cmdbuf=2%
+[   42.863] case 0225 perf      tri768_d1 1 gpu_ms=0.561937 p3d_us=420 cmdbuf=1%
+[   42.935] case 0226 perf      tri192_d64 1 gpu_ms=0.235924 p3d_us=89 cmdbuf=0%
+[   43.015] case 0227 perf      tri192_d1 1 gpu_ms=0.253857 p3d_us=100 cmdbuf=2%
+[   43.064] case 0228 perf      empty 1 gpu_ms=0.253857 p3d_us=0 cmdbuf=0%
+[   43.115] case 0229 perf      empty 2 gpu_ms=0.253857 p3d_us=0 cmdbuf=0%
+[   43.165] case 0230 perf      tri192_d1 2 gpu_ms=0.238042 p3d_us=93 cmdbuf=0%
+[   43.249] case 0231 perf      tri192_d64 2 gpu_ms=0.238654 p3d_us=89 cmdbuf=0%
+[   43.299] case 0232 perf      tri768_d1 2 gpu_ms=0.617421 p3d_us=445 cmdbuf=2%
+[   43.350] case 0233 perf      tri768_d16 2 gpu_ms=0.576670 p3d_us=418 cmdbuf=0%
+[   43.400] case 0234 perf      tri768_d64 2 gpu_ms=0.568255 p3d_us=419 cmdbuf=1%
+[   43.484] case 0235 perf      tri768_d256 2 gpu_ms=0.563325 p3d_us=418 cmdbuf=2%
+[   43.539] case 0236 perf      tri3072_d1 2 gpu_ms=1.894836 p3d_us=1745 cmdbuf=9%
+[   43.582] case 0237 perf      fill1_d1 2 gpu_ms=0.454989 p3d_us=306 cmdbuf=0%
+[   43.635] case 0238 perf      fill16_d1 2 gpu_ms=5.208408 p3d_us=5064 cmdbuf=0%
+[   43.713] case 0239 perf      fill16_d16 2 gpu_ms=5.209146 p3d_us=5065 cmdbuf=0%
+[   43.766] case 0240 perf      fill16_d16 3 gpu_ms=5.209549 p3d_us=5062 cmdbuf=1%
+[   43.816] case 0241 perf      fill16_d1 3 gpu_ms=5.210549 p3d_us=5062 cmdbuf=1%
+[   43.869] case 0242 perf      fill1_d1 3 gpu_ms=0.442315 p3d_us=301 cmdbuf=0%
+[   43.916] case 0243 perf      tri3072_d1 3 gpu_ms=1.894739 p3d_us=1748 cmdbuf=0%
+[   44.001] case 0244 perf      tri768_d256 3 gpu_ms=0.572604 p3d_us=420 cmdbuf=0%
+[   44.057] case 0245 perf      tri768_d64 3 gpu_ms=0.565749 p3d_us=421 cmdbuf=9%
+[   44.102] case 0246 perf      tri768_d16 3 gpu_ms=0.572567 p3d_us=426 cmdbuf=2%
+[   44.152] case 0247 perf      tri768_d1 3 gpu_ms=0.568502 p3d_us=422 cmdbuf=1%
+[   44.235] case 0248 perf      tri192_d64 3 gpu_ms=0.252052 p3d_us=109 cmdbuf=0%
+[   44.286] case 0249 perf      tri192_d1 3 gpu_ms=0.233925 p3d_us=93 cmdbuf=2%
+[   44.335] case 0250 perf      empty 3 gpu_ms=0.233925 p3d_us=0 cmdbuf=0%
+[   44.385] case 0251 perf      empty 4 gpu_ms=0.233925 p3d_us=0 cmdbuf=0%
+[   44.470] case 0252 perf      tri192_d1 4 gpu_ms=0.230635 p3d_us=91 cmdbuf=0%
+[   44.519] case 0253 perf      tri192_d64 4 gpu_ms=0.232679 p3d_us=91 cmdbuf=0%
+[   44.569] case 0254 perf      tri768_d1 4 gpu_ms=0.564153 p3d_us=422 cmdbuf=2%
+[   44.623] case 0255 perf      tri768_d16 4 gpu_ms=0.581265 p3d_us=428 cmdbuf=0%
+[   44.703] case 0256 perf      tri768_d64 4 gpu_ms=0.563414 p3d_us=420 cmdbuf=1%
+[   44.753] case 0257 perf      tri768_d256 4 gpu_ms=0.566137 p3d_us=418 cmdbuf=2%
+[   44.803] case 0258 perf      tri3072_d1 4 gpu_ms=1.895858 p3d_us=1748 cmdbuf=9%
+[   44.853] case 0259 perf      fill1_d1 4 gpu_ms=0.453706 p3d_us=300 cmdbuf=0%
+[   44.903] case 0260 perf      fill16_d1 4 gpu_ms=5.209774 p3d_us=5046 cmdbuf=0%
+[   44.987] case 0261 perf      fill16_d16 4 gpu_ms=5.211556 p3d_us=5065 cmdbuf=0%
+[   45.037] case 0262 perf      fill16_d16 5 gpu_ms=5.212026 p3d_us=5065 cmdbuf=1%
+[   45.088] case 0263 perf      fill16_d1 5 gpu_ms=5.212757 p3d_us=5062 cmdbuf=1%
+[   45.143] case 0264 perf      fill1_d1 5 gpu_ms=0.460330 p3d_us=307 cmdbuf=0%
+[   45.220] case 0265 perf      tri3072_d1 5 gpu_ms=1.887914 p3d_us=1742 cmdbuf=0%
+[   45.271] case 0266 perf      tri768_d256 5 gpu_ms=0.571262 p3d_us=417 cmdbuf=0%
+[   45.321] case 0267 perf      tri768_d64 5 gpu_ms=0.566652 p3d_us=420 cmdbuf=9%
+[   45.371] case 0268 perf      tri768_d16 5 gpu_ms=0.563287 p3d_us=423 cmdbuf=2%
+[   45.454] case 0269 perf      tri768_d1 5 gpu_ms=0.578557 p3d_us=423 cmdbuf=1%
+[   45.504] case 0270 perf      tri192_d64 5 gpu_ms=0.248613 p3d_us=88 cmdbuf=0%
+[   45.554] case 0271 perf      tri192_d1 5 gpu_ms=0.232134 p3d_us=90 cmdbuf=2%
+[   45.604] case 0272 perf      empty 5 gpu_ms=0.232134 p3d_us=0 cmdbuf=0%
+[   45.689] case 0273 perf      empty 6 gpu_ms=0.232134 p3d_us=0 cmdbuf=0%
+[   45.743] case 0274 perf      tri192_d1 6 gpu_ms=0.238483 p3d_us=93 cmdbuf=0%
+[   45.789] case 0275 perf      tri192_d64 6 gpu_ms=0.234186 p3d_us=91 cmdbuf=0%
+[   45.840] case 0276 perf      tri768_d1 6 gpu_ms=0.567062 p3d_us=420 cmdbuf=2%
+[   45.926] case 0277 perf      tri768_d16 6 gpu_ms=0.567189 p3d_us=421 cmdbuf=0%
+[   45.974] case 0278 perf      tri768_d64 6 gpu_ms=0.586979 p3d_us=425 cmdbuf=1%
+[   46.023] case 0279 perf      tri768_d256 6 gpu_ms=0.592797 p3d_us=429 cmdbuf=2%
+[   46.074] case 0280 perf      tri3072_d1 6 gpu_ms=1.894463 p3d_us=1740 cmdbuf=9%
+[   46.124] case 0281 perf      fill1_d1 6 gpu_ms=0.441614 p3d_us=301 cmdbuf=0%
+[   46.206] case 0282 perf      fill16_d1 6 gpu_ms=5.223327 p3d_us=5061 cmdbuf=0%
+[   46.261] case 0283 perf      fill16_d16 6 gpu_ms=5.214055 p3d_us=5064 cmdbuf=0%
+[   46.306] case 0284 perf      fill16_d16 7 gpu_ms=5.209408 p3d_us=5065 cmdbuf=1%
+[   46.356] case 0285 perf      fill16_d1 7 gpu_ms=5.213749 p3d_us=5069 cmdbuf=1%
+[   46.440] case 0286 perf      fill1_d1 7 gpu_ms=0.440413 p3d_us=299 cmdbuf=0%
+[   46.508] case 0287 perf      tri3072_d1 7 gpu_ms=1.895776 p3d_us=1750 cmdbuf=0%
+[   46.558] case 0288 perf      tri768_d256 7 gpu_ms=0.575357 p3d_us=425 cmdbuf=0%
+[   46.608] case 0289 perf      tri768_d64 7 gpu_ms=0.578773 p3d_us=422 cmdbuf=9%
+[   46.691] case 0290 perf      tri768_d16 7 gpu_ms=0.583928 p3d_us=423 cmdbuf=2%
+[   46.741] case 0291 perf      tri768_d1 7 gpu_ms=0.585793 p3d_us=428 cmdbuf=1%
+[   46.791] case 0292 perf      tri192_d64 7 gpu_ms=0.237669 p3d_us=91 cmdbuf=0%
+[   46.847] case 0293 perf      tri192_d1 7 gpu_ms=0.234798 p3d_us=93 cmdbuf=2%
+[   46.939] case 0294 perf      empty 7 gpu_ms=0.234798 p3d_us=0 cmdbuf=0%
+[   46.992] case 0295 perf      empty 8 gpu_ms=0.234798 p3d_us=0 cmdbuf=0%
+[   47.042] case 0296 perf      tri192_d1 8 gpu_ms=0.238453 p3d_us=92 cmdbuf=0%
+[   47.093] case 0297 perf      tri192_d64 8 gpu_ms=0.235782 p3d_us=90 cmdbuf=0%
+[   47.142] case 0298 perf      tri768_d1 8 gpu_ms=0.574402 p3d_us=427 cmdbuf=2%
+[   47.226] case 0299 perf      tri768_d16 8 gpu_ms=0.563451 p3d_us=422 cmdbuf=0%
+[   47.276] case 0300 perf      tri768_d64 8 gpu_ms=0.582772 p3d_us=424 cmdbuf=1%
+[   47.325] case 0301 perf      tri768_d256 8 gpu_ms=0.578363 p3d_us=421 cmdbuf=2%
+[   47.384] case 0302 perf      tri3072_d1 8 gpu_ms=1.883326 p3d_us=1742 cmdbuf=9%
+[   47.477] case 0303 perf      fill1_d1 8 gpu_ms=0.441980 p3d_us=299 cmdbuf=0%
+[   47.527] case 0304 perf      fill16_d1 8 gpu_ms=5.216815 p3d_us=5063 cmdbuf=0%
+[   47.577] case 0305 perf      fill16_d16 8 gpu_ms=5.232331 p3d_us=5066 cmdbuf=0%
+[   47.628] case 0306 perf      fill16_d16 9 gpu_ms=5.211265 p3d_us=5065 cmdbuf=1%
+[   47.728] case 0307 perf      fill16_d1 9 gpu_ms=5.208513 p3d_us=5064 cmdbuf=1%
+[   47.779] case 0308 perf      fill1_d1 9 gpu_ms=0.453639 p3d_us=300 cmdbuf=0%
+[   47.829] case 0309 perf      tri3072_d1 9 gpu_ms=1.896716 p3d_us=1750 cmdbuf=0%
+[   47.879] case 0310 perf      tri768_d256 9 gpu_ms=0.590903 p3d_us=425 cmdbuf=0%
+[   47.966] case 0311 perf      tri768_d64 9 gpu_ms=0.616832 p3d_us=423 cmdbuf=9%
+[   48.013] case 0312 perf      tri768_d16 9 gpu_ms=0.567166 p3d_us=419 cmdbuf=2%
+[   48.062] case 0313 perf      tri768_d1 9 gpu_ms=0.586695 p3d_us=423 cmdbuf=1%
+[   48.112] case 0314 perf      tri192_d64 9 gpu_ms=0.235715 p3d_us=88 cmdbuf=0%
+[   48.163] case 0315 perf      tri192_d1 9 gpu_ms=0.238818 p3d_us=90 cmdbuf=2%
+[   48.246] case 0316 perf      empty 9 gpu_ms=0.238818 p3d_us=0 cmdbuf=0%
+[   48.296] case 0317 perf      empty 10 gpu_ms=0.238818 p3d_us=0 cmdbuf=0%
+[   48.346] case 0318 perf      tri192_d1 10 gpu_ms=0.234342 p3d_us=90 cmdbuf=0%
+[   48.396] case 0319 perf      tri192_d64 10 gpu_ms=0.233127 p3d_us=89 cmdbuf=0%
+[   48.462] case 0320 perf      tri768_d1 10 gpu_ms=0.585032 p3d_us=404 cmdbuf=2%
+[   48.518] case 0321 perf      tri768_d16 10 gpu_ms=0.568524 p3d_us=422 cmdbuf=0%
+[   48.565] case 0322 perf      tri768_d64 10 gpu_ms=0.568860 p3d_us=419 cmdbuf=1%
+[   48.613] case 0323 perf      tri768_d256 10 gpu_ms=0.582906 p3d_us=408 cmdbuf=2%
+[   48.699] case 0324 perf      tri3072_d1 10 gpu_ms=1.904534 p3d_us=1744 cmdbuf=9%
+[   48.747] case 0325 perf      fill1_d1 10 gpu_ms=0.442323 p3d_us=301 cmdbuf=0%
+[   48.798] case 0326 perf      fill16_d1 10 gpu_ms=5.208028 p3d_us=5065 cmdbuf=0%
+[   48.849] case 0327 perf      fill16_d16 10 gpu_ms=5.219359 p3d_us=5064 cmdbuf=0%
+[   48.933] case 0328 perf      fill16_d16 11 gpu_ms=5.211444 p3d_us=5067 cmdbuf=1%
+[   48.982] case 0329 perf      fill16_d1 11 gpu_ms=5.211094 p3d_us=5065 cmdbuf=1%
+[   49.037] case 0330 perf      fill1_d1 11 gpu_ms=0.441808 p3d_us=299 cmdbuf=0%
+[   49.082] case 0331 perf      tri3072_d1 11 gpu_ms=1.884333 p3d_us=1742 cmdbuf=0%
+[   49.166] case 0332 perf      tri768_d256 11 gpu_ms=0.572455 p3d_us=421 cmdbuf=0%
+[   49.214] case 0333 perf      tri768_d64 11 gpu_ms=0.568971 p3d_us=420 cmdbuf=9%
+[   49.264] case 0334 perf      tri768_d16 11 gpu_ms=0.593745 p3d_us=425 cmdbuf=2%
+[   49.315] case 0335 perf      tri768_d1 11 gpu_ms=0.571649 p3d_us=423 cmdbuf=1%
+[   49.365] case 0336 perf      tri192_d64 11 gpu_ms=0.240668 p3d_us=86 cmdbuf=0%
+[   49.448] case 0337 perf      tri192_d1 11 gpu_ms=0.233567 p3d_us=91 cmdbuf=2%
+[   49.500] case 0338 perf      empty 11 gpu_ms=0.233567 p3d_us=0 cmdbuf=0%
+[   49.549] case 0339 perf      empty 12 gpu_ms=0.233567 p3d_us=0 cmdbuf=0%
+[   49.605] case 0340 perf      tri192_d1 12 gpu_ms=0.238020 p3d_us=92 cmdbuf=0%
+[   49.701] case 0341 perf      tri192_d64 12 gpu_ms=0.238490 p3d_us=91 cmdbuf=0%
+[   49.751] case 0342 perf      tri768_d1 12 gpu_ms=0.563198 p3d_us=422 cmdbuf=2%
+[   49.801] case 0343 perf      tri768_d16 12 gpu_ms=0.603711 p3d_us=432 cmdbuf=0%
+[   49.851] case 0344 perf      tri768_d64 12 gpu_ms=0.561930 p3d_us=421 cmdbuf=1%
+[   49.933] case 0345 perf      tri768_d256 12 gpu_ms=0.581071 p3d_us=423 cmdbuf=2%
+[   49.984] case 0346 perf      tri3072_d1 12 gpu_ms=1.896574 p3d_us=1748 cmdbuf=9%
+[   50.035] case 0347 perf      fill1_d1 12 gpu_ms=0.456198 p3d_us=300 cmdbuf=0%
+[   50.084] case 0348 perf      fill16_d1 12 gpu_ms=5.215614 p3d_us=5068 cmdbuf=0%
+[   50.190] case 0349 perf      fill16_d16 12 gpu_ms=5.210654 p3d_us=5063 cmdbuf=0%
+[   50.233] case 0350 perf      fill16_d16 13 gpu_ms=5.207543 p3d_us=5065 cmdbuf=1%
+[   50.285] case 0351 perf      fill16_d1 13 gpu_ms=5.211123 p3d_us=5065 cmdbuf=1%
+[   50.335] case 0352 perf      fill1_d1 13 gpu_ms=0.447500 p3d_us=306 cmdbuf=0%
+[   50.385] case 0353 perf      tri3072_d1 13 gpu_ms=1.892300 p3d_us=1748 cmdbuf=0%
+[   50.469] case 0354 perf      tri768_d256 13 gpu_ms=0.567509 p3d_us=420 cmdbuf=0%
+[   50.519] case 0355 perf      tri768_d64 13 gpu_ms=0.567084 p3d_us=420 cmdbuf=9%
+[   50.569] case 0356 perf      tri768_d16 13 gpu_ms=0.566719 p3d_us=424 cmdbuf=2%
+[   50.620] case 0357 perf      tri768_d1 13 gpu_ms=0.569896 p3d_us=425 cmdbuf=1%
+[   50.708] case 0358 perf      tri192_d64 13 gpu_ms=0.234999 p3d_us=89 cmdbuf=0%
+[   50.752] case 0359 perf      tri192_d1 13 gpu_ms=0.236476 p3d_us=93 cmdbuf=2%
+[   50.803] case 0360 perf      empty 13 gpu_ms=0.236476 p3d_us=0 cmdbuf=0%
+[   50.853] case 0361 perf      empty 14 gpu_ms=0.236476 p3d_us=0 cmdbuf=0%
+[   50.938] case 0362 perf      tri192_d1 14 gpu_ms=0.233343 p3d_us=91 cmdbuf=0%
+[   50.987] case 0363 perf      tri192_d64 14 gpu_ms=0.235074 p3d_us=91 cmdbuf=0%
+[   51.036] case 0364 perf      tri768_d1 14 gpu_ms=0.562810 p3d_us=420 cmdbuf=2%
+[   51.086] case 0365 perf      tri768_d16 14 gpu_ms=0.563489 p3d_us=421 cmdbuf=0%
+[   51.170] case 0366 perf      tri768_d64 14 gpu_ms=0.581623 p3d_us=422 cmdbuf=1%
+[   51.220] case 0367 perf      tri768_d256 14 gpu_ms=0.575864 p3d_us=425 cmdbuf=2%
+[   51.275] case 0368 perf      tri3072_d1 14 gpu_ms=1.901087 p3d_us=1746 cmdbuf=9%
+[   51.322] case 0369 perf      fill1_d1 14 gpu_ms=0.452371 p3d_us=300 cmdbuf=0%
+[   51.407] case 0370 perf      fill16_d1 14 gpu_ms=5.217315 p3d_us=5064 cmdbuf=0%
+[   51.456] case 0371 perf      fill16_d16 14 gpu_ms=5.213637 p3d_us=5062 cmdbuf=0%
+[   51.506] case 0372 perf      fill16_d16 15 gpu_ms=5.218837 p3d_us=5060 cmdbuf=1%
+[   51.556] case 0373 perf      fill16_d1 15 gpu_ms=5.211974 p3d_us=5062 cmdbuf=1%
+[   51.606] case 0374 perf      fill1_d1 15 gpu_ms=0.441495 p3d_us=300 cmdbuf=0%
+[   51.690] case 0375 perf      tri3072_d1 15 gpu_ms=1.893217 p3d_us=1751 cmdbuf=0%
+[   51.739] case 0376 perf      tri768_d256 15 gpu_ms=0.571366 p3d_us=426 cmdbuf=0%
+[   51.793] case 0377 perf      tri768_d64 15 gpu_ms=0.577759 p3d_us=422 cmdbuf=9%
+[   51.838] case 0378 perf      tri768_d16 15 gpu_ms=0.564063 p3d_us=422 cmdbuf=2%
+[   51.922] case 0379 perf      tri768_d1 15 gpu_ms=0.582913 p3d_us=409 cmdbuf=1%
+[   51.972] case 0380 perf      tri192_d64 15 gpu_ms=0.240497 p3d_us=96 cmdbuf=0%
+[   52.022] case 0381 perf      tri192_d1 15 gpu_ms=0.231060 p3d_us=93 cmdbuf=2%
+[   52.073] case 0382 perf      empty 15 gpu_ms=0.231060 p3d_us=0 cmdbuf=0%
+[   52.157] case 0383 perf      empty 16 gpu_ms=0.231060 p3d_us=0 cmdbuf=0%
+[   52.207] case 0384 perf      tri192_d1 16 gpu_ms=0.233858 p3d_us=91 cmdbuf=0%
+[   52.257] case 0385 perf      tri192_d64 16 gpu_ms=0.235693 p3d_us=90 cmdbuf=0%
+[   52.313] case 0386 perf      tri768_d1 16 gpu_ms=0.588329 p3d_us=424 cmdbuf=2%
+[   52.393] case 0387 perf      tri768_d16 16 gpu_ms=0.564063 p3d_us=422 cmdbuf=0%
+[   52.442] case 0388 perf      tri768_d64 16 gpu_ms=0.566666 p3d_us=422 cmdbuf=1%
+[   52.491] case 0389 perf      tri768_d256 16 gpu_ms=0.570948 p3d_us=420 cmdbuf=2%
+[   52.541] case 0390 perf      tri3072_d1 16 gpu_ms=1.893232 p3d_us=1747 cmdbuf=9%
+[   52.591] case 0391 perf      fill1_d1 16 gpu_ms=0.445001 p3d_us=303 cmdbuf=0%
+[   52.675] case 0392 perf      fill16_d1 16 gpu_ms=5.212541 p3d_us=5067 cmdbuf=0%
+[   52.725] case 0393 perf      fill16_d16 16 gpu_ms=5.214861 p3d_us=5063 cmdbuf=0%
+[   52.775] case 0394 perf      fill16_d16 17 gpu_ms=5.222559 p3d_us=5067 cmdbuf=1%
+[   52.830] case 0395 perf      fill16_d1 17 gpu_ms=5.245393 p3d_us=5063 cmdbuf=1%
+[   52.909] case 0396 perf      fill1_d1 17 gpu_ms=0.445874 p3d_us=302 cmdbuf=0%
+[   52.959] case 0397 perf      tri3072_d1 17 gpu_ms=1.882386 p3d_us=1742 cmdbuf=0%
+[   53.009] case 0398 perf      tri768_d256 17 gpu_ms=0.565003 p3d_us=419 cmdbuf=0%
+[   53.059] case 0399 perf      tri768_d64 17 gpu_ms=0.563257 p3d_us=420 cmdbuf=9%
+[   53.134] case 0400 perf      tri768_d16 17 gpu_ms=0.583354 p3d_us=423 cmdbuf=2%
+[   53.211] case 0401 perf      tri768_d1 17 gpu_ms=0.566674 p3d_us=422 cmdbuf=1%
+[   53.261] case 0402 perf      tri192_d64 17 gpu_ms=0.259996 p3d_us=93 cmdbuf=0%
+[   53.311] case 0403 perf      tri192_d1 17 gpu_ms=0.232075 p3d_us=93 cmdbuf=2%
+[   53.361] case 0404 perf      empty 17 gpu_ms=0.232075 p3d_us=0 cmdbuf=0%
+[   53.440] case 0405 perf      empty 18 gpu_ms=0.232075 p3d_us=0 cmdbuf=0%
+[   53.494] case 0406 perf      tri192_d1 18 gpu_ms=0.231180 p3d_us=91 cmdbuf=0%
+[   53.543] case 0407 perf      tri192_d64 18 gpu_ms=0.253096 p3d_us=95 cmdbuf=0%
+[   53.593] case 0408 perf      tri768_d1 18 gpu_ms=0.580974 p3d_us=427 cmdbuf=2%
+[   53.680] case 0409 perf      tri768_d16 18 gpu_ms=0.706489 p3d_us=365 cmdbuf=0%
+[   53.743] case 0410 perf      tri768_d64 18 gpu_ms=0.563929 p3d_us=420 cmdbuf=1%
+[   53.793] case 0411 perf      tri768_d256 18 gpu_ms=0.563310 p3d_us=418 cmdbuf=2%
+[   53.844] case 0412 perf      tri3072_d1 18 gpu_ms=1.897283 p3d_us=1750 cmdbuf=9%
+[   53.895] case 0413 perf      fill1_d1 18 gpu_ms=0.442360 p3d_us=300 cmdbuf=0%
+[   53.984] case 0414 perf      fill16_d1 18 gpu_ms=5.213719 p3d_us=5064 cmdbuf=0%
+[   54.030] case 0415 perf      fill16_d16 18 gpu_ms=5.211370 p3d_us=5064 cmdbuf=0%
+[   54.080] case 0416 perf      fill16_d16 19 gpu_ms=5.211660 p3d_us=5064 cmdbuf=1%
+[   54.130] case 0417 perf      fill16_d1 19 gpu_ms=5.212302 p3d_us=5063 cmdbuf=1%
+[   54.213] case 0418 perf      fill1_d1 19 gpu_ms=0.441338 p3d_us=300 cmdbuf=0%
+[   54.264] case 0419 perf      tri3072_d1 19 gpu_ms=1.894030 p3d_us=1748 cmdbuf=0%
+[   54.314] case 0420 perf      tri768_d256 19 gpu_ms=0.569262 p3d_us=419 cmdbuf=0%
+[   54.366] case 0421 perf      tri768_d64 19 gpu_ms=0.566771 p3d_us=419 cmdbuf=9%
+[   54.447] case 0422 perf      tri768_d16 19 gpu_ms=0.560699 p3d_us=421 cmdbuf=2%
+[   54.501] case 0423 perf      tri768_d1 19 gpu_ms=0.566249 p3d_us=423 cmdbuf=1%
+[   54.546] case 0424 perf      tri192_d64 19 gpu_ms=0.233485 p3d_us=88 cmdbuf=0%
+[   54.596] case 0425 perf      tri192_d1 19 gpu_ms=0.259444 p3d_us=99 cmdbuf=2%
+[   54.680] case 0426 perf      empty 19 gpu_ms=0.259444 p3d_us=0 cmdbuf=0%
+[   54.731] case 0427 perf      empty 20 gpu_ms=0.259444 p3d_us=0 cmdbuf=0%
+[   54.781] case 0428 perf      tri192_d1 20 gpu_ms=0.235178 p3d_us=91 cmdbuf=0%
+[   54.831] case 0429 perf      tri192_d64 20 gpu_ms=0.238229 p3d_us=89 cmdbuf=0%
+[   54.881] case 0430 perf      tri768_d1 20 gpu_ms=0.565436 p3d_us=420 cmdbuf=2%
+[   54.965] case 0431 perf      tri768_d16 20 gpu_ms=0.567047 p3d_us=422 cmdbuf=0%
+[   55.016] case 0432 perf      tri768_d64 20 gpu_ms=0.592163 p3d_us=427 cmdbuf=1%
+[   55.070] case 0433 perf      tri768_d256 20 gpu_ms=0.588605 p3d_us=424 cmdbuf=2%
+[   55.115] case 0434 perf      tri3072_d1 20 gpu_ms=1.895306 p3d_us=1742 cmdbuf=9%
+[   55.199] case 0435 perf      fill1_d1 20 gpu_ms=0.461166 p3d_us=303 cmdbuf=0%
+[   55.249] case 0436 perf      fill16_d1 20 gpu_ms=5.215637 p3d_us=5070 cmdbuf=0%
+[   55.299] case 0437 perf      fill16_d16 20 gpu_ms=5.211549 p3d_us=5066 cmdbuf=0%
+[   55.348] case 0438 perf      fill16_d16 21 gpu_ms=5.211258 p3d_us=5063 cmdbuf=1%
+[   55.432] case 0439 perf      fill16_d1 21 gpu_ms=5.225722 p3d_us=5062 cmdbuf=1%
+[   55.482] case 0440 perf      fill1_d1 21 gpu_ms=0.458652 p3d_us=300 cmdbuf=0%
+[   55.532] case 0441 perf      tri3072_d1 21 gpu_ms=1.922272 p3d_us=1747 cmdbuf=0%
+[   55.587] case 0442 perf      tri768_d256 21 gpu_ms=0.578945 p3d_us=424 cmdbuf=0%
+[   55.669] case 0443 perf      tri768_d64 21 gpu_ms=0.575775 p3d_us=422 cmdbuf=9%
+[   55.718] case 0444 perf      tri768_d16 21 gpu_ms=0.560617 p3d_us=420 cmdbuf=2%
+[   55.768] case 0445 perf      tri768_d1 21 gpu_ms=0.577326 p3d_us=425 cmdbuf=1%
+[   55.818] case 0446 perf      tri192_d64 21 gpu_ms=0.234589 p3d_us=89 cmdbuf=0%
+[   55.906] case 0447 perf      tri192_d1 21 gpu_ms=0.230963 p3d_us=91 cmdbuf=2%
+[   55.952] case 0448 perf      empty 21 gpu_ms=0.230963 p3d_us=0 cmdbuf=0%
+[   56.002] case 0449 perf      empty 22 gpu_ms=0.230963 p3d_us=0 cmdbuf=0%
+[   56.052] case 0450 perf      tri192_d1 22 gpu_ms=0.234626 p3d_us=93 cmdbuf=0%
+[   56.139] case 0451 perf      tri192_d64 22 gpu_ms=0.234260 p3d_us=94 cmdbuf=0%
+[   56.184] case 0452 perf      tri768_d1 22 gpu_ms=0.575603 p3d_us=430 cmdbuf=2%
+[   56.234] case 0453 perf      tri768_d16 22 gpu_ms=0.578751 p3d_us=417 cmdbuf=0%
+[   56.285] case 0454 perf      tri768_d64 22 gpu_ms=0.569620 p3d_us=422 cmdbuf=1%
+[   56.334] case 0455 perf      tri768_d256 22 gpu_ms=0.568226 p3d_us=419 cmdbuf=2%
+[   56.418] case 0456 perf      tri3072_d1 22 gpu_ms=1.886847 p3d_us=1740 cmdbuf=9%
+[   56.469] case 0457 perf      fill1_d1 22 gpu_ms=0.439861 p3d_us=298 cmdbuf=0%
+[   56.519] case 0458 perf      fill16_d1 22 gpu_ms=5.211004 p3d_us=5066 cmdbuf=0%
+[   56.569] case 0459 perf      fill16_d16 22 gpu_ms=5.236277 p3d_us=5064 cmdbuf=0%
+[   56.658] case 0460 perf      fill16_d16 23 gpu_ms=5.212369 p3d_us=5065 cmdbuf=1%
+[   56.704] case 0461 perf      fill16_d1 23 gpu_ms=5.211638 p3d_us=5059 cmdbuf=1%
+[   56.754] case 0462 perf      fill1_d1 23 gpu_ms=0.443017 p3d_us=300 cmdbuf=0%
+[   56.804] case 0463 perf      tri3072_d1 23 gpu_ms=1.887369 p3d_us=1738 cmdbuf=0%
+[   56.887] case 0464 perf      tri768_d256 23 gpu_ms=0.566241 p3d_us=419 cmdbuf=0%
+[   56.937] case 0465 perf      tri768_d64 23 gpu_ms=0.564242 p3d_us=419 cmdbuf=9%
+[   56.987] case 0466 perf      tri768_d16 23 gpu_ms=0.571396 p3d_us=427 cmdbuf=2%
+[   57.037] case 0467 perf      tri768_d1 23 gpu_ms=0.567853 p3d_us=424 cmdbuf=1%
+[   57.088] case 0468 perf      tri192_d64 23 gpu_ms=0.239393 p3d_us=88 cmdbuf=0%
+[   57.170] case 0469 perf      tri192_d1 23 gpu_ms=0.232806 p3d_us=93 cmdbuf=2%
+[   57.227] case 0470 perf      empty 23 gpu_ms=0.232806 p3d_us=0 cmdbuf=0%
+[   57.288] case 0471 perf      empty 24 gpu_ms=0.232806 p3d_us=0 cmdbuf=0%
+[   57.338] case 0472 perf      tri192_d1 24 gpu_ms=0.236924 p3d_us=93 cmdbuf=0%
+[   57.422] case 0473 perf      tri192_d64 24 gpu_ms=0.237237 p3d_us=92 cmdbuf=0%
+[   57.472] case 0474 perf      tri768_d1 24 gpu_ms=0.563966 p3d_us=423 cmdbuf=2%
+[   57.522] case 0475 perf      tri768_d16 24 gpu_ms=0.583809 p3d_us=440 cmdbuf=0%
+[   57.573] case 0476 perf      tri768_d64 24 gpu_ms=0.567942 p3d_us=422 cmdbuf=1%
+[   57.656] case 0477 perf      tri768_d256 24 gpu_ms=0.565853 p3d_us=420 cmdbuf=2%
+[   57.707] case 0478 perf      tri3072_d1 24 gpu_ms=1.894664 p3d_us=1746 cmdbuf=9%
+[   57.762] case 0479 perf      fill1_d1 24 gpu_ms=0.458018 p3d_us=305 cmdbuf=0%
+[   57.806] case 0480 perf      fill16_d1 24 gpu_ms=5.211907 p3d_us=5065 cmdbuf=0%
+[   57.885] case 0481 perf      fill16_d16 24 gpu_ms=5.213100 p3d_us=5066 cmdbuf=0%
+[   57.939] case 0482 perf      fill16_d16 25 gpu_ms=5.211041 p3d_us=5064 cmdbuf=1%
+[   57.989] case 0483 perf      fill16_d1 25 gpu_ms=5.209922 p3d_us=5065 cmdbuf=1%
+[   58.039] case 0484 perf      fill1_d1 25 gpu_ms=0.444441 p3d_us=300 cmdbuf=0%
+[   58.105] case 0485 perf      tri3072_d1 25 gpu_ms=1.894582 p3d_us=1749 cmdbuf=0%
+[   58.206] case 0486 perf      tri768_d256 25 gpu_ms=0.569665 p3d_us=422 cmdbuf=0%
+[   58.256] case 0487 perf      tri768_d64 25 gpu_ms=0.569576 p3d_us=418 cmdbuf=9%
+[   58.313] case 0488 perf      tri768_d16 25 gpu_ms=0.581936 p3d_us=429 cmdbuf=2%
+[   58.394] case 0489 perf      tri768_d1 25 gpu_ms=0.565503 p3d_us=422 cmdbuf=1%
+[   58.442] case 0490 perf      tri192_d64 25 gpu_ms=0.253238 p3d_us=94 cmdbuf=0%
+[   58.492] case 0491 perf      tri192_d1 25 gpu_ms=0.234790 p3d_us=91 cmdbuf=2%
+[   58.543] case 0492 perf      empty 25 gpu_ms=0.234790 p3d_us=0 cmdbuf=0%
+[   58.592] case 0493 perf      empty 26 gpu_ms=0.234790 p3d_us=0 cmdbuf=0%
+[   58.676] case 0494 perf      tri192_d1 26 gpu_ms=0.255654 p3d_us=96 cmdbuf=0%
+[   58.725] case 0495 perf      tri192_d64 26 gpu_ms=0.233149 p3d_us=90 cmdbuf=0%
+[   58.776] case 0496 perf      tri768_d1 26 gpu_ms=0.564339 p3d_us=421 cmdbuf=2%
+[   58.825] case 0497 perf      tri768_d16 26 gpu_ms=0.575939 p3d_us=427 cmdbuf=0%
+[   58.915] case 0498 perf      tri768_d64 26 gpu_ms=0.567718 p3d_us=422 cmdbuf=1%
+[   58.975] case 0499 perf      tri768_d256 26 gpu_ms=0.567487 p3d_us=419 cmdbuf=2%
+[   59.026] case 0500 perf      tri3072_d1 26 gpu_ms=1.885131 p3d_us=1743 cmdbuf=9%
+[   59.076] case 0501 perf      fill1_d1 26 gpu_ms=0.450319 p3d_us=306 cmdbuf=0%
+[   59.160] case 0502 perf      fill16_d1 26 gpu_ms=5.214704 p3d_us=5063 cmdbuf=0%
+[   59.210] case 0503 perf      fill16_d16 26 gpu_ms=5.209766 p3d_us=5040 cmdbuf=0%
+[   59.260] case 0504 perf      fill16_d16 27 gpu_ms=5.212519 p3d_us=5064 cmdbuf=1%
+[   59.311] case 0505 perf      fill16_d1 27 gpu_ms=5.222268 p3d_us=5065 cmdbuf=1%
+[   59.360] case 0506 perf      fill1_d1 27 gpu_ms=0.443158 p3d_us=300 cmdbuf=0%
+[   59.467] case 0507 perf      tri3072_d1 27 gpu_ms=1.888451 p3d_us=1740 cmdbuf=0%
+[   59.511] case 0508 perf      tri768_d256 27 gpu_ms=0.568248 p3d_us=420 cmdbuf=0%
+[   59.561] case 0509 perf      tri768_d64 27 gpu_ms=0.564541 p3d_us=421 cmdbuf=9%
+[   59.611] case 0510 perf      tri768_d16 27 gpu_ms=0.601779 p3d_us=430 cmdbuf=2%
+[   59.695] case 0511 perf      tri768_d1 27 gpu_ms=0.582175 p3d_us=420 cmdbuf=1%
+[   59.745] case 0512 perf      tri192_d64 27 gpu_ms=0.250142 p3d_us=93 cmdbuf=0%
+[   59.794] case 0513 perf      tri192_d1 27 gpu_ms=0.247352 p3d_us=89 cmdbuf=2%
+[   59.844] case 0514 perf      empty 27 gpu_ms=0.247352 p3d_us=0 cmdbuf=0%
+[   59.927] case 0515 perf      empty 28 gpu_ms=0.247352 p3d_us=0 cmdbuf=0%
+[   59.984] case 0516 perf      tri192_d1 28 gpu_ms=0.234469 p3d_us=92 cmdbuf=0%
+[   60.029] case 0517 perf      tri192_d64 28 gpu_ms=0.245577 p3d_us=96 cmdbuf=0%
+[   60.079] case 0518 perf      tri768_d1 28 gpu_ms=0.562594 p3d_us=422 cmdbuf=2%
+[   60.166] case 0519 perf      tri768_d16 28 gpu_ms=0.619383 p3d_us=425 cmdbuf=0%
+[   60.213] case 0520 perf      tri768_d64 28 gpu_ms=0.564466 p3d_us=420 cmdbuf=1%
+[   60.264] case 0521 perf      tri768_d256 28 gpu_ms=0.569799 p3d_us=418 cmdbuf=2%
+[   60.313] case 0522 perf      tri3072_d1 28 gpu_ms=1.895351 p3d_us=1748 cmdbuf=9%
+[   60.363] case 0523 perf      fill1_d1 28 gpu_ms=0.440988 p3d_us=300 cmdbuf=0%
+[   60.447] case 0524 perf      fill16_d1 28 gpu_ms=5.225670 p3d_us=5066 cmdbuf=0%
+[   60.502] case 0525 perf      fill16_d16 28 gpu_ms=5.227863 p3d_us=5064 cmdbuf=0%
+[   60.563] case 0526 perf      fill16_d16 29 gpu_ms=5.212921 p3d_us=5068 cmdbuf=1%
+[   60.614] case 0527 perf      fill16_d1 29 gpu_ms=5.209423 p3d_us=5064 cmdbuf=1%
+[   60.697] case 0528 perf      fill1_d1 29 gpu_ms=0.445366 p3d_us=301 cmdbuf=0%
+[   60.747] case 0529 perf      tri3072_d1 29 gpu_ms=1.898819 p3d_us=1748 cmdbuf=0%
+[   60.799] case 0530 perf      tri768_d256 29 gpu_ms=0.565458 p3d_us=415 cmdbuf=0%
+[   60.848] case 0531 perf      tri768_d64 29 gpu_ms=0.575648 p3d_us=426 cmdbuf=9%
+[   60.947] case 0532 perf      tri768_d16 29 gpu_ms=0.584353 p3d_us=423 cmdbuf=2%
+[   61.014] case 0533 perf      tri768_d1 29 gpu_ms=0.565973 p3d_us=423 cmdbuf=1%
+[   61.064] case 0534 perf      tri192_d64 29 gpu_ms=0.238863 p3d_us=87 cmdbuf=0%
+[   61.120] case 0535 perf      tri192_d1 29 gpu_ms=0.235297 p3d_us=92 cmdbuf=2%
+[   61.199] case 0536 perf      empty 29 gpu_ms=0.235297 p3d_us=0 cmdbuf=0%
+[   61.249] case 0537 perf      empty 30 gpu_ms=0.235297 p3d_us=0 cmdbuf=0%
+[   61.300] case 0538 perf      tri192_d1 30 gpu_ms=0.237580 p3d_us=92 cmdbuf=0%
+[   61.351] case 0539 perf      tri192_d64 30 gpu_ms=0.236163 p3d_us=91 cmdbuf=0%
+[   61.437] case 0540 perf      tri768_d1 30 gpu_ms=0.576543 p3d_us=420 cmdbuf=2%
+[   61.482] case 0541 perf      tri768_d16 30 gpu_ms=0.565906 p3d_us=420 cmdbuf=0%
+[   61.532] case 0542 perf      tri768_d64 30 gpu_ms=0.572470 p3d_us=427 cmdbuf=1%
+[   61.584] case 0543 perf      tri768_d256 30 gpu_ms=0.574812 p3d_us=427 cmdbuf=2%
+[   61.671] case 0544 perf      tri3072_d1 30 gpu_ms=1.899312 p3d_us=1745 cmdbuf=9%
+[   61.716] case 0545 perf      fill1_d1 30 gpu_ms=0.444702 p3d_us=300 cmdbuf=0%
+[   61.766] case 0546 perf      fill16_d1 30 gpu_ms=5.213973 p3d_us=5068 cmdbuf=0%
+[   61.816] case 0547 perf      fill16_d16 30 gpu_ms=5.217897 p3d_us=5071 cmdbuf=0%
+[   61.867] case 0548 perf      fill16_d16 31 gpu_ms=5.216532 p3d_us=5062 cmdbuf=1%
+[   61.950] case 0549 perf      fill16_d1 31 gpu_ms=5.211318 p3d_us=5045 cmdbuf=1%
+[   62.000] case 0550 perf      fill1_d1 31 gpu_ms=0.467827 p3d_us=302 cmdbuf=0%
+[   62.051] case 0551 perf      tri3072_d1 31 gpu_ms=1.895970 p3d_us=1748 cmdbuf=0%
+[   62.101] case 0552 perf      tri768_d256 31 gpu_ms=0.593140 p3d_us=427 cmdbuf=0%
+[   62.191] case 0553 perf      tri768_d64 31 gpu_ms=0.565257 p3d_us=420 cmdbuf=9%
+[   62.236] case 0554 perf      tri768_d16 31 gpu_ms=0.564376 p3d_us=422 cmdbuf=2%
+[   62.287] case 0555 perf      tri768_d1 31 gpu_ms=0.588635 p3d_us=426 cmdbuf=1%
+[   62.336] case 0556 perf      tri192_d64 31 gpu_ms=0.238565 p3d_us=91 cmdbuf=0%
+[   62.419] case 0557 perf      tri192_d1 31 gpu_ms=0.236677 p3d_us=92 cmdbuf=2%
+[   62.469] case 0558 perf      empty 31 gpu_ms=0.236677 p3d_us=0 cmdbuf=0%
+[   62.519] case 0559 perf      empty 32 gpu_ms=0.236677 p3d_us=0 cmdbuf=0%
+[   62.569] case 0560 perf      tri192_d1 32 gpu_ms=0.234760 p3d_us=92 cmdbuf=0%
+[   62.619] case 0561 perf      tri192_d64 32 gpu_ms=0.237132 p3d_us=91 cmdbuf=0%
+[   62.703] case 0562 perf      tri768_d1 32 gpu_ms=0.591373 p3d_us=407 cmdbuf=2%
+[   62.758] case 0563 perf      tri768_d16 32 gpu_ms=0.568569 p3d_us=425 cmdbuf=0%
+[   62.804] case 0564 perf      tri768_d64 32 gpu_ms=0.565369 p3d_us=420 cmdbuf=1%
+[   62.853] case 0565 perf      tri768_d256 32 gpu_ms=0.568860 p3d_us=416 cmdbuf=2%
+[   62.937] case 0566 perf      tri3072_d1 32 gpu_ms=1.884102 p3d_us=1741 cmdbuf=9%
+[   62.987] case 0567 perf      fill1_d1 32 gpu_ms=0.443136 p3d_us=299 cmdbuf=0%
+[   63.038] case 0568 perf      fill16_d1 32 gpu_ms=5.213175 p3d_us=5068 cmdbuf=0%
+[   63.089] case 0569 perf      fill16_d16 32 gpu_ms=5.233077 p3d_us=5066 cmdbuf=0%
+[   63.172] case 0570 perf      fill16_d16 33 gpu_ms=5.209818 p3d_us=5066 cmdbuf=1%
+[   63.222] case 0571 perf      fill16_d1 33 gpu_ms=5.216964 p3d_us=5062 cmdbuf=1%
+[   63.276] case 0572 perf      fill1_d1 33 gpu_ms=0.438533 p3d_us=299 cmdbuf=0%
+[   63.322] case 0573 perf      tri3072_d1 33 gpu_ms=1.885168 p3d_us=1743 cmdbuf=0%
+[   63.405] case 0574 perf      tri768_d256 33 gpu_ms=0.568912 p3d_us=422 cmdbuf=0%
+[   63.454] case 0575 perf      tri768_d64 33 gpu_ms=0.564287 p3d_us=420 cmdbuf=9%
+[   63.504] case 0576 perf      tri768_d16 33 gpu_ms=0.585584 p3d_us=426 cmdbuf=2%
+[   63.554] case 0577 perf      tri768_d1 33 gpu_ms=0.563257 p3d_us=421 cmdbuf=1%
+[   63.640] case 0578 perf      tri192_d64 33 gpu_ms=0.236454 p3d_us=90 cmdbuf=0%
+[   63.688] case 0579 perf      tri192_d1 33 gpu_ms=0.232127 p3d_us=91 cmdbuf=2%
+[   63.738] case 0580 perf      empty 33 gpu_ms=0.232127 p3d_us=0 cmdbuf=0%
+[   63.823] case 0581 perf      empty 34 gpu_ms=0.232127 p3d_us=0 cmdbuf=0%
+[   63.874] case 0582 perf      tri192_d1 34 gpu_ms=0.231366 p3d_us=93 cmdbuf=0%
+[   63.924] case 0583 perf      tri192_d64 34 gpu_ms=0.239773 p3d_us=69 cmdbuf=0%
+[   63.974] case 0584 perf      tri768_d1 34 gpu_ms=0.563705 p3d_us=421 cmdbuf=2%
+[   64.025] case 0585 perf      tri768_d16 34 gpu_ms=0.617317 p3d_us=423 cmdbuf=0%
+[   64.108] case 0586 perf      tri768_d64 34 gpu_ms=0.581824 p3d_us=427 cmdbuf=1%
+[   64.159] case 0587 perf      tri768_d256 34 gpu_ms=0.569844 p3d_us=416 cmdbuf=2%
+[   64.207] case 0588 perf      tri3072_d1 34 gpu_ms=1.896059 p3d_us=1748 cmdbuf=9%
+[   64.257] case 0589 perf      fill1_d1 34 gpu_ms=0.446306 p3d_us=282 cmdbuf=0%
+[   64.341] case 0590 perf      fill16_d1 34 gpu_ms=5.214003 p3d_us=5067 cmdbuf=0%
+[   64.395] case 0591 perf      fill16_d16 34 gpu_ms=5.209699 p3d_us=5066 cmdbuf=0%
+[   64.440] case 0592 perf      fill16_d16 35 gpu_ms=5.224357 p3d_us=5064 cmdbuf=1%
+[   64.507] case 0593 perf      fill16_d1 35 gpu_ms=5.216106 p3d_us=5069 cmdbuf=1%
+[   64.592] case 0594 perf      fill1_d1 35 gpu_ms=0.439563 p3d_us=300 cmdbuf=0%
+[   64.642] case 0595 perf      tri3072_d1 35 gpu_ms=1.891121 p3d_us=1748 cmdbuf=0%
+[   64.693] case 0596 perf      tri768_d256 35 gpu_ms=0.566555 p3d_us=419 cmdbuf=0%
+[   64.742] case 0597 perf      tri768_d64 35 gpu_ms=0.562340 p3d_us=420 cmdbuf=9%
+[   64.829] case 0598 perf      tri768_d16 35 gpu_ms=0.567629 p3d_us=423 cmdbuf=2%
+[   64.876] case 0599 perf      tri768_d1 35 gpu_ms=0.567897 p3d_us=422 cmdbuf=1%
+[   64.934] case 0600 perf      tri192_d64 35 gpu_ms=0.256042 p3d_us=99 cmdbuf=0%
+[   64.992] case 0601 perf      tri192_d1 35 gpu_ms=0.229822 p3d_us=91 cmdbuf=2%
+[   65.078] case 0602 perf      empty 35 gpu_ms=0.229822 p3d_us=0 cmdbuf=0%
+[   65.126] case 0603 perf      empty 36 gpu_ms=0.229822 p3d_us=0 cmdbuf=0%
+[   65.176] case 0604 perf      tri192_d1 36 gpu_ms=0.239445 p3d_us=92 cmdbuf=0%
+[   65.228] case 0605 perf      tri192_d64 36 gpu_ms=0.238527 p3d_us=91 cmdbuf=0%
+[   65.277] case 0606 perf      tri768_d1 36 gpu_ms=0.561042 p3d_us=421 cmdbuf=2%
+[   65.377] case 0607 perf      tri768_d16 36 gpu_ms=0.577535 p3d_us=423 cmdbuf=0%
+[   65.426] case 0608 perf      tri768_d64 36 gpu_ms=0.565436 p3d_us=421 cmdbuf=1%
+[   65.482] case 0609 perf      tri768_d256 36 gpu_ms=0.576013 p3d_us=422 cmdbuf=2%
+[   65.528] case 0610 perf      tri3072_d1 36 gpu_ms=1.913224 p3d_us=1751 cmdbuf=9%
+[   65.611] case 0611 perf      fill1_d1 36 gpu_ms=0.469230 p3d_us=301 cmdbuf=0%
+[   65.661] case 0612 perf      fill16_d1 36 gpu_ms=5.234405 p3d_us=5064 cmdbuf=0%
+[   65.712] case 0613 perf      fill16_d16 36 gpu_ms=5.211795 p3d_us=5062 cmdbuf=0%
+[   65.763] case 0614 perf      fill16_d16 37 gpu_ms=5.207752 p3d_us=5065 cmdbuf=1%
+[   65.846] case 0615 perf      fill16_d1 37 gpu_ms=5.214808 p3d_us=5067 cmdbuf=1%
+[   65.897] case 0616 perf      fill1_d1 37 gpu_ms=0.451133 p3d_us=301 cmdbuf=0%
+[   65.946] case 0617 perf      tri3072_d1 37 gpu_ms=1.894679 p3d_us=1748 cmdbuf=0%
+[   66.001] case 0618 perf      tri768_d256 37 gpu_ms=0.583935 p3d_us=425 cmdbuf=0%
+[   66.095] case 0619 perf      tri768_d64 37 gpu_ms=0.593670 p3d_us=428 cmdbuf=9%
+[   66.145] case 0620 perf      tri768_d16 37 gpu_ms=0.564160 p3d_us=423 cmdbuf=2%
+[   66.195] case 0621 perf      tri768_d1 37 gpu_ms=0.563511 p3d_us=422 cmdbuf=1%
+[   66.246] case 0622 perf      tri192_d64 37 gpu_ms=0.236476 p3d_us=88 cmdbuf=0%
+[   66.295] case 0623 perf      tri192_d1 37 gpu_ms=0.257437 p3d_us=95 cmdbuf=2%
+[   66.379] case 0624 perf      empty 37 gpu_ms=0.257437 p3d_us=0 cmdbuf=0%
+[   66.431] case 0625 perf      empty 38 gpu_ms=0.257437 p3d_us=0 cmdbuf=0%
+[   66.480] case 0626 perf      tri192_d1 38 gpu_ms=0.232575 p3d_us=92 cmdbuf=0%
+[   66.531] case 0627 perf      tri192_d64 38 gpu_ms=0.235842 p3d_us=90 cmdbuf=0%
+[   66.619] case 0628 perf      tri768_d1 38 gpu_ms=0.578423 p3d_us=418 cmdbuf=2%
+[   66.665] case 0629 perf      tri768_d16 38 gpu_ms=0.565771 p3d_us=421 cmdbuf=0%
+[   66.716] case 0630 perf      tri768_d64 38 gpu_ms=0.580340 p3d_us=423 cmdbuf=1%
+[   66.765] case 0631 perf      tri768_d256 38 gpu_ms=0.574245 p3d_us=422 cmdbuf=2%
+[   66.864] case 0632 perf      tri3072_d1 38 gpu_ms=1.909233 p3d_us=1744 cmdbuf=9%
+[   66.915] case 0633 perf      fill1_d1 38 gpu_ms=0.443367 p3d_us=299 cmdbuf=0%
+[   66.965] case 0634 perf      fill16_d1 38 gpu_ms=5.219269 p3d_us=5063 cmdbuf=0%
+[   67.015] case 0635 perf      fill16_d16 38 gpu_ms=5.207551 p3d_us=5064 cmdbuf=0%
+[   67.100] case 0636 perf      fill16_d16 39 gpu_ms=5.216099 p3d_us=5067 cmdbuf=1%
+[   67.153] case 0637 perf      fill16_d1 39 gpu_ms=5.209139 p3d_us=5065 cmdbuf=1%
+[   67.216] case 0638 perf      fill1_d1 39 gpu_ms=0.453065 p3d_us=313 cmdbuf=0%
+[   67.266] case 0639 perf      tri3072_d1 39 gpu_ms=1.895403 p3d_us=1744 cmdbuf=0%
+[   67.352] case 0640 perf      tri768_d256 39 gpu_ms=0.590298 p3d_us=431 cmdbuf=0%
+[   67.400] case 0641 perf      tri768_d64 39 gpu_ms=0.572612 p3d_us=427 cmdbuf=9%
+[   67.450] case 0642 perf      tri768_d16 39 gpu_ms=0.564033 p3d_us=422 cmdbuf=2%
+[   67.500] case 0643 perf      tri768_d1 39 gpu_ms=0.582391 p3d_us=426 cmdbuf=1%
+[   67.551] case 0644 perf      tri192_d64 39 gpu_ms=0.241981 p3d_us=92 cmdbuf=0%
+[   67.618] case 0645 perf      tri192_d1 39 gpu_ms=0.245293 p3d_us=93 cmdbuf=2%
+[   67.672] case 0646 perf      empty 39 gpu_ms=0.245293 p3d_us=0 cmdbuf=0%
+[   67.686] empty       g=0.235ms p3d=0us (+0)
+[   67.700] tri192_d1   g=0.235ms p3d=92us (+92)
+[   67.714] tri192_d64  g=0.238ms p3d=90us (+90)
+[   67.727] tri768_d1   g=0.569ms p3d=422us (+422)
+[   67.752] tri768_d16  g=0.570ms p3d=423us (+423)
+[   67.820] tri768_d64  g=0.568ms p3d=421us (+421)
+[   67.835] tri768_d256 g=0.570ms p3d=420us (+420)
+[   67.849] tri3072_d1  g=1.895ms p3d=1746us (+1746)
+[   67.866] fill1_d1    g=0.445ms p3d=300us (+300)
+[   67.880] fill16_d1   g=5.213ms p3d=5064us (+5064)
+[   67.897] fill16_d16  g=5.212ms p3d=5065us (+5065)
+[   67.912] [5/6] perf        done: 440 cases, 27.6s
+[   68.058] [6/6] probe       start
+[   68.073] HWID rc=00000000 value=00010002
+[   68.122] BUSY rc=00000000 value=80000000
+[   68.223] [6/6] probe       done: 0 cases, 0.2s
+[   68.375] === COMPLETE: 6/6 families, 647 cases ===
+[   74.540] exit error_flag=0

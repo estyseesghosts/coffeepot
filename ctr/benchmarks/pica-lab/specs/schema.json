@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PICA Lab experiment catalog entry",
+  "type": "object",
+  "required": ["id", "title", "implemented", "risk", "objective", "reference"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[A-Z][0-9]{2}$"},
+    "title": {"type": "string"},
+    "implemented": {"type": "boolean"},
+    "risk": {"enum": ["L", "M", "H"]},
+    "objective": {"type": "string"},
+    "reference": {"type": "string"}
+  },
+  "additionalProperties": false
+}

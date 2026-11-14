@@ -1,0 +1,1281 @@
+ ▐▛███▛█   Claude Code v2.1.317
+▝▜██████▀  Sonnet 5.5 · Claude Pro
+ ▝▝   ▝▝   ~\workdir\pica-lab\run-logs
+
+
+❯ take a look at pica-lab. currently, you have to manually run and close and    
+  run each bench one by one. you should automate this nicely for me, and make   
+  sure we have neat logs. come back to me with a rebuilt 3dsx binary.           
+
+  Searched for 1 pattern, read 3 files, listed 1 directory, ran 2 shell commands, recalled 1 memory (ctrl+o to expand)
+
+● Patching main.c to add a run-all mode, per-run log folders and a manifest. One
+  of my string replacements didn't match, so I'm debugging that now.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 4 lines
+      12  #include <stdbool.h>
+      13  #include <stdint.h>
+      14  #include <math.h>
+      15 +#include <time.h>                                              
+      16 +#include <stdarg.h>                                            
+      17 +#include <errno.h>                                             
+      18 +#include <sys/stat.h>                                          
+      19  #include "vshader_shbin.h"
+      20  
+      21  #define SIZE 256
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 26 lines
+      40  static unsigned case_id;
+      41  static bool error_flag;
+      42  static bool calibrated;
+      43 +static char run_dir[96];                                       
+      44 +static FILE *runlog;                                           
+      45 +static u64 t0_tick;                                            
+      46  
+      47 +/* Timestamped log to run.log (always) and the console (if cons
+         +ole=true). */                                                  
+      48 +static void logmsg(bool console, const char *fmt, ...) {       
+      49 +    char line[200];                                            
+      50 +    va_list ap; va_start(ap, fmt);                             
+      51 +    vsnprintf(line, sizeof(line), fmt, ap);                    
+      52 +    va_end(ap);                                                
+      53 +    if (console) printf("%s\n", line);                         
+      54 +    if (runlog) {                                              
+      55 +        double s = (double)(svcGetSystemTick() - t0_tick) / SYS
+         +CLOCK_ARM11;                                                   
+      56 +        fprintf(runlog, "[%9.3f] %s\n", s, line);              
+      57 +        fflush(runlog);                                        
+      58 +    }                                                          
+      59 +}                                                              
+      60 +static void make_run_dir(void) {                               
+      61 +    mkdir(OUTPUT_DIR, 0777); /* EEXIST is fine */              
+      62 +    for (int i = 1; i < 1000; i++) {                           
+      63 +        snprintf(run_dir, sizeof(run_dir), OUTPUT_DIR "/run_%03
+         +d", i);                                                        
+      64 +        if (mkdir(run_dir, 0777) == 0) return;                 
+      65 +        if (errno != EEXIST) break;                            
+      66 +    }                                                          
+      67 +    run_dir[0] = 0;                                            
+      68 +}                                                              
+      69 +                                                               
+      70  static u32 hash32(const u8 *data, size_t n) {
+      71      u32 h = 2166136261u;
+      72      for (size_t i = 0; i < n; i++) { h ^= data[i]; h *= 1677761
+          9u; }
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 2 lines, removed 2 lines
+      127  }
+      128  static void save_capture(const char *family, unsigned id) {
+      129      char path[192];
+      130 -    snprintf(path,sizeof(path),OUTPUT_DIR "/%s_%04u.rgba",fami
+          -ly,id);                                                       
+      130 +    snprintf(path,sizeof(path),"%s/%s_%04u.rgba",run_dir,famil
+          +y,id);                                                        
+      131      FILE *f = fopen(path,"wb");
+      132 -    if (!f) { printf("Write error: %s\n",path); error_flag=tru
+          -e; return; }                                                  
+      132 +    if (!f) { logmsg(true,"Write error: %s",path); error_flag=
+          +true; return; }                                               
+      133      if (fwrite(staging,1,BYTES,f)!=BYTES) error_flag=true;
+      134      fclose(f);
+      135  }
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      122      C3D_SyncDisplayTransfer((u32*)target->frameBuf.colorBuf,
+      123          GX_BUFFER_DIM(SIZE,SIZE),(u32*)staging,GX_BUFFER_DIM(S
+           IZE,SIZE),TRANSFER_FLAGS);
+      124      Result rc = GSPGPU_InvalidateDataCache(staging,BYTES);
+      125 -    if (R_FAILED(rc)) { printf("Invalidate failed %08lX\n",(un
+          -signed long)rc); error_flag=true; return false; }             
+      125 +    if (R_FAILED(rc)) { logmsg(true,"Invalidate failed %08lX",
+          +(unsigned long)rc); error_flag=true; return false; }          
+      126      return true;
+      127  }
+      128  static void save_capture(const char *family, unsigned id) {
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      142      u32 center=p[(SIZE/2)*SIZE + SIZE/2];
+      143      log_case(family,variant,parameter,h,marked,center,gpu_ms);
+      144      if (dump) save_capture(family,case_id);
+      145 -    printf("%04u %-9s %s %d pixels=%d h=%08lX\n",             
+      145 +    logmsg(false,"case %04u %-9s %s %d pixels=%d h=%08lX",    
+      146          case_id,family,variant,parameter,marked,(unsigned long
+           )h);
+      147      case_id++;
+      148  }
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      171          if(i==2 && (count<100 || h!=baseline_hash)) pass=false
+           ;
+      172      }
+      173      calibrated=pass;
+      174 -    printf("Self-test: %s\n",pass?"PASS":"FAIL: no other tests
+          - permitted");                                                 
+      174 +    logmsg(true,"Self-test: %s",pass?"PASS":"FAIL: no other te
+          +sts permitted");                                              
+      175  }
+      176  static void run_raster(void) {
+      177      // Triangle translates through 1/64-pixel steps; geometry 
+           size is constant.
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 4 lines, removed 3 lines
+      247      u32 hwid=0, busy=0;
+      248      Result id_rc=GSPGPU_ReadHWRegs(0x00400000,&hwid,4);
+      249      Result busy_rc=GSPGPU_ReadHWRegs(0x00400034,&busy,4);
+      250 -    printf("HWID rc=%08lX value=%08lX\n",(unsigned long)id_rc,
+          -(unsigned long)hwid);                                         
+      251 -    printf("BUSY rc=%08lX value=%08lX\n",(unsigned long)busy_r
+          -c,(unsigned long)busy);                                       
+      252 -    FILE *f=fopen(OUTPUT_DIR "/probe.txt","w");               
+      250 +    logmsg(true,"HWID rc=%08lX value=%08lX",(unsigned long)id_
+          +rc,(unsigned long)hwid);                                      
+      251 +    logmsg(true,"BUSY rc=%08lX value=%08lX",(unsigned long)bus
+          +y_rc,(unsigned long)busy);                                    
+      252 +    char ppath[128]; snprintf(ppath,sizeof(ppath),"%s/probe.tx
+          +t",run_dir);                                                  
+      253 +    FILE *f=fopen(ppath,"w");                                 
+      254      if(f) {
+      255          fprintf(f,"id_rc=%08lX id=%08lX busy_rc=%08lX busy=%08
+           lX\n",
+      256             (unsigned long)id_rc,(unsigned long)hwid,(unsigned 
+           long)busy_rc,(unsigned long)busy);
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line
+      284          double time_ms=C3D_GetDrawingTime();
+      285          C3D_FrameEnd(0); // empty frame; excluded from reporte
+           d timed sample.
+      286          log_case("perf",split?"64_draws":"1_draw",sample,0,0,0
+           ,time_ms);
+      287 +        logmsg(false,"case %04u perf      %s %d gpu_ms=%.6f",c
+          +ase_id,split?"64_draws":"1_draw",sample,time_ms);             
+      288          case_id++;
+      289      }
+      290  }
+
+● Now run-all, manifest, and main.
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 46 lines
+      317      if(dvlb) {shaderProgramFree(&program); DVLB_Free(dvlb);}
+      318      if(target) C3D_RenderTargetDelete(target);
+      319  }
+      320 +typedef struct { const char *name; void (*fn)(void); bool need
+          +s_cal; } Family;                                              
+      321 +static void run_raster_edge(void) { run_raster(); if(!error_fl
+          +ag) run_edge(); }                                             
+      322 +                                                              
+      323 +/* Runs every family in a fixed order, timing each one; aborts
+          + on error. */                                                 
+      324 +static void run_all(void) {                                   
+      325 +    static const Family fams[] = {                            
+      326 +        {"selftest", run_selftest, false},                    
+      327 +        {"raster+edge", run_raster_edge, true},               
+      328 +        {"tev", run_tev, true},                               
+      329 +        {"blend", run_blend, true},                           
+      330 +        {"perf", run_perf, true},                             
+      331 +        {"probe", run_readonly_probe, false},                 
+      332 +    };                                                        
+      333 +    int ok = 0, n = (int)(sizeof(fams)/sizeof(fams[0]));      
+      334 +    logmsg(true,"=== RUN ALL: %d families ===",n);            
+      335 +    for (int k = 0; k < n; k++) {                             
+      336 +        if (fams[k].needs_cal && !calibrated) {               
+      337 +            logmsg(true,"[%d/%d] %-11s SKIP (self-test failed)
+          +",k+1,n,fams[k].name);                                        
+      338 +            continue;                                         
+      339 +        }                                                     
+      340 +        unsigned first = case_id;                             
+      341 +        u64 t = svcGetSystemTick();                           
+      342 +        logmsg(true,"[%d/%d] %-11s start",k+1,n,fams[k].name);
+      343 +        fams[k].fn();                                         
+      344 +        double sec = (double)(svcGetSystemTick() - t) / SYSCLO
+          +CK_ARM11;                                                     
+      345 +        if (error_flag) {                                     
+      346 +            logmsg(true,"[%d/%d] %-11s ERROR after %u cases, %
+          +.1fs",k+1,n,fams[k].name,case_id-first,sec);                  
+      347 +            break;                                            
+      348 +        }                                                     
+      349 +        logmsg(true,"[%d/%d] %-11s done: %u cases, %.1fs",k+1,
+          +n,fams[k].name,case_id-first,sec);                            
+      350 +        ok++;                                                 
+      351 +        if (k == 0 && !calibrated) break;                     
+      352 +    }                                                         
+      353 +    logmsg(true,"=== %s: %d/%d families, %u cases ===",       
+      354 +           (ok==n && !error_flag)?"COMPLETE":"INCOMPLETE",ok,n
+          +,case_id);                                                    
+      355 +}                                                             
+      356 +static void write_manifest(void) {                            
+      357 +    char path[128]; snprintf(path,sizeof(path),"%s/manifest.tx
+          +t",run_dir);                                                  
+      358 +    FILE *f = fopen(path,"w"); if(!f) return;                 
+      359 +    bool n3ds = false; APT_CheckNew3DS(&n3ds);                
+      360 +    fprintf(f,"pica-lab v0.2\nstarted_unix=%lld\nmodel=%s\nfir
+          +m_version=%08lX\nlibctru=%d.%d.%d\nshader_fnv1a32=%08lX\nsize=
+          +%d\n",                                                        
+      361 +        (long long)time(NULL), n3ds?"New3DS":"Old3DS", (unsign
+          +ed long)osGetFirmVersion(),                                   
+      362 +        CTR_LIBCTRU_MAJOR, CTR_LIBCTRU_MINOR, CTR_LIBCTRU_PATC
+          +H,                                                            
+      363 +        (unsigned long)hash32((const u8*)vshader_shbin,vshader
+          +_shbin_size), SIZE);                                          
+      364 +    fclose(f);                                                
+      365 +}                                                             
+      366  int main(void) {
+      367      gfxInitDefault();
+      368      consoleInit(GFX_BOTTOM,NULL);
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 19 lines, removed 10 lines
+      373          printf("Init failed. Check shader + VRAM.\n");
+      374          shutdown_renderer(); C3D_Fini(); gfxExit();return 1;
+      375      }
+      376 -    // SD directory should be created once before running; avo
+          -ids platform-specific mkdir.                                  
+      377 -    logfile=fopen(OUTPUT_DIR "/results.csv","w");             
+      376 +    t0_tick = svcGetSystemTick();                             
+      377 +    make_run_dir();                                           
+      378 +    if(!run_dir[0]) {                                         
+      379 +        printf("Cannot create run dir in " OUTPUT_DIR "\n");  
+      380 +        shutdown_renderer(); C3D_Fini(); gfxExit(); return 1; 
+      381 +    }                                                         
+      382 +    char path[128];                                           
+      383 +    snprintf(path,sizeof(path),"%s/run.log",run_dir);         
+      384 +    runlog=fopen(path,"w");                                   
+      385 +    snprintf(path,sizeof(path),"%s/results.csv",run_dir);     
+      386 +    logfile=fopen(path,"w");                                  
+      387      if(!logfile) {
+      379 -        printf("Create " OUTPUT_DIR " on SD first!\n");       
+      388 +        printf("Cannot create %s\n",path);                    
+      389          shutdown_renderer(); C3D_Fini(); gfxExit(); return 1;
+      390      }
+      382 -    else {                                                    
+      383 -        fprintf(logfile,"case_id,family,variant,parameter,fnv1
+          -a32,nonclear_pixels,center_abgr_u32,gpu_queue_ms\n");         
+      384 -        fflush(logfile);                                      
+      385 -    }                                                         
+      391 +    fprintf(logfile,"case_id,family,variant,parameter,fnv1a32,
+          +nonclear_pixels,center_abgr_u32,gpu_queue_ms\n");             
+      392 +    fflush(logfile);                                          
+      393 +    write_manifest();                                         
+      394 +    logmsg(true,"Output: %s",run_dir);                        
+      395 +    printf("SELECT: run ALL (automatic)\n");                  
+      396      printf("A: self-test   B: raster + edges\n");
+      397      printf("X: TEV        Y: blending\n");
+      388 -    printf("L: queued GPU draw timing\n");                    
+      389 -    printf("R: read-only GPU ID/busy probe\n");               
+      390 -    printf("START: exit. Use fresh launch per run.\n");       
+      398 +    printf("L: GPU draw timing  R: ID probe\n");              
+      399 +    printf("START: exit.\n");                                 
+      400      while(aptMainLoop()) {
+      401          hidScanInput(); u32 down=hidKeysDown();
+      402          if(down & KEY_START) break;
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line
+      400      while(aptMainLoop()) {
+      401          hidScanInput(); u32 down=hidKeysDown();
+      402          if(down & KEY_START) break;
+      403 +        if(down & KEY_SELECT) { run_all(); if(error_flag) brea
+          +k; continue; }                                                
+      404          if(down & KEY_A) run_selftest();
+      405          if(down & (KEY_B|KEY_X|KEY_Y|KEY_L)) {
+      406              if(!calibrated) {printf("Run A self-test first.\n"
+           );continue;}
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      403          if(down & KEY_SELECT) { run_all(); if(error_flag) brea
+           k; continue; }
+      404          if(down & KEY_A) run_selftest();
+      405          if(down & (KEY_B|KEY_X|KEY_Y|KEY_L)) {
+      406 -            if(!calibrated) {printf("Run A self-test first.\n"
+          -);continue;}                                                  
+      406 +            if(!calibrated) {logmsg(true,"Run A self-test firs
+          +t.");continue;}                                               
+      407          }
+      408          if(down & KEY_B) {run_raster();if(!error_flag)run_edge
+           ();}
+      409          if(down & KEY_X) run_tev();
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      410          if(down & KEY_Y) run_blend();
+      411          if(down & KEY_L) run_perf();
+      412          if(down & KEY_R) run_readonly_probe();
+      413 -        if(error_flag) {printf("ERROR logged. Abort experiment
+          -.\n");break;}                                                 
+      413 +        if(error_flag) {logmsg(true,"ERROR logged. Abort exper
+          +iment.");break;}                                              
+      414          gspWaitForVBlank();
+      415      }
+      416      if(logfile) fclose(logfile);
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 2 lines
+      413          if(error_flag) {logmsg(true,"ERROR logged. Abort exper
+           iment.");break;}
+      414          gspWaitForVBlank();
+      415      }
+      416 +    logmsg(false,"exit error_flag=%d",(int)error_flag);       
+      417      if(logfile) fclose(logfile);
+      418 +    if(runlog) fclose(runlog);                                
+      419      // Ensure GPU has completed before freeing GPU-visible buf
+           fers.
+      420      C3D_FrameBegin(0); C3D_FrameEnd(0);
+      421      shutdown_renderer(); C3D_Fini(); gfxExit();
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      366  int main(void) {
+      367      gfxInitDefault();
+      368      consoleInit(GFX_BOTTOM,NULL);
+      369 -    printf("PICA Lab v0.1 | Original 3DS focus\n");           
+      369 +    printf("PICA Lab v0.2 | Original 3DS focus\n");           
+      370      printf("Offscreen RGBA8 / controlled 256x256\n");
+      371      if(!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) {printf("C3D_Init f
+           ailed\n");gfxExit();return 1;}
+      372      if(!initialize()) {
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      400      while(aptMainLoop()) {
+      401          hidScanInput(); u32 down=hidKeysDown();
+      402          if(down & KEY_START) break;
+      403 -        if(down & KEY_SELECT) { run_all(); if(error_flag) brea
+          -k; continue; }                                                
+      403 +        if(down & KEY_SELECT) { run_all(); if(error_flag) brea
+          +k; gspWaitForVBlank(); continue; }                            
+      404          if(down & KEY_A) run_selftest();
+      405          if(down & (KEY_B|KEY_X|KEY_Y|KEY_L)) {
+      406              if(!calibrated) {logmsg(true,"Run A self-test firs
+           t.");continue;}
+
+  Searched for 1 pattern, ran 1 shell command (ctrl+o to expand)
+● No version macros exist; drop that field.
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      357      char path[128]; snprintf(path,sizeof(path),"%s/manifest.tx
+           t",run_dir);
+      358      FILE *f = fopen(path,"w"); if(!f) return;
+      359      bool n3ds = false; APT_CheckNew3DS(&n3ds);
+      360 -    fprintf(f,"pica-lab v0.2\nstarted_unix=%lld\nmodel=%s\nfir
+          -m_version=%08lX\nlibctru=%d.%d.%d\nshader_fnv1a32=%08lX\nsize=
+          -%d\n",                                                        
+      360 +    fprintf(f,"pica-lab v0.2\nstarted_unix=%lld\nmodel=%s\nfir
+          +m_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",            
+      361          (long long)time(NULL), n3ds?"New3DS":"Old3DS", (unsign
+           ed long)osGetFirmVersion(),
+      362          CTR_LIBCTRU_MAJOR, CTR_LIBCTRU_MINOR, CTR_LIBCTRU_PATC
+           H,
+      363          (unsigned long)hash32((const u8*)vshader_shbin,vshader
+           _shbin_size), SIZE);
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Removed 1 line
+      359      bool n3ds = false; APT_CheckNew3DS(&n3ds);
+      360      fprintf(f,"pica-lab v0.2\nstarted_unix=%lld\nmodel=%s\nfir
+           m_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",
+      361          (long long)time(NULL), n3ds?"New3DS":"Old3DS", (unsign
+           ed long)osGetFirmVersion(),
+      362 -        CTR_LIBCTRU_MAJOR, CTR_LIBCTRU_MINOR, CTR_LIBCTRU_PATC
+          -H,                                                            
+      362          (unsigned long)hash32((const u8*)vshader_shbin,vshader
+           _shbin_size), SIZE);
+      363      fclose(f);
+      364  }
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Rebuilt pica-lab/pica-lab.3dsx (171,716 bytes). It compiles with no warnings
+  or errors. I haven't run it in Azahar or on hardware.
+
+  - Run all: press SELECT and it runs selftest, raster+edge, tev, blend, perf,
+    then probe, in one launch.
+    - If the self-test fails, it skips the rest.
+    - It stops on the first error.
+    - The individual A/B/X/Y/L/R buttons still work.
+  - One folder per launch: each launch creates sdmc:/3ds/pica-lab/run_NNN/, so
+    nothing gets overwritten. It also creates /3ds/pica-lab itself, so you no
+    longer need to make it first.
+  - Folder contents: results.csv and the .rgba dumps are in the same format as
+    before, so tools/analyze.py and interrogate.py should work on a run folder.
+    It also holds:
+    - run.log, with a timestamp on every line, including each case's hash, pixel
+      count and perf ms.
+    - manifest.txt, with model (Old/New 3DS), firmware version, shader hash and
+      render size.
+    - probe.txt, from the probe step.
+  - Console: bottom screen shows one line per family, like [3/6] tev done: 17 
+    cases, 2.1s, and a COMPLETE or INCOMPLETE line at the end.
+  - README: it still says "one family per clean launch" and "create the
+    directory first". I haven't updated it.
+  - Manifest: I dropped the libctru version field because this libctru has no
+    version macros.
+
+✻ Cooked for 2m 1s · done 3:08 AM
+
+❯ you've got run logs to look at. tell me what they tell you, and tell me what  
+  this means next for our research.                                             
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+● Three runs came back clean (Old 3DS, firmware 023A0000, 247 cases each, all
+  six families, error_flag=0). The harness works, but the edge test has a bug
+  and the perf test shows no signal.
+
+  What passed
+  - Self-test: all three runs pass.
+  - Repeatability: 167 of 167 non-perf hashes are identical across the three
+    separate launches. Validation gate 4 (repeat in clean sessions) is met for
+    these tests.
+  - Run time: a full run takes about 36–46 s. About 25 s of that is writing 130
+    raster and edge dumps to the SD card.
+  - Probe: GSPGPU_ReadHWRegs works. The ID register reads 0x00010002 and the
+    busy register reads 0x80000000. I don't know what either value means yet.
+  - Blend: it follows the expected blend math to within about 1 LSB. For
+    example, at i=1 the red channel reads 0x48, which matches the arithmetic. At
+    i=11 it reads 0x99 where I compute about 0x98.
+  - TEV: output rises by exactly 8 per step on red. This sweep doesn't expose
+    any rounding quirk.
+
+  What the logs say about the raster test
+  - No direction effect: forward and reverse sweeps are identical in all 64
+    steps. There's no hysteresis or ordering artifact.
+  - Coarse snap grid: across 64 steps of 1/64 px, only 6 distinct images appear,
+    with transitions at steps 9, 25, 32, 41 and 57. Those sit about 16 steps
+    (1/4 px) apart, plus one at the half-pixel step. So the effective x snap
+    here looks like about 1/4 px, not 1/64. This is a hypothesis from one
+    geometry. Nothing here confirms it.
+
+  What the logs say about the harness
+  - Edge test is invalid: both captures cover only about half the quad (8224 and
+    8256 of 16384 pixels). reverse_diag lies entirely on one side of the
+    diagonal. Both triangles are written into the same vertex slots before the
+    GPU reads them, so the second triangle is drawn twice. This is a harness
+    bug.
+  - Perf is a null result: 1 draw and 64 draws both have a median of 0.414 ms,
+    matching to about 0.001 ms in all three runs. That points to a fixed cost,
+    most likely the target clear and framebuffer flush, dominating the
+    measurement. It does not show that draw calls are free.
+
+  Next for the research
+  1. Fix the edge test by giving each triangle its own vertex range, then rerun
+     it. Until then, make no claims about shared-edge behavior.
+  2. Redesign the perf test so it can see a difference. Sweep triangle count (0,
+     192, 1920) and add a fill-heavy case, so the fixed floor is separated from
+     per-draw cost.
+  3. Test the 1/4-pixel snap. Sweep x at 1/256 steps at several offsets and in
+     y, and check whether the grid changes with geometry size. If it holds,
+     that's the first real finding.
+  4. Give the TEV and blend tests inputs that can show rounding. Use non-trivial
+     constants and compare against the Azahar output.
+  5. Update the README, which still says one family per launch.
+
+  Want me to start with 1 and 2?
+
+✻ Churned for 1m 19s · done 3:29 AM
+
+❯ alright. read relevant areas of ~\workdir\coffeepot\ctr before you start      
+  writing code. you're going to repair the edge and perf tests so we can get    
+  useful results out of them. then, you should find a way to containerize all   
+  of the run logs into one 'file' - doesn't have to be properly compressed, but 
+  sending 100 tiny files over ftp is a lot slower than one large one. maybe     
+  pack them into a lossless uncompressed zip. come back to me with a 3dsx       
+  binary.                                                                       
+
+  Ran 6 shell commands (ctrl+o to expand)
+
+● Docs read: drawbench and performance.md (timer semantics, the GSP perf log).
+  Next I'm reading the host tools so I can change the CSV and zip format safely.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Docs and tools read. Now editing: per-triangle vertex slots (edge fix), the
+  additive coverage test, the perf redesign, and the zip writer.
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      22  #define CLEAR 0x000000FFu
+      23  #define PIXELS (SIZE * SIZE)
+      24  #define BYTES (PIXELS * 4)
+      25 -#define MAX_VERTS 768                                          
+      25 +#define MAX_VERTS 9216   /* 3072 triangles: largest perf varian
+         +t */                                                           
+      26  #define OUTPUT_DIR "sdmc:/3ds/pica-lab"
+      27  #define TRANSFER_FLAGS (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_
+          OUT_TILED(0) | \
+      28      GX_TRANSFER_RAW_COPY(0) | GX_TRANSFER_IN_FORMAT(GX_TRANSFER
+          _FMT_RGBA8) | \
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 92 lines, removed 9 lines
+       72      for (size_t i = 0; i < n; i++) { h ^= data[i]; h *= 167776
+           19u; }
+       73      return h;
+       74  }
+       75 +/* p3d_us: GSP-measured command-list time in microseconds, -1 
+          +when not measured. */                                         
+       76  static void log_case(const char *family, const char *variant, 
+           int parameter,
+       76 -                     u32 hash, int marked, u32 center, double 
+          -gpu_ms) {                                                     
+       77 +                     u32 hash, int marked, u32 center, double 
+          +gpu_ms, long p3d_us) {                                        
+       78      if (!logfile) return;
+       78 -    fprintf(logfile, "%u,%s,%s,%d,%08lX,%d,%08lX,%.6f\n",     
+       79 +    fprintf(logfile, "%u,%s,%s,%d,%08lX,%d,%08lX,%.6f,%ld\n", 
+       80              case_id, family, variant, parameter, (unsigned lon
+           g)hash,
+       80 -            marked, (unsigned long)center, gpu_ms);           
+       81 +            marked, (unsigned long)center, gpu_ms, p3d_us);   
+       82      fflush(logfile);
+       83  }
+       84 +                                                              
+       85 +/*                                                            
+       86 + * Vertex slots. The GPU reads the VBO when the command list e
+          +xecutes (after                                                
+       87 + * C3D_FrameEnd), not when C3D_DrawArrays is called, so every 
+          +draw in a frame                                               
+       88 + * must own distinct vertices. (v0.2 reused slot 0 for every t
+          +riangle, so the                                               
+       89 + * edge test drew its second triangle twice.)                 
+       90 + */                                                           
+       91 +static int vcur;                                              
+       92 +static Vertex *vtx_alloc(int n) {                             
+       93 +    if (vcur + n > MAX_VERTS) { error_flag = true; return NULL
+          +; }                                                           
+       94 +    Vertex *p = vertices + vcur;                              
+       95 +    vcur += n;                                                
+       96 +    return p;                                                 
+       97 +}                                                             
+       98  static void rect(float x0, float y0, float x1, float y1, float
+            z) {
+       99      const Vertex q[6] = {
+      100          {x0,y0,z}, {x1,y0,z}, {x0,y1,z},
+      101          {x0,y1,z}, {x1,y0,z}, {x1,y1,z}
+      102      };
+       88 -    memcpy(vertices,q,sizeof(q));                             
+       89 -    C3D_DrawArrays(GPU_TRIANGLES,0,6);                        
+      103 +    Vertex *v = vtx_alloc(6); if (!v) return;                 
+      104 +    memcpy(v,q,sizeof(q));                                    
+      105 +    C3D_DrawArrays(GPU_TRIANGLES,(int)(v-vertices),6);        
+      106  }
+      107  static void triangle(float x0, float y0, float x1, float y1, f
+           loat x2, float y2) {
+       92 -    vertices[0] = (Vertex){x0,y0,0.5f};                       
+       93 -    vertices[1] = (Vertex){x1,y1,0.5f};                       
+       94 -    vertices[2] = (Vertex){x2,y2,0.5f};                       
+       95 -    C3D_DrawArrays(GPU_TRIANGLES,0,3);                        
+      108 +    Vertex *v = vtx_alloc(3); if (!v) return;                 
+      109 +    v[0] = (Vertex){x0,y0,0.5f};                              
+      110 +    v[1] = (Vertex){x1,y1,0.5f};                              
+      111 +    v[2] = (Vertex){x2,y2,0.5f};                              
+      112 +    C3D_DrawArrays(GPU_TRIANGLES,(int)(v-vertices),3);        
+      113  }
+      114 +                                                              
+      115 +/* ---- Uncompressed (STORE) zip writer ----------------------
+          +--------------                                                
+      116 + * Captures are appended straight into one .zip so a run is a 
+          +single file to                                                
+      117 + * copy. The central directory is rewritten after every entry,
+          + so the archive                                               
+      118 + * is valid even if the program dies mid-run. Timestamps are f
+          +ixed                                                          
+      119 + * (1980-01-01) so identical runs give identical archives. */ 
+      120 +#define ZIP_MAX 1024                                          
+      121 +typedef struct { char name[64]; u32 crc, size, off; } ZipEnt; 
+      122 +static FILE *zipf;                                            
+      123 +static ZipEnt zents[ZIP_MAX];                                 
+      124 +static int znent;                                             
+      125 +static u32 zend;                                              
+      126 +static char zprefix[32];                                      
+      127 +static u32 crc_table[256];                                    
+      128 +                                                              
+      129 +static void crc_init(void) {                                  
+      130 +    for (u32 n = 0; n < 256; n++) {                           
+      131 +        u32 c = n;                                            
+      132 +        for (int k = 0; k < 8; k++) c = (c & 1) ? 0xEDB88320u 
+          +^ (c >> 1) : c >> 1;                                          
+      133 +        crc_table[n] = c;                                     
+      134 +    }                                                         
+      135 +}                                                             
+      136 +static u32 crc32_buf(const u8 *d, size_t n) {                 
+      137 +    u32 c = 0xFFFFFFFFu;                                      
+      138 +    for (size_t i = 0; i < n; i++) c = crc_table[(c ^ d[i]) & 
+          +0xFF] ^ (c >> 8);                                             
+      139 +    return c ^ 0xFFFFFFFFu;                                   
+      140 +}                                                             
+      141 +static void w16(FILE *f, u32 v) { fputc(v & 0xFF, f); fputc((v
+          + >> 8) & 0xFF, f); }                                          
+      142 +static void w32(FILE *f, u32 v) { w16(f, v & 0xFFFF); w16(f, v
+          + >> 16); }                                                    
+      143 +static bool zip_sync(void) {                                  
+      144 +    if (fseek(zipf, zend, SEEK_SET)) return false;            
+      145 +    u32 cd = 0;                                               
+      146 +    for (int i = 0; i < znent; i++) {                         
+      147 +        size_t nl = strlen(zents[i].name);                    
+      148 +        w32(zipf, 0x02014b50); w16(zipf, 20); w16(zipf, 10); w
+          +16(zipf, 0); w16(zipf, 0);                                    
+      149 +        w16(zipf, 0); w16(zipf, 0x21);                        
+      150 +        w32(zipf, zents[i].crc); w32(zipf, zents[i].size); w32
+          +(zipf, zents[i].size);                                        
+      151 +        w16(zipf, (u32)nl); w16(zipf, 0); w16(zipf, 0); w16(zi
+          +pf, 0); w16(zipf, 0);                                         
+      152 +        w32(zipf, 0); w32(zipf, zents[i].off);                
+      153 +        fwrite(zents[i].name, 1, nl, zipf);                   
+      154 +        cd += 46 + (u32)nl;                                   
+      155 +    }                                                         
+      156 +    w32(zipf, 0x06054b50); w16(zipf, 0); w16(zipf, 0);        
+      157 +    w16(zipf, (u32)znent); w16(zipf, (u32)znent); w32(zipf, cd
+          +); w32(zipf, zend); w16(zipf, 0);                             
+      158 +    if (fflush(zipf)) return false;                           
+      159 +    return !ferror(zipf);                                     
+      160 +}                                                             
+      161 +static bool zip_add(const char *name, const void *data, size_t
+          + len) {                                                       
+      162 +    if (!zipf || znent >= ZIP_MAX) return false;              
+      163 +    ZipEnt *e = &zents[znent];                                
+      164 +    snprintf(e->name, sizeof(e->name), "%s/%s", zprefix, name)
+          +;                                                             
+      165 +    e->crc = crc32_buf((const u8*)data, len);                 
+      166 +    e->size = (u32)len;                                       
+      167 +    e->off = zend;                                            
+      168 +    size_t nl = strlen(e->name);                              
+      169 +    if (fseek(zipf, zend, SEEK_SET)) return false;            
+      170 +    w32(zipf, 0x04034b50); w16(zipf, 10); w16(zipf, 0); w16(zi
+          +pf, 0);                                                       
+      171 +    w16(zipf, 0); w16(zipf, 0x21);                            
+      172 +    w32(zipf, e->crc); w32(zipf, e->size); w32(zipf, e->size);
+      173 +    w16(zipf, (u32)nl); w16(zipf, 0);                         
+      174 +    fwrite(e->name, 1, nl, zipf);                             
+      175 +    if (len && fwrite(data, 1, len, zipf) != len) return false
+          +;                                                             
+      176 +    zend += 30 + (u32)nl + (u32)len;                          
+      177 +    znent++;                                                  
+      178 +    return zip_sync();                                        
+      179 +}                                                             
+      180  static void tev_passthrough(void) {
+      181      for (int i=0;i<6;i++) C3D_TexEnvInit(C3D_GetTexEnv(i));
+      182      C3D_TexEnv *env = C3D_GetTexEnv(0);
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 2 lines, removed 1 line
+      193      tev_passthrough();
+      194  }
+      195  static bool begin_case(void) {
+      196 -    if (!C3D_FrameBegin(0)) { error_flag = true; return false;
+          - }                                                            
+      196 +    vcur = 0;                                                 
+      197 +    if (!C3D_FrameBegin(C3D_FRAME_SYNCDRAW)) { error_flag = tr
+          +ue; return false; }                                           
+      198      C3D_RenderTargetClear(target,C3D_CLEAR_ALL,CLEAR,0);
+      199      if (!C3D_FrameDrawOn(target)) { error_flag=true; C3D_Frame
+           End(0); return false; }
+      200      basic_state();
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 3 lines, removed 6 lines
+      210      return true;
+      211  }
+      212  static void save_capture(const char *family, unsigned id) {
+      213 -    char path[192];                                           
+      214 -    snprintf(path,sizeof(path),"%s/%s_%04u.rgba",run_dir,famil
+          -y,id);                                                        
+      215 -    FILE *f = fopen(path,"wb");                               
+      216 -    if (!f) { logmsg(true,"Write error: %s",path); error_flag=
+          -true; return; }                                               
+      217 -    if (fwrite(staging,1,BYTES,f)!=BYTES) error_flag=true;    
+      218 -    fclose(f);                                                
+      213 +    char name[64];                                            
+      214 +    snprintf(name,sizeof(name),"%s_%04u.rgba",family,id);     
+      215 +    if (!zip_add(name,staging,BYTES)) { logmsg(true,"Zip write
+          + error: %s",name); error_flag=true; }                         
+      216  }
+      217  static void record(const char *family,const char *variant,int 
+           parameter,bool dump,double gpu_ms) {
+      218      if (!capture()) return;
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      221      for (int i=0;i<PIXELS;i++) if (p[i]!=CLEAR) marked++;
+      222      u32 h=hash32((const u8*)staging,BYTES);
+      223      u32 center=p[(SIZE/2)*SIZE + SIZE/2];
+      224 -    log_case(family,variant,parameter,h,marked,center,gpu_ms);
+      224 +    log_case(family,variant,parameter,h,marked,center,gpu_ms,-
+          +1);                                                           
+      225      if (dump) save_capture(family,case_id);
+      226      logmsg(false,"case %04u %-9s %s %d pixels=%d h=%08lX",
+      227          case_id,family,variant,parameter,marked,(unsigned long
+           )h);
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 53 lines, removed 9 lines
+      270          }
+      271      }
+      272  }
+      273 +/* Quad [64,192]^2 (+ offset) split along one of two diagonals
+          +. */                                                          
+      274 +static void edge_quad(int diagonal, float ox, float oy) {     
+      275 +    const float a=64+ox, b=192+ox, c=64+oy, d=192+oy;         
+      276 +    if(!diagonal) { triangle(a,c,b,c,a,d); triangle(a,d,b,c,b,
+          +d); }                                                         
+      277 +    else          { triangle(a,c,b,c,b,d); triangle(a,c,b,d,a,
+          +d); }                                                         
+      278 +}                                                             
+      279 +/* Four triangles fanned around an interior vertex: slanted sh
+          +ared edges. */                                                
+      280 +static void edge_fan(float cx, float cy) {                    
+      281 +    triangle(64,64,192,64,cx,cy);                             
+      282 +    triangle(192,64,192,192,cx,cy);                           
+      283 +    triangle(192,192,64,192,cx,cy);                           
+      284 +    triangle(64,192,64,64,cx,cy);                             
+      285 +}                                                             
+      286 +/* Additive coverage: each hit adds ~0x40 to RGB over a black 
+          +clear, so                                                     
+      287 + * gap = 0, single hit ~0x40, double hit ~0x80. Logs gap/overl
+          +ap counts. */                                                 
+      288 +static void cover_stats(int *gaps, int *overlaps) {           
+      289 +    const u32 *p=(const u32*)staging;                         
+      290 +    int g=0,o=0;                                              
+      291 +    for(int y=0;y<SIZE;y++) for(int x=0;x<SIZE;x++) {         
+      292 +        u32 r=(p[y*SIZE+x]>>24)&0xFF;                         
+      293 +        if(r>=0x60) o++;                                      
+      294 +        else if(r<0x20 && x>=68 && x<188 && y>=68 && y<188) g+
+          ++; /* interior only */                                        
+      295 +    }                                                         
+      296 +    *gaps=g; *overlaps=o;                                     
+      297 +}                                                             
+      298  static void run_edge(void) {
+      274 -    // Invariance: opposite diagonal splits should produce sam
+          -e coverage,                                                   
+      275 -    // provided blending is disabled and winding/culling are c
+          -ontrolled.                                                    
+      299 +    // Part 1: plain overwrite, both diagonals. Full quad = 16
+          +384 px; each                                                  
+      300 +    // diagonal case must now cover ~the whole quad (v0.2 cove
+          +red half).                                                    
+      301      for(int diagonal=0;diagonal<2;diagonal++) {
+      302          if(!begin_case()) return;
+      303          C3D_FixedAttribSet(1,1,1,1,1);
+      279 -        if(!diagonal) {                                       
+      280 -            triangle(64,64,192,64,64,192);                    
+      281 -            triangle(64,192,192,64,192,192);                  
+      282 -        } else {                                              
+      283 -            triangle(64,64,192,64,192,192);                   
+      284 -            triangle(64,64,192,192,64,192);                   
+      285 -        }                                                     
+      304 +        edge_quad(diagonal,0,0);                              
+      305          GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
+      306          C3D_FrameEnd(0);
+      307          record("edge",diagonal?"reverse_diag":"normal_diag",di
+           agonal,true,0.0);
+      308 +        if(error_flag) return;                                
+      309      }
+      310 +    // Part 2: additive watertightness at fractional quad posi
+          +tions.                                                        
+      311 +    static const float offs[8]={0.0f,1.0f/64,1.0f/16,1.0f/8,0.
+          +25f,0.375f,0.5f,0.75f};                                       
+      312 +    int idx=0;                                                
+      313 +    for(int mode=0;mode<3;mode++) {          /* 0: diag A  1: 
+          +diag B  2: fan */                                             
+      314 +        for(int axis=0;axis<2;axis++) {      /* 0: offset x+y 
+          + 1: offset x only */                                          
+      315 +            if(mode==2 && axis==1) continue;                  
+      316 +            for(int k=0;k<8;k++) {                            
+      317 +                float ox=offs[k], oy=axis?0.0f:offs[k];       
+      318 +                if(!begin_case()) return;                     
+      319 +                C3D_FixedAttribSet(1,0.25f,0.25f,0.25f,0.25f);
+      320 +                C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU
+          +_ONE,GPU_ONE,GPU_ONE,GPU_ONE);                                
+      321 +                if(mode==2) edge_fan(128+ox,128+oy); else edge
+          +_quad(mode,ox,oy);                                            
+      322 +                GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);  
+      323 +                C3D_FrameEnd(0);                              
+      324 +                char var[48];                                 
+      325 +                snprintf(var,sizeof(var),"%s_%s_%.6f",mode==2?
+          +"fan":(mode?"diagB":"diagA"),axis?"x":"xy",ox);               
+      326 +                unsigned id=case_id;                          
+      327 +                record("edge_cov",var,idx++,true,0.0);        
+      328 +                if(error_flag) return;                        
+      329 +                int gaps,overlaps; cover_stats(&gaps,&overlaps
+          +);                                                            
+      330 +                logmsg(false,"cover %04u %s gaps=%d overlaps=%
+          +d",id,var,gaps,overlaps);                                     
+      331 +            }                                                 
+      332 +        }                                                     
+      333 +    }                                                         
+      334  }
+      335  static void run_tev(void) {
+      336      // Constant multiplier in stage 1; stage 0 passes vertex c
+           olor.
+
+  Made 1 scratchpad edit +107, ran 3 shell commands (ctrl+o to expand)
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 12 lines, removed 2 lines
+      587          printf("Cannot create %s\n",path);
+      588          shutdown_renderer(); C3D_Fini(); gfxExit(); return 1;
+      589      }
+      590 -    fprintf(logfile,"case_id,family,variant,parameter,fnv1a32,
+          -nonclear_pixels,center_abgr_u32,gpu_queue_ms\n");             
+      590 +    fprintf(logfile,"case_id,family,variant,parameter,fnv1a32,
+          +nonclear_pixels,center_abgr_u32,gpu_queue_ms,p3d_us\n");      
+      591      fflush(logfile);
+      592      write_manifest();
+      593 -    logmsg(true,"Output: %s",run_dir);                        
+      593 +    crc_init();                                               
+      594 +    {   // zip sits beside the run dir: sdmc:/3ds/pica-lab/run
+          +_NNN.zip                                                      
+      595 +        char zpath[128];                                      
+      596 +        snprintf(zpath,sizeof(zpath),"%s.zip",run_dir);       
+      597 +        const char *base=strrchr(run_dir,'/'); base=base?base+
+          +1:run_dir;                                                    
+      598 +        snprintf(zprefix,sizeof(zprefix),"%s",base);          
+      599 +        zipf=fopen(zpath,"wb+");                              
+      600 +        if(!zipf) logmsg(true,"WARN cannot create %s",zpath); 
+      601 +        else { zend=0; zip_sync(); }                          
+      602 +    }                                                         
+      603 +    logmsg(true,"Output: %s (+ .zip)",run_dir);               
+      604      printf("SELECT: run ALL (automatic)\n");
+      605      printf("A: self-test   B: raster + edges\n");
+      606      printf("X: TEV        Y: blending\n");
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 2 lines
+      625      logmsg(false,"exit error_flag=%d",(int)error_flag);
+      626      if(logfile) fclose(logfile);
+      627      if(runlog) fclose(runlog);
+      628 +    logfile=NULL; runlog=NULL;                                
+      629 +    finish_zip();                                             
+      630      // Ensure GPU has completed before freeing GPU-visible buf
+           fers.
+      631      C3D_FrameBegin(0); C3D_FrameEnd(0);
+      632      shutdown_renderer(); C3D_Fini(); gfxExit();
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 22 lines
+      562          (unsigned long)hash32((const u8*)vshader_shbin,vshader
+           _shbin_size), SIZE);
+      563      fclose(f);
+      564  }
+      565 +/* Copies the small text outputs into the zip so it is self-co
+          +ntained. */                                                   
+      566 +static void zip_add_file(const char *name) {                  
+      567 +    char path[128];                                           
+      568 +    snprintf(path,sizeof(path),"%s/%s",run_dir,name);         
+      569 +    FILE *f=fopen(path,"rb");                                 
+      570 +    if(!f) return;                                            
+      571 +    fseek(f,0,SEEK_END); long n=ftell(f); fseek(f,0,SEEK_SET);
+      572 +    u8 *buf=n>0?malloc((size_t)n):NULL;                       
+      573 +    if(buf && fread(buf,1,(size_t)n,f)==(size_t)n) zip_add(nam
+          +e,buf,(size_t)n);                                             
+      574 +    free(buf);                                                
+      575 +    fclose(f);                                                
+      576 +}                                                             
+      577 +static void finish_zip(void) {                                
+      578 +    if(!zipf) return;                                         
+      579 +    zip_add_file("manifest.txt");                             
+      580 +    zip_add_file("results.csv");                              
+      581 +    zip_add_file("run.log");                                  
+      582 +    zip_add_file("probe.txt");                                
+      583 +    zip_sync();                                               
+      584 +    fclose(zipf);                                             
+      585 +    zipf=NULL;                                                
+      586 +}                                                             
+      587  int main(void) {
+      588      gfxInitDefault();
+      589      consoleInit(GFX_BOTTOM,NULL);
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      587  int main(void) {
+      588      gfxInitDefault();
+      589      consoleInit(GFX_BOTTOM,NULL);
+      590 -    printf("PICA Lab v0.2 | Original 3DS focus\n");           
+      590 +    printf("PICA Lab v0.3 | Original 3DS focus\n");           
+      591      printf("Offscreen RGBA8 / controlled 256x256\n");
+      592      if(!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) {printf("C3D_Init f
+           ailed\n");gfxExit();return 1;}
+      593      if(!initialize()) {
+
+● Update(~\workdir\pica-lab\source\main.c)
+  ⎿  Added 1 line, removed 1 line
+      557      char path[128]; snprintf(path,sizeof(path),"%s/manifest.tx
+           t",run_dir);
+      558      FILE *f = fopen(path,"w"); if(!f) return;
+      559      bool n3ds = false; APT_CheckNew3DS(&n3ds);
+      560 -    fprintf(f,"pica-lab v0.2\nstarted_unix=%lld\nmodel=%s\nfir
+          -m_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",            
+      560 +    fprintf(f,"pica-lab v0.3\nstarted_unix=%lld\nmodel=%s\nfir
+          +m_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",            
+      561          (long long)time(NULL), n3ds?"New3DS":"Old3DS", (unsign
+           ed long)osGetFirmVersion(),
+      562          (unsigned long)hash32((const u8*)vshader_shbin,vshader
+           _shbin_size), SIZE);
+      563      fclose(f);
+  Ran 1 shell command (ctrl+o to expand)
+
+● Built clean. I'm checking the zip writer on the host, since it can't be tested
+  on the console from here.
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+● Background command "cd /c/Users/terezi/AppData/Local/Temp/claude/596f382ffeba1
+215/4baf1198-ae8c-40bf-a0fb-fab044b73b81/scratchpad &&
+C:/devkitPro/msys2/usr/bin/bash.exe -lc 'cd "$(cygpath "'"$PWD"'")" && gcc -Wall
+-o ziptest.exe ziptest.c && ./ziptest.exe' 2>&1 | tail -5; python -I - <<'EOF'
+import zipfile z=zipfile.ZipFile('t.zip'); print(z.testzip(), len(z.namelist()),
+[(i.filename,i.file_size,i.compress_type) for i in z.infolist()][-3:])
+print(z.read('run_007/tiny.txt')) EOF" completed (exit code 0)
+
+● Zip verified: valid, stored (method 0), CRCs pass. Updating the host tools for
+  the zip input, the new CSV column, edge_cov and the new perf report.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Rebuilt pica-lab/pica-lab.3dsx (181,236 bytes, v0.3). It compiles with no
+  warnings. I haven't run it on the console. I checked the zip writer on the
+  host and updated the analysis tools. Everything else is untested until you run
+  it.
+
+  Edge fix
+  - Cause: the old test reused the same three vertex slots for every triangle.
+    The GPU reads vertices when the command list runs, after C3D_FrameEnd, so
+    the second triangle was drawn twice.
+  - Fix: each triangle now gets its own vertex slots.
+  - New edge_cov family: it draws with additive blending, so a gap reads 0, a
+    single hit about 0x40 and a double hit about 0x80.
+    - It covers 40 cases: both diagonals plus a 4-triangle fan, at 8 fractional
+      offsets (0 to 3/4 px), shifted in x+y and in x only.
+    - It logs gap and overlap counts per case to run.log.
+    - The original two plain edge cases are kept. Each should now cover about
+      16384 px, not 8224/8256.
+
+  Perf redesign
+  - Why it needed redesigning: the old 0.414 ms was probably a fixed per-frame
+    cost (clear and completion latency), not draw cost. I haven't proven that.
+    From performance.md and drawbench, C3D_GetDrawingTime() includes queued
+    transfers and interrupt latency, so a tiny workload would sit on that floor.
+  - New design: 11 variants run interleaved, 40 reps each after 4 warmup reps,
+    with the order reversed on alternate reps. There is no clear and no
+    readback, and C3D_FrameSync() makes each reading belong to its own frame.
+    - Floor: an empty frame, so every other variant is read as a delta against
+      it.
+    - Draw-call cost: 768 triangles split into 1, 16, 64 or 256 draws, plus the
+      192-triangle pair from before.
+    - Triangle count: up to 3072 triangles.
+    - Fill load: 1 and 16 full-target quads, in one draw or in 16.
+  - New p3d_us column: it holds command-list time from the GSP perf log, taken
+    as a before/after difference. A medians table prints on the bottom screen
+    and goes into run.log.
+
+  One file per run
+  - Zip: each launch writes sdmc:/3ds/pica-lab/run_NNN.zip, uncompressed, with
+    the dumps and manifest.txt, results.csv, run.log and probe.txt inside.
+  - Crash safety: the zip's central directory is rewritten after every entry, so
+    a crashed run still leaves a readable archive. The text files are added
+    only at clean exit.
+  - Host check: I wrote 5 × 256 KB entries plus small and empty ones with this
+    code, and Python's zipfile read them with CRCs passing. The zip is
+    deterministic because timestamps are fixed to 1980-01-01.
+  - Plain files: the run_NNN/ folder still holds results.csv, run.log,
+    manifest.txt and probe.txt as plain files for reading on the console. The
+    .rgba dumps exist only inside the zip.
+  - Size: expect about 50 MB per full run. The dumps go straight into the zip,
+    so there is no second pass over the SD card.
+
+  Host tools
+  - analyze.py and interrogate.py now take a .zip, a run folder or a
+    results.csv. A zip is extracted beside itself. I tested the zip path with a
+    zip I built from run_001.
+  - They report edge_cov gaps and overlaps, and the perf table with deltas
+    against empty.
+  - Run against run_001 (the old logs), interrogate.py flags the old edge bug:
+    8224 and 8256 px.
+
+  The README is still out of date: it describes one family per launch and .rgba
+  files on the SD card.
+
+✻ Churned for 5m 0s · done 3:36 AM
+
+❯ is raster+edge just slow or does it hang now?                                 
+
+  Listed 1 directory (ctrl+o to expand)
+
+● I can't tell from here. There are no logs from the v0.3 build on this machine,
+  only the three earlier runs.
+
+  Expected time: the old build took 24–28 s for raster+edge (130 captures). v0.3
+  does 172 captures (the 130 plus 2 plain edge and 40 edge_cov), plus the zip
+  bookkeeping, so I'd expect roughly 35–50 s.
+
+  It can look hung: since v0.2 the per-case lines go only to run.log. The
+  console prints [2/6] raster+edge start and then nothing until the family
+  finishes.
+
+  How to tell which it is:
+  - Look at the tail of sdmc:/3ds/pica-lab/run_NNN/run.log. It's flushed on
+    every line, so if the last case line's timestamp is still advancing, it's
+    slow. If it stopped, it's a hang, and the last line shows the case it died
+    on.
+  - Check whether run_NNN.zip is still growing. It gains 256 KB per capture.
+  - If it hung, send me the last 10 lines of run.log and the zip size.
+
+  Possible hang: I haven't found one in review. The zip step is the only new
+  risk. It rewrites the central directory after every entry and seeks back over
+  the file, which I tested only on a PC filesystem, not on the console's SD
+  card.
+
+  I can add a live progress counter on the console (case N of 172 for the
+  current family) so it never looks stuck. Want that?
+
+✻ Crunched for 22s · done 3:45 AM
+
+❯ ... after every entry? when we have to write 150+ files? batch that shit, get 
+  back in there and give me another binary                                      
+
+  Searched for 1 pattern, ran 2 shell commands (ctrl+o to expand)
+
+● Rebuilt pica-lab/pica-lab.3dsx (181,316 bytes). It compiles with no warnings.
+
+  The zip index is now rewritten every 32 entries and after each family
+  finishes, not after every capture. Each capture is still written straight into
+  the zip. I checked the batched writer on the host with 75 entries: Python's
+  zipfile reads all 75 with CRCs passing.
+
+  Crash trade-off: if the app dies mid-family, the index can miss up to 32
+  recent entries. Those are still in the file and zip -FF can recover them.
+
+  I haven't run this on the console, so I don't know yet whether the old build
+  was hanging or just slow. If raster+edge still looks stuck, send me the tail
+  of run.log and the zip size.
+
+✻ Baked for 31s · done 3:46 AM
+
+❯ two zip files for you in run-logs. am i just impatient, or is there something 
+  hanging/stalling now?                                                         
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+● It's most likely a real stall, but the two zips can't prove it. I need the
+  plain run.log files to be sure.
+
+  What the zips show
+  - Both are truncated mid-raster, with no central directory and no trace of the
+    later families.
+  - run_001.zip (17.3 MB) has 66 complete entries, ending at raster_0065.
+    raster_0066 has only 4,594 of its 262,144 bytes.
+  - run_002.zip (15.2 MB) has 58 complete entries, ending at raster_0057, cut
+    cleanly at an entry boundary.
+  - The two runs stopped at different points (about 15–17 MB), so it isn't a
+    fixed bad case. It looks like the write path stops after some amount of
+    data.
+
+  Why this isn't impatience
+  - The old build wrote 34 MB of raster and edge dumps in about 25 s. These runs
+    stopped at roughly half that.
+  - If you waited more than a minute or so, that is a stall. If you copied the
+    files off while it was still running, the truncation proves nothing.
+  - run_002.zip was growing while I looked, but that was the copy to this
+    machine. It stopped at 03:55:30.
+
+  Suspected cause (not confirmed)
+  - The only new filesystem behavior is one big file that stays open while it
+    seeks back to overwrite its own tail every 32 entries. I tested that on a PC
+    filesystem, not the console's SD driver.
+  - The old design only appended to small files that were closed right away.
+
+  What I need
+  - The plain run_001/ and run_002/ folders from the SD card. Their run.log
+    lines are flushed one at a time and timestamped, so the last line shows when
+    and where it stopped. The zips don't hold run.log, because it's added only
+    at clean exit.
+
+  Proposed fix
+  - Make the zip purely append-only: no seeking back during the run, and write
+    the central directory once at exit.
+  - A crash would leave a zip that zip -FF can recover, and the plain
+    results.csv and run.log stay as the safety net.
+  - I'd also add a live case counter to the console.
+  - Want me to make that change and rebuild?
+
+✻ Crunched for 1m 13s · done 3:56 AM
+
+❯ folders provided                                                              
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● The logs show it's slow rather than hung, and the likely cause is misaligned
+  zip entries in my writer that stall the SD driver on alternating captures. I'm
+  padding each local header so entry data lands on 512-byte boundaries, then
+  testing on the host. · summary
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Rebuilt pica-lab/pica-lab.3dsx (182,168 bytes). It compiles with no warnings.
+  I haven't run it on the console.
+
+  What changed: each zip entry's data now starts on a 512-byte boundary, using
+  zero padding in the local header's extra field. On the host, Python's zipfile
+  reads all 43 test entries with CRCs passing, and every 256 KB entry starts
+  512-aligned.
+
+  How to confirm on the console: run raster+edge and watch run.log. If the
+  alignment theory is right, the 10 s gaps on odd cases disappear and the family
+  finishes in roughly 35–50 s.
+
+  If the gaps remain: the stall isn't alignment. In that case send me the new
+  run.log. I'd then take the zip out of the capture path entirely, writing the
+  dumps as separate files as the old build did and packing them into the zip
+  only at exit.
+
+  I'll leave the 72 s and 16 s one-off stalls alone until I see whether they
+  recur.
+
+✻ Cooked for 57s · done 3:58 AM
+
+❯ you have new logs. tell me what you can read in the tea leaves                
+
+  Ran 8 shell commands (ctrl+o to expand)
+
+● Two images that differ in 768 bytes have the same FNV-1a hash (45949DC5). The
+  harness hash can hide image changes, so I'm recomputing the raster analysis
+  from the raw pixels.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Runs 003–005 (the v0.3 build with 512-byte-aligned zip entries) are clean and
+  repeatable. They also overturn one of my earlier hypotheses.
+
+  Harness health
+  - Alignment fix worked. All six families finish in about 70 s, with no stalls.
+    The longest gap between cases is 1.9 s, and raster+edge takes 28–32 s for
+    170 cases. Runs 001 and 002 were the old build and are superseded.
+  - Zips are good. Each of the three has 211 entries, passes testzip, and has
+    exactly the same size, 54,476,791 bytes. The analyzer finds no hash,
+    pixel-count or center-pixel mismatches.
+  - Repeatable. All 207 non-perf hashes are identical across the three launches.
+    Perf medians agree within about 2 µs.
+  - Weak hash. The FNV-1a hash in the CSV gave the same value for two images
+    that differ in 768 bytes (edge_cov cases 133 and 139). I recomputed
+    everything from the raw pixels (SHA-1) to check. It hid only that one pair,
+    so the conclusions below hold, but the hash isn't trustworthy.
+
+  Edge test (now valid)
+  - Both diagonals: the plain edge captures are identical and each covers 16384
+    px, the full quad.
+  - Additive coverage: all 40 edge_cov cases show 0 gaps and 0 overlaps. That
+    includes both diagonals at 8 offsets in two axis modes, and the 4-triangle
+    fan with slanted shared edges.
+  - No fractional effect on a quad: an axis-aligned quad changes only when it
+    crosses 0.5 px, and nothing changes between 0 and 0.375. That is what an
+    exact pixel-center rule predicts. I found no hardware quirk here.
+
+  I'm retracting the 1/4-pixel snap idea
+  - The raster transitions at steps 9, 25, 41 and 57 are exactly where a
+    3:4-slope hypotenuse crosses pixel centers, at offsets of 1/8 + k/4 (steps
+    8, 24, 40, 56) plus one step for the tie.
+  - The vertical edge's transition at step 32 (offset 0.5) fits the same
+    exact-arithmetic rule.
+  - Both fit an exact pixel-center rasterizer where a pixel whose center sits
+    exactly on an edge counts as outside.
+  - So I see no evidence of coarse snapping at 1/64 resolution. That doesn't
+    rule out finer quantization.
+
+  Perf (the redesign now has signal)
+
+  ┌──────────────────────┬──────────────────────────────┐
+  │       Variant        │    GPU command time (p3d)    │
+  ├──────────────────────┼──────────────────────────────┤
+  │ empty                │ no GPU command time recorded │
+  ├──────────────────────┼──────────────────────────────┤
+  │ 192 triangles        │ 92 µs                        │
+  ├──────────────────────┼──────────────────────────────┤
+  │ 768 triangles        │ 422 µs                       │
+  ├──────────────────────┼──────────────────────────────┤
+  │ 3072 triangles       │ 1746 µs                      │
+  ├──────────────────────┼──────────────────────────────┤
+  │ 1 full-target quad   │ 301 µs                       │
+  ├──────────────────────┼──────────────────────────────┤
+  │ 16 full-target quads │ 5064 µs                      │
+  └──────────────────────┴──────────────────────────────┘
+
+  - Per triangle: about 0.575 µs for these 9×9-pixel triangles. That is roughly
+    0.19 µs of fill plus 0.38 µs of setup and vertex work, by my estimate rather
+    than a measurement.
+  - Fill rate: about 4.8 ns per pixel, or roughly 207 Mpixel/s, with depth,
+    blend and texture all off.
+  - Draw count costs the GPU nothing measurable: 768 triangles take 420–423 µs
+    whether drawn in 1, 16, 64 or 256 calls, and 16 quads take the same in 1
+    call or 16. The known 9.6 µs per draw is CPU-side in citro3d, which this
+    test doesn't see.
+  - Why the old test was null: C3D_GetDrawingTime has a floor of about 235 µs.
+    Above it, it reads about 145 µs more than the p3d time. The 192-triangle
+    frame (92 µs of p3d) reads 235 µs, the same as an empty frame. The old 0.414
+    ms was that floor plus the clear plus the triangles.
+
+  Next
+  1. Replace the CSV hash with CRC-32, which the code already computes for the
+     zip, or a 64-bit hash.
+  2. Sweep raster in 1/256-pixel steps near the known transitions at 8–9/64 and
+     32/64, to look for vertex quantization.
+  3. Make triangle size the independent variable in perf, to split per-triangle
+     setup from per-pixel fill cost.
+  4. Add a perf case with depth test, blend and texture on, because fill rate
+     with them off isn't what games get.
+
+  Want me to start with 1 and 2?
+
+✻ Baked for 3m 51s · done 4:11 AM
+
+❯ write a state log for this session into the pica-lab folder. write what we've 
+  done, what assumptions we were right about, what we were wrong about, and     
+  information that will be helpful later.                                       
+
+● Write(~\workdir\pica-lab\STATE-LOG-2026-11-13.md)
+  ⎿  Wrote 84 lines to ~\workdir\pica-lab\STATE-LOG-2026-11-13.md
+       1 # PICA Lab state log: 2026-11-13
+       2 
+       3 Hardware: Old 3DS, firmware `023A0000`, GSP HWID reads `0x000100
+         02`, busy reg `0x80000000` (meaning unknown).
+       4 Build: devkitARM via `C:/devkitPro/msys2/usr/bin/bash.exe -lc 'c
+         d .../pica-lab && make -j4'`. Current binary: v0.3, `pica-lab.3d
+         sx` 182,168 bytes, no compiler warnings.
+       5 
+       6 ## 1. What we did
+       7 
+     … +77 lines (ctrl+o to expand)
+
+● The state log is at pica-lab/STATE-LOG-2026-11-13.md.
+
+  Sections
+  1. What we did
+  2. Assumptions we were right about
+  3. Assumptions we were wrong about
+  4. Information for later: measured perf numbers, orientation and tie-rule
+     notes, zip tooling quirks, and a prioritized open-items list
+
+  Corrections
+  - The 1/4-pixel snap idea is retracted. The raster transitions are exact
+    pixel-center arithmetic, not coarse snapping.
+  - FNV-1a is flagged as unreliable for image identity.
+  - The seek-back zip index is recorded as the wrong theory for the stalls.
+    Unaligned writes were the cause, which is an inference from the fix working.
+
+  Limits
+  - The numbers come from the Old 3DS runs 003–005.
+  - The 0.19 µs fill and 0.38 µs setup split of the per-triangle cost is labeled
+    an estimate.
+  - The README is still out of date, and the log lists it as an open item.
+
+✻ Sautéed for 27s · done 4:13 AM

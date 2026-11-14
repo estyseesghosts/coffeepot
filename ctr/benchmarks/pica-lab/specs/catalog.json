@@ -1,0 +1,362 @@
+[
+  {
+    "id": "R01",
+    "title": "Subpixel coverage grid",
+    "implemented": true,
+    "risk": "L",
+    "objective": "H1: triangle edge coverage is quantized to a fixed subpixel lattice. H0: at every tested offset, coverage moves continuously or quantization is masked by viewport rounding. Move one triangle by offsets `k/64` px for k=0..63; then refine any first transition with k/256. Keep shape, depth, state, and visible area constant. Inspect full binary coverage masks and compare forward/reverse. A transition ladder with regularly spaced boundaries supports H1; irregular boundaries or shape-dependent thresholds reject a single global lattice. Output: shortest interval producing a coverage change, *not* an asserted internal number of coordinate bits. Run with rotations, winding reversal, and different edge slopes to reject a slope-dependent explanation.",
+    "reference": "docs/02-experiment-matrix.md#r01"
+  },
+  {
+    "id": "R02",
+    "title": "Shared-edge watertightness",
+    "implemented": true,
+    "risk": "L",
+    "objective": "H1: two triangles forming a rectangle cover every pixel exactly once under a stated edge rule. H0: coverage has cracks or overlap at some orientations. Draw both diagonals at exactly the same coordinates with overwrite blending, then with additive blending to expose double hits. Repeat vertex order and half-pixel offsets. Look for gaps and twice-covered pixels using per-pixel masks. A difference between quad splits rejects simple watertightness; identical images don't prove all edges conform, so also test skewed quads. Output: pixel diffs and counterexample coordinates.",
+    "reference": "docs/02-experiment-matrix.md#r02"
+  },
+  {
+    "id": "R03",
+    "title": "Clipping boundary conventions",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: clipping follows the documented PICA clip-plane convention in homogeneous coordinates. Sweep a triangle vertex across left/right/top/bottom, near/far and `w` boundaries in controlled epsilon steps, with legal finite positions. Compare image plus attributes against a reference clipper with a documented threshold. Different pixels, degenerate fragments, or a different region mark a counterexample. Never intentionally feed NaNs or unbounded coordinates until baseline has been validated.",
+    "reference": "docs/02-experiment-matrix.md#r03"
+  },
+  {
+    "id": "R04",
+    "title": "Perspective-correct varying interpolation",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: texcoords interpolate in `attribute/w`, normalized by `1/w`, with quantization at a particular step. Feed a gradient lookup texture and vary w values (1, 2, 4, 8), holding projected screen-space geometry fixed. Compare to affine interpolation and multiple precision/rounding models. Regions that favor affine vs perspective predictions distinguish them; matching all models requires finer tests. Output: per-pixel error map and smallest distinguishing input.",
+    "reference": "docs/02-experiment-matrix.md#r04"
+  },
+  {
+    "id": "R05",
+    "title": "Depth and W-buffer quantization",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: Z and W paths quantize depth with different transforms/rounding. Repeated overlapping coplanar quads with controlled delta-z around depth equality and nontrivial w. Test 16-/24-bit depth formats separately, reversed draw order, comparison ops, depth writes, and polygon offsets. Binary-search the first value that changes visibility. A single fixed quantization rule predicting all comparison boundaries supports it; any mismatched boundary rejects it. Distinguish depth-buffer quantization from rasterized depth interpolation by testing constant-depth and varying-depth primitives separately.",
+    "reference": "docs/02-experiment-matrix.md#r05"
+  },
+  {
+    "id": "R06",
+    "title": "Early rejection timing and ordering",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: a fully hidden triangle avoids some texture/lighting work when early depth is active. Hold vertex, triangle, shading and memory inputs constant; alternate fully visible versus hidden surfaces, early-depth modes, alpha-test states, and draw order. Quantify queue-time difference and calibrated hotspot distribution. If hidden geometry costs the same across a texture-cost sweep, substantial early rejection is not supported under that configuration. A small timing difference alone does not establish a pipeline position; force expensive texture sampling to amplify stage-specific differences.",
+    "reference": "docs/02-experiment-matrix.md#r06"
+  },
+  {
+    "id": "R07",
+    "title": "Scissor inclusive/exclusive boundaries",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: scissor coordinates are inclusive on both ends, or another explicit convention. Sweep single-pixel lines and scissor box edges across exact integer boundaries; compare full output masks with predicted box conventions. A one-pixel discrepancy falsifies a convention. Repeat with nonzero viewport offsets to isolate scissor coordinates from viewport transform.",
+    "reference": "docs/02-experiment-matrix.md#r07"
+  },
+  {
+    "id": "R08",
+    "title": "Primitive setup scaling",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: setup cost scales primarily with submitted primitives, not covered pixels; H2: narrow or very long triangle geometry has an additional penalty. Compare 16..8192 non-overlapping tiny triangles, equal-count large triangles, long thin triangles, fully clipped triangles, and fully culled triangles. Keep shader instruction count fixed; warm caches and use geometric control. Fit slope vs primitive count and pixel count. If slopes follow covered pixels regardless of geometry, the setup-limited hypothesis is rejected. Beware command-list size and vertex attribute bandwidth.",
+    "reference": "docs/02-experiment-matrix.md#r08"
+  },
+  {
+    "id": "R09",
+    "title": "Sample positions / multisampling",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: enabled antialiasing uses a stable sample configuration, not a simple post-filter. Render thin diagonals and moving edges at fractions of one pixel; compare renderbuffer and display-transfer scaling options independently. Infer sample pattern only from several rotated edges; a single antialiased edge is underdetermined. Output heatmaps of coverage fractions.",
+    "reference": "docs/02-experiment-matrix.md#r09"
+  },
+  {
+    "id": "R10",
+    "title": "Face winding / degenerate primitives",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: winding and culling follow specified signed-area rules at subpixel boundaries. Sweep triangle determinant from large positive to near zero to negative while keeping one edge fixed. If culling switches at a threshold unrelated to orientation in quantized coordinates, reject pure signed-area rule. Use strictly valid geometry, no hardware-fault primitives.",
+    "reference": "docs/02-experiment-matrix.md#r10"
+  },
+  {
+    "id": "C01",
+    "title": "TEV stage arithmetic",
+    "implemented": true,
+    "risk": "L",
+    "objective": "H1: each stage applies a particular intermediate quantization/clamp; H2: some operations retain more precision until the final stage. Use per-vertex color and constant multiplier, 0..255, and compare 1-stage, 2-stage and 6-stage chains. Choose adversarial operand pairs where early and late rounding differ, and change channel order while keeping total arithmetic equivalent. If stage chaining produces identical outputs to single-stage high-precision reference on all distinguishing cases, early-rounding models are rejected. Record alpha separately from RGB. Initial implementation sweeps 17 multipliers on stage 1 only: not enough to resolve all alternatives.",
+    "reference": "docs/02-experiment-matrix.md#c01"
+  },
+  {
+    "id": "C02",
+    "title": "Blending precision and factors",
+    "implemented": true,
+    "risk": "L",
+    "objective": "H1: factors are evaluated using a specific 8-bit arithmetic and rounding rule; H2: additional internal precision is retained. Blend one colored rectangle over a known destination with source alpha 0..255; then invert source/destination, test ADD/SUBTRACT/MIN/MAX and separate alpha equation. Predict exact 8-bit channels under floor, round-to-nearest, and clamp-first models; store a minimal disagreement case. Initial implementation samples alpha in sixteenths only.",
+    "reference": "docs/02-experiment-matrix.md#c02"
+  },
+  {
+    "id": "C03",
+    "title": "Alpha-test/depth/stencil ordering",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: alpha rejection prevents depth and stencil writes (within specified state), and/or occurs before blending. Use a two-pass test: first pass has alpha below/at/above threshold and requests a stencil/depth write; second renders using stencil/depth predicate to reveal the first-pass side effects. Exactly predicted pixels distinguish ordering; control every mask. A failed expectation may indicate test configuration rather than a hidden pipeline stage; include no-test reference.",
+    "reference": "docs/02-experiment-matrix.md#c03"
+  },
+  {
+    "id": "C04",
+    "title": "Fog, gas, and lighting interpolation precision",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: lookup values interpolate with an identifiable precision or clamp rule. Sweep LUT coordinates over bins and discontinuities, compare neighboring input normals/depth values and different LUT contents. For fog and lighting, vary one scalar at a time. Output minimal counterexamples to fixed-point interpolation models. GAS must be split into its own mode and validated against Citro3D's experimental API rather than conflated with fog.",
+    "reference": "docs/02-experiment-matrix.md#c04"
+  },
+  {
+    "id": "C05",
+    "title": "Color-buffer format conversions",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: RGB565/RGBA4/RGB5A1 conversions use a stable rounding/expansion rule. Render high-precision gradients to each supported color-buffer format; transfer to matching linear output (not an unsupported conversion) and decode raw bytes. Compare 8\u21925/6/4-bit floor, truncation, and nearest models. Confirm byte order, alpha semantics, and restrictions. Do not use a transfer combination 3dbrew says may omit completion IRQ.",
+    "reference": "docs/02-experiment-matrix.md#c05"
+  },
+  {
+    "id": "C06",
+    "title": "Color write masks / logic operations",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: disabled color channels preserve their previous value exactly; H2: blend or logic operations affect masked channels before masking. Render a known RGBA8 sentinel, vary per-channel write mask and logic op, inspect full words. Any masked-channel change disproves strict final-stage masking, but confirm store/readback first.",
+    "reference": "docs/02-experiment-matrix.md#c06"
+  },
+  {
+    "id": "T01",
+    "title": "Filter precision and texel addressing",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: nearest and bilinear sampling use specific texel-center and fractional weight rules. Create a high-contrast 8\u00d78 and 64\u00d764 texture (known tiling), magnify 16\u00d7, sweep half-texel and 1/256-texel offsets and UV wrap modes. Fit competing address conventions and bilinear weight precision. Any pixel where predictions differ is a discriminating case; differing high-level images alone do not prove cache behavior.",
+    "reference": "docs/02-experiment-matrix.md#t01"
+  },
+  {
+    "id": "T02",
+    "title": "LOD computation and mip selection",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: texture level selection depends on log2(max(|dudx|,|dvdy|, ...)) with a particular bias/rounding. Build each mip level as a unique solid color. Sweep projected texture footprints, anisotropy, w, explicit bias and min/max clamps; infer exact level boundaries. Reject candidate rules when colors disagree. Keep cache effects out of correctness runs.",
+    "reference": "docs/02-experiment-matrix.md#t02"
+  },
+  {
+    "id": "T03",
+    "title": "Cache working-set thresholds",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: an effective texture cache has reproducible capacity- or set-conflict-driven throughput changes. First fix texels *actually sampled*, texture format, triangle count, fragment count and cache warm state while changing backing texture size alone; if throughput changes, the assumed same-request premise needs examination. Then vary footprint 4\u2013256KiB using addresses and independent fixed sets with stable request count; randomize order. Validate a candidate capacity by shifting base address, using multiple formats, and changing 2-way/4-way conflict patterns. A single throughput cliff is **not** proof of cache capacity.",
+    "reference": "docs/02-experiment-matrix.md#t03"
+  },
+  {
+    "id": "T04",
+    "title": "Cache coherency and invalidation",
+    "implemented": false,
+    "risk": "M",
+    "objective": "H1: texture updates by CPU, transfer engine, and P3D writer have different required barriers. For each writer, make a legal, synchronized control sequence that produces new texture A. Remove **one** cache invalidation/flush at a time, without introducing an unsupported race in the control. Render new color and compare. If omission never changes pixels under repeated cold/warm tests, a required barrier has not been demonstrated for that path. Hardware races need explicit nondeterminism labeling, not a single screenshot.",
+    "reference": "docs/02-experiment-matrix.md#t04"
+  },
+  {
+    "id": "T05",
+    "title": "Shared bandwidth and VRAM-bank placement",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: specific simultaneous P3D render-target reads/writes and texture access suffer bank contention. Allocate color/depth/texture in specific supported bank arrangements with recorded real allocations; run P3D-alone and PPF-alone references, then overlap workloads with controlled start points. Compute `T_overlap/(T_a+T_b)` and per-engine durations. Any non-overlap or bank-insensitive result weakens the contention hypothesis; distinguish bank constraints from insufficient VRAM, allocation fragmentation, cache hit rate, and synchronization overhead.",
+    "reference": "docs/02-experiment-matrix.md#t05"
+  },
+  {
+    "id": "T06",
+    "title": "Attribute-fetch alignment/stride cost",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: certain aligned vertex formats and strides improve attribute fetch; H2: cost is only fetched byte count. Use structurally valid layouts with identical semantic attributes and identical shader math; vary u8/u16/float representations and supported padding. Scan strides with explicit padding attributes per 3dbrew. Model timing against bytes and alignment. Never supply unsupported stride mismatches: documented to freeze GPU or fail to draw.",
+    "reference": "docs/02-experiment-matrix.md#t06"
+  },
+  {
+    "id": "T07",
+    "title": "Post-transform vertex reuse",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: repeated indices skip a material fraction of vertex shader executions via reuse. Compare `DrawArrays` replicated triangles against `DrawElements` with shared indices, while keeping pixel output/primitive count fixed. Increase unique-vertex reuse distance in an index stream, including a control that uses unique vertices but identical vertex values. If shader-hotspot counts and timing do not change with reuse distance, no caching benefit is established in this configuration. Control index fetch overhead separately.",
+    "reference": "docs/02-experiment-matrix.md#t07"
+  },
+  {
+    "id": "T08",
+    "title": "Procedural texture semantics",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: special procedural texture modes implement a particular LUT interpolation and coordinate mapping. Use one texel stage; step through controlled coordinates and LUT entries with discontinuities. Start with Citro3D's supported proc-texture API, record generated registers; then compare the emulator model. A single row of exact captured colors should distinguish competing interpolation models.",
+    "reference": "docs/02-experiment-matrix.md#t08"
+  },
+  {
+    "id": "T09",
+    "title": "Framebuffer cache coherency",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: a framebuffer-to-texture or framebuffer-to-PPF transition requires explicit flush but not necessarily invalidation under a known ordering. Render a rectangle to VRAM A, copy to B using PPF, then display/use as texture. Compare legal barrier sequences. Detect stale pixels using two distinct alternating colors and full captures, not only GPU idle flags. Do not read live buffers before completion.",
+    "reference": "docs/02-experiment-matrix.md#t09"
+  },
+  {
+    "id": "S01",
+    "title": "Dependent instruction latency",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: chains of 16..256 `ADD`/`MUL` instructions have greater incremental cost than equivalent sets of independent operations, due to dependency stalls. Generate paired assembly shader binaries automatically, verify disassembly and absence of dead instructions, consume all results, keep exactly the same draw and output. Sweep processed vertices at 128..65536, take timing slope after subtracting an empty shader. If independent and dependent slopes agree within noise across workload scales, the latency-hiding hypothesis is not supported. Opcode count alone cannot establish cycles per instruction without issue-width assumptions.",
+    "reference": "docs/02-experiment-matrix.md#s01"
+  },
+  {
+    "id": "S02",
+    "title": "Special-function throughput",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: `RCP`, `RSQ`, `LG2`, `EX2` have distinct issue/latency costs. Build valid instruction chains and independent lanes, vary arithmetic mix and number of processed vertices. Measure slope; cross-check with hotspot stage, and control exceptional inputs. If every instruction type gives same slope in a shader-limited regime, distinct functional-unit costs are not supported (but could be hidden).",
+    "reference": "docs/02-experiment-matrix.md#s02"
+  },
+  {
+    "id": "S03",
+    "title": "Vertex processor parallelism",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: throughput changes near occupancy thresholds reflecting physical vertex processors. With shader-heavy, pixel-cheap vertices, sweep independent vertex count and grouping, compare `DrawArrays`/`DrawElements` and geometry shader off/on. Graph time vs vertices, *not* just frames per second. A periodic step can be compatible with batching, cache lines, or issue width; require another shader length/attribute-size sweep before attributing it to three or four processors.",
+    "reference": "docs/02-experiment-matrix.md#s03"
+  },
+  {
+    "id": "S04",
+    "title": "Branch divergence and control-stack costs",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: mixed branch outcomes across vertices incur higher cost than uniform outcomes. Use conditional assembly with equal work per path, vary fraction and arrangement of vertices selecting each branch; record shader and vertex count. If only fraction matters, not arrangement, classic warp-style divergence is not supported; this GPU need not work like modern SIMT. Never deliberately overflow stack depths.",
+    "reference": "docs/02-experiment-matrix.md#s04"
+  },
+  {
+    "id": "S05",
+    "title": "Float24 operation models",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: a bit-exact model of `RCP`, `RSQ`, `LG2`, `EX2`, MIN/MAX, conversions and `CMP` predicts observable outputs. Use targeted values near exponent boundaries, exact halfway cases, signed zero, infinities and NaNs only where known safe. First build an observable encoding that can distinguish candidate float24 results; RGBA8 direct render cannot do it. Existing 3dbrew tests already cover many corner cases; aim at **remaining** uncertain rounding and approximate functions. A single mismatching distinguishing input rejects a model. Keep operand construction and upload conversion under separate test.",
+    "reference": "docs/02-experiment-matrix.md#s05"
+  },
+  {
+    "id": "S06",
+    "title": "Relative addressing and uniform precision",
+    "implemented": false,
+    "risk": "M",
+    "objective": "H1: constant-register access and index arithmetic have a specific clamping/wrapping rule for *valid bounds*. Populate a table with unique safe values; vary indices within documented range using MOVA with intervening NOPs and controlled control flow. Compare outputs, cost and shader register traces. Never start with out-of-range offsets or adjacent MOVA instructions.",
+    "reference": "docs/02-experiment-matrix.md#s06"
+  },
+  {
+    "id": "S07",
+    "title": "Geometry shader emission and buffer reuse",
+    "implemented": false,
+    "risk": "M",
+    "objective": "H1: SETEMIT/EMIT reuse follows the documented tentative four-vertex-buffer behavior. Generate valid primitives with unique vertex colors/positions and vary emission order and count, with known-good geoshader sample as baseline. A pixel whose identity differs from predicted reuse rejects the model. Separate geometry output semantics from throughput; cap total generated primitives. Geometry stage may change vertex-processor allocation, so do not interpret timing without an appropriate reference shader.",
+    "reference": "docs/02-experiment-matrix.md#s07"
+  },
+  {
+    "id": "P01",
+    "title": "Hotspot sampler semantics",
+    "implemented": false,
+    "risk": "M",
+    "objective": "Known: at 0x1EF00064/68/6C, eight u16 counters from four FIFO reads. Claimed: exactly one counter increments per sampling interval, with stage labels provisional. First test `GSPGPU_ReadHWRegs`/`WriteHWRegs` permission and error codes without interacting with other GPU work. Then in a serialized, opt-in module, measure idle, one isolated vertex-heavy, one raster-heavy, one texel-heavy, and one copy-heavy workload across legal interval lengths (3,4,8,16,32,64) and counts (64,256,1024). Validate sum-of-counters, repeatability, profiler-vs-GSP time, counter increment during idle, behavior when sampling ends, FIFO reset semantics. A change in a purported vertex counter under **only** fragment fill falsifies the simple label or indicates overlap/limitation. Never leave profiler enabled across module teardown.",
+    "reference": "docs/02-experiment-matrix.md#p01"
+  },
+  {
+    "id": "P02",
+    "title": "GSP per-engine performance log",
+    "implemented": false,
+    "risk": "L",
+    "objective": "`GSPGPU_SetPerfLogMode`/`GetPerfLog` are available in modern libctru. Enable, discard first frame (known GSP initial-value issue), capture `totalDurationUs` deltas for P3D, PPF, PSC and scanout where supported. Compare monotonicity against number of issued commands; label potential 32-bit wrapping and concurrency. If a purported P3D increase appears only in PPF, investigate queue measurement instead of asserting raster pressure. This is *not* the same facility as the hotspot profiler.",
+    "reference": "docs/02-experiment-matrix.md#p02"
+  },
+  {
+    "id": "P03",
+    "title": "Draw submission/state overhead",
+    "implemented": true,
+    "risk": "L",
+    "objective": "H1: same 192 triangles cost measurably more with 64 draw calls versus one. Alternate ABBA and keep command list within fixed buffer budget. Examine GPU queue duration and later CPU preparation cost. If no difference above noise, per-draw GPU overhead is not established; a CPU-side penalty may still exist. Extend to 1,2,4,8,16,32,64,128 calls, and hold vertex count strictly constant. Initial source implements endpoints only.",
+    "reference": "docs/02-experiment-matrix.md#p03"
+  },
+  {
+    "id": "P04",
+    "title": "Command stream state-change overhead",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: repeated writes to registers trigger cost beyond their byte count. Use legal no-op or identical-value state writes compared with equal-length command lists containing distinct benign writes, measure command processing time at 1..4096 writes. If equal-length command lists have the same slope, state change penalty beyond command parsing is not established. Use GPUCMD command header tests with command-list dump and bounded length.",
+    "reference": "docs/02-experiment-matrix.md#p04"
+  },
+  {
+    "id": "P05",
+    "title": "P3D/PPF/PSC overlap",
+    "implemented": false,
+    "risk": "M",
+    "objective": "H1: GPU 3D, display transfer and memory-fill engines can overlap under specific buffer independence conditions. Use three *disjoint* VRAM buffers and verify outputs; measure each alone, serialized pairs, and queued pairs with permitted dependencies. If paired time approaches max(a,b), overlap supported; if sum(a,b), serialization supported; intermediate case underdetermined. Confirm with GSP perflog; don't infer overlap from wall-clock CPU timing alone.",
+    "reference": "docs/02-experiment-matrix.md#p05"
+  },
+  {
+    "id": "P06",
+    "title": "Completion/barrier contract",
+    "implemented": false,
+    "risk": "M",
+    "objective": "H1: P3D completion, framebuffer flush, PPF completion and CPU invalidation guarantee distinct visibility. For each writer-reader pair, first prove a legal reference sequence. Then alter only one barrier at a time, across alternating color epochs, and record all 256\u00b2 pixels. If stale pixels appear only when a specific barrier is removed, that barrier matters for that use. If results vary across runs, report race/nondeterminism, never make a reliability guarantee.",
+    "reference": "docs/02-experiment-matrix.md#p06"
+  },
+  {
+    "id": "P07",
+    "title": "GPU queue length/pacing",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: queue startup costs can be amortized by longer legal command lists, until another bottleneck. Vary number of identical simple operations per queued list, constant total work; measure completion events with and without forced waits. A per-list overhead appears as an intercept. Check that queue gets truly drained between conditions, and no C3D framerate limiter/VBlank synchronization is mixed in.",
+    "reference": "docs/02-experiment-matrix.md#p07"
+  },
+  {
+    "id": "P08",
+    "title": "Display-transfer behavior and PPF limits",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: transfer time scales as fixed startup plus bytes moved, with format- and alignment-dependent discontinuities. Benchmark only **documented supported** format pairs and dimension constraints, use widths 64..512 with proper alignment and height >=16. Each transfer must have a completion event and exact output verify. A throughput discontinuity at an alignment boundary falsifies a pure bytes-only model. Never use invalid line dimensions\u2014known potential GPU hangs.",
+    "reference": "docs/02-experiment-matrix.md#p08"
+  },
+  {
+    "id": "G01",
+    "title": "GAS mode",
+    "implemented": false,
+    "risk": "H",
+    "objective": "H1: Citro3D's experimental GAS path can generate a reproducible accumulation/render image matching a proposed two-stage model. Inspect `citro3d/source/gas.c` and header first, reuse existing control setup and legitimate LUT values; sweep one parameter (attenuation/lighting/depth) at a time. Capture exact frame outputs and counter distributions. If changing a parameter produces zero difference, first prove that GAS mode is enabled and that a known-good smoke test responds. Do not jump from zero response to 'hardware ignores register'.",
+    "reference": "docs/02-experiment-matrix.md#g01"
+  },
+  {
+    "id": "G02",
+    "title": "Fog/lighting LUT boundaries",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: LUT table edges use one of several clamp/wrap/interpolate conventions. Build LUT with sharp distinct color/brightness values, sweep indices and small fractions at boundaries, holding all light vectors constant. Compare model-generated output images; each mispredicted pixel falsifies the rule.",
+    "reference": "docs/02-experiment-matrix.md#g02"
+  },
+  {
+    "id": "G03",
+    "title": "Unknown readable registers (non-destructive survey)",
+    "implemented": false,
+    "risk": "M",
+    "objective": "H1: certain currently unnamed *readable* external register fields correlate with GPU state. On idle, submit safe known-good workloads; read only known-safe read addresses and compare with reference. Never blindly enumerate registers, especially FIFO/autoincrement or status/IRQ-sensitive addresses. Treat zero, service error, permission denial, and a changing value as distinct observations. No writes until mechanism is understood.",
+    "reference": "docs/02-experiment-matrix.md#g03"
+  },
+  {
+    "id": "G04",
+    "title": "Shader output map and attribute clock gating",
+    "implemented": false,
+    "risk": "L",
+    "objective": "H1: enabling unused attribute clocks / output semantics causes measurable activity or changes in interpolation. Use only valid, fully-written shader output maps, vary one enabled semantic and produce equivalent final pixels. If time difference persists after matching output attribute byte count, investigate clock-gating effects. Capture actual register sequence and do not violate output write-once rules.",
+    "reference": "docs/02-experiment-matrix.md#g04"
+  },
+  {
+    "id": "G05",
+    "title": "Geometry restart semantics",
+    "implemented": false,
+    "risk": "M",
+    "objective": "H1: triangle strip/fan primitive restart flushes all internally held primitive state according to documented conditions. Feed unique-color vertices, issue restart between small strips, compare output against separate draws. Different outputs falsify equivalence. Use documented legal restart sequences; never infer hardware corruption from invalid command combinations.",
+    "reference": "docs/02-experiment-matrix.md#g05"
+  }
+]

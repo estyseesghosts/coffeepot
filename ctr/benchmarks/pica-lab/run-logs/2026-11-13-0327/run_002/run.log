@@ -1,0 +1,266 @@
+[    0.703] Output: sdmc:/3ds/pica-lab/run_002
+[    1.401] === RUN ALL: 6 families ===
+[    1.411] [1/6] selftest    start
+[    1.820] case 0000 selftest  clear 0 pixels=0 h=37949DC5
+[    2.011] case 0001 selftest  rect 1 pixels=11000 h=542C0625
+[    2.201] case 0002 selftest  rect 2 pixels=11000 h=542C0625
+[    2.231] Self-test: PASS
+[    2.240] [1/6] selftest    done: 3 cases, 0.8s
+[    2.251] [2/6] raster+edge start
+[    2.425] case 0003 raster    forward 0 pixels=6144 h=2CF9DCC5
+[    2.668] case 0004 raster    forward 1 pixels=6144 h=2CF9DCC5
+[    2.849] case 0005 raster    forward 2 pixels=6144 h=2CF9DCC5
+[    3.024] case 0006 raster    forward 3 pixels=6144 h=2CF9DCC5
+[    3.198] case 0007 raster    forward 4 pixels=6144 h=2CF9DCC5
+[    3.381] case 0008 raster    forward 5 pixels=6144 h=2CF9DCC5
+[    3.555] case 0009 raster    forward 6 pixels=6144 h=2CF9DCC5
+[    3.732] case 0010 raster    forward 7 pixels=6144 h=2CF9DCC5
+[    3.907] case 0011 raster    forward 8 pixels=6144 h=2CF9DCC5
+[    4.084] case 0012 raster    forward 9 pixels=6176 h=BE477AC5
+[    4.305] case 0013 raster    forward 10 pixels=6176 h=BE477AC5
+[    4.486] case 0014 raster    forward 11 pixels=6176 h=BE477AC5
+[    4.665] case 0015 raster    forward 12 pixels=6176 h=BE477AC5
+[    4.845] case 0016 raster    forward 13 pixels=6176 h=BE477AC5
+[    5.026] case 0017 raster    forward 14 pixels=6176 h=BE477AC5
+[    5.212] case 0018 raster    forward 15 pixels=6176 h=BE477AC5
+[    5.371] case 0019 raster    forward 16 pixels=6176 h=BE477AC5
+[    5.590] case 0020 raster    forward 17 pixels=6176 h=BE477AC5
+[    5.775] case 0021 raster    forward 18 pixels=6176 h=BE477AC5
+[    5.958] case 0022 raster    forward 19 pixels=6176 h=BE477AC5
+[    6.139] case 0023 raster    forward 20 pixels=6176 h=BE477AC5
+[    6.323] case 0024 raster    forward 21 pixels=6176 h=BE477AC5
+[    6.506] case 0025 raster    forward 22 pixels=6176 h=BE477AC5
+[    6.690] case 0026 raster    forward 23 pixels=6176 h=BE477AC5
+[    6.878] case 0027 raster    forward 24 pixels=6176 h=BE477AC5
+[    7.072] case 0028 raster    forward 25 pixels=6208 h=4F9227C5
+[    7.261] case 0029 raster    forward 26 pixels=6208 h=4F9227C5
+[    7.446] case 0030 raster    forward 27 pixels=6208 h=4F9227C5
+[    7.629] case 0031 raster    forward 28 pixels=6208 h=4F9227C5
+[    7.815] case 0032 raster    forward 29 pixels=6208 h=4F9227C5
+[    8.000] case 0033 raster    forward 30 pixels=6208 h=4F9227C5
+[    8.191] case 0034 raster    forward 31 pixels=6208 h=4F9227C5
+[    8.375] case 0035 raster    forward 32 pixels=6080 h=288E09C5
+[    8.608] case 0036 raster    forward 33 pixels=6080 h=288E09C5
+[    8.792] case 0037 raster    forward 34 pixels=6080 h=288E09C5
+[    8.961] case 0038 raster    forward 35 pixels=6080 h=288E09C5
+[    9.146] case 0039 raster    forward 36 pixels=6080 h=288E09C5
+[    9.332] case 0040 raster    forward 37 pixels=6080 h=288E09C5
+[    9.518] case 0041 raster    forward 38 pixels=6080 h=288E09C5
+[    9.703] case 0042 raster    forward 39 pixels=6080 h=288E09C5
+[    9.891] case 0043 raster    forward 40 pixels=6080 h=288E09C5
+[   10.083] case 0044 raster    forward 41 pixels=6112 h=5AD584C5
+[   10.273] case 0045 raster    forward 42 pixels=6112 h=5AD584C5
+[   10.463] case 0046 raster    forward 43 pixels=6112 h=5AD584C5
+[   10.657] case 0047 raster    forward 44 pixels=6112 h=5AD584C5
+[   10.843] case 0048 raster    forward 45 pixels=6112 h=5AD584C5
+[   11.032] case 0049 raster    forward 46 pixels=6112 h=5AD584C5
+[   11.224] case 0050 raster    forward 47 pixels=6112 h=5AD584C5
+[   11.416] case 0051 raster    forward 48 pixels=6112 h=5AD584C5
+[   11.664] case 0052 raster    forward 49 pixels=6112 h=5AD584C5
+[   11.858] case 0053 raster    forward 50 pixels=6112 h=5AD584C5
+[   12.048] case 0054 raster    forward 51 pixels=6112 h=5AD584C5
+[   12.241] case 0055 raster    forward 52 pixels=6112 h=5AD584C5
+[   12.425] case 0056 raster    forward 53 pixels=6112 h=5AD584C5
+[   12.582] case 0057 raster    forward 54 pixels=6112 h=5AD584C5
+[   12.738] case 0058 raster    forward 55 pixels=6112 h=5AD584C5
+[   12.900] case 0059 raster    forward 56 pixels=6112 h=5AD584C5
+[   13.058] case 0060 raster    forward 57 pixels=6144 h=7789DCC5
+[   13.218] case 0061 raster    forward 58 pixels=6144 h=7789DCC5
+[   13.376] case 0062 raster    forward 59 pixels=6144 h=7789DCC5
+[   13.532] case 0063 raster    forward 60 pixels=6144 h=7789DCC5
+[   13.690] case 0064 raster    forward 61 pixels=6144 h=7789DCC5
+[   13.847] case 0065 raster    forward 62 pixels=6144 h=7789DCC5
+[   14.015] case 0066 raster    forward 63 pixels=6144 h=7789DCC5
+[   14.179] case 0067 raster    reverse 63 pixels=6144 h=7789DCC5
+[   14.348] case 0068 raster    reverse 62 pixels=6144 h=7789DCC5
+[   14.508] case 0069 raster    reverse 61 pixels=6144 h=7789DCC5
+[   14.667] case 0070 raster    reverse 60 pixels=6144 h=7789DCC5
+[   14.826] case 0071 raster    reverse 59 pixels=6144 h=7789DCC5
+[   14.988] case 0072 raster    reverse 58 pixels=6144 h=7789DCC5
+[   15.148] case 0073 raster    reverse 57 pixels=6144 h=7789DCC5
+[   15.309] case 0074 raster    reverse 56 pixels=6112 h=5AD584C5
+[   15.475] case 0075 raster    reverse 55 pixels=6112 h=5AD584C5
+[   15.640] case 0076 raster    reverse 54 pixels=6112 h=5AD584C5
+[   15.808] case 0077 raster    reverse 53 pixels=6112 h=5AD584C5
+[   15.970] case 0078 raster    reverse 52 pixels=6112 h=5AD584C5
+[   16.132] case 0079 raster    reverse 51 pixels=6112 h=5AD584C5
+[   16.295] case 0080 raster    reverse 50 pixels=6112 h=5AD584C5
+[   16.458] case 0081 raster    reverse 49 pixels=6112 h=5AD584C5
+[   16.627] case 0082 raster    reverse 48 pixels=6112 h=5AD584C5
+[   16.819] case 0083 raster    reverse 47 pixels=6112 h=5AD584C5
+[   17.019] case 0084 raster    reverse 46 pixels=6112 h=5AD584C5
+[   17.241] case 0085 raster    reverse 45 pixels=6112 h=5AD584C5
+[   17.454] case 0086 raster    reverse 44 pixels=6112 h=5AD584C5
+[   17.668] case 0087 raster    reverse 43 pixels=6112 h=5AD584C5
+[   17.891] case 0088 raster    reverse 42 pixels=6112 h=5AD584C5
+[   18.115] case 0089 raster    reverse 41 pixels=6112 h=5AD584C5
+[   18.343] case 0090 raster    reverse 40 pixels=6080 h=288E09C5
+[   18.568] case 0091 raster    reverse 39 pixels=6080 h=288E09C5
+[   18.792] case 0092 raster    reverse 38 pixels=6080 h=288E09C5
+[   19.019] case 0093 raster    reverse 37 pixels=6080 h=288E09C5
+[   19.248] case 0094 raster    reverse 36 pixels=6080 h=288E09C5
+[   19.482] case 0095 raster    reverse 35 pixels=6080 h=288E09C5
+[   19.713] case 0096 raster    reverse 34 pixels=6080 h=288E09C5
+[   19.943] case 0097 raster    reverse 33 pixels=6080 h=288E09C5
+[   20.218] case 0098 raster    reverse 32 pixels=6080 h=288E09C5
+[   20.447] case 0099 raster    reverse 31 pixels=6208 h=4F9227C5
+[   20.700] case 0100 raster    reverse 30 pixels=6208 h=4F9227C5
+[   20.923] case 0101 raster    reverse 29 pixels=6208 h=4F9227C5
+[   21.118] case 0102 raster    reverse 28 pixels=6208 h=4F9227C5
+[   21.312] case 0103 raster    reverse 27 pixels=6208 h=4F9227C5
+[   21.510] case 0104 raster    reverse 26 pixels=6208 h=4F9227C5
+[   21.711] case 0105 raster    reverse 25 pixels=6208 h=4F9227C5
+[   21.915] case 0106 raster    reverse 24 pixels=6176 h=BE477AC5
+[   22.113] case 0107 raster    reverse 23 pixels=6176 h=BE477AC5
+[   22.312] case 0108 raster    reverse 22 pixels=6176 h=BE477AC5
+[   22.515] case 0109 raster    reverse 21 pixels=6176 h=BE477AC5
+[   22.715] case 0110 raster    reverse 20 pixels=6176 h=BE477AC5
+[   22.915] case 0111 raster    reverse 19 pixels=6176 h=BE477AC5
+[   23.115] case 0112 raster    reverse 18 pixels=6176 h=BE477AC5
+[   23.316] case 0113 raster    reverse 17 pixels=6176 h=BE477AC5
+[   23.531] case 0114 raster    reverse 16 pixels=6176 h=BE477AC5
+[   23.736] case 0115 raster    reverse 15 pixels=6176 h=BE477AC5
+[   23.958] case 0116 raster    reverse 14 pixels=6176 h=BE477AC5
+[   24.162] case 0117 raster    reverse 13 pixels=6176 h=BE477AC5
+[   24.365] case 0118 raster    reverse 12 pixels=6176 h=BE477AC5
+[   24.568] case 0119 raster    reverse 11 pixels=6176 h=BE477AC5
+[   24.775] case 0120 raster    reverse 10 pixels=6176 h=BE477AC5
+[   24.986] case 0121 raster    reverse 9 pixels=6176 h=BE477AC5
+[   25.193] case 0122 raster    reverse 8 pixels=6144 h=2CF9DCC5
+[   25.400] case 0123 raster    reverse 7 pixels=6144 h=2CF9DCC5
+[   25.612] case 0124 raster    reverse 6 pixels=6144 h=2CF9DCC5
+[   25.823] case 0125 raster    reverse 5 pixels=6144 h=2CF9DCC5
+[   26.031] case 0126 raster    reverse 4 pixels=6144 h=2CF9DCC5
+[   26.240] case 0127 raster    reverse 3 pixels=6144 h=2CF9DCC5
+[   26.461] case 0128 raster    reverse 2 pixels=6144 h=2CF9DCC5
+[   26.675] case 0129 raster    reverse 1 pixels=6144 h=2CF9DCC5
+[   26.887] case 0130 raster    reverse 0 pixels=6144 h=2CF9DCC5
+[   27.098] case 0131 edge      normal_diag 0 pixels=8224 h=994B71C5
+[   27.317] case 0132 edge      reverse_diag 1 pixels=8256 h=B8D6F1C5
+[   27.331] [2/6] raster+edge done: 130 cases, 25.1s
+[   27.340] [3/6] tev         start
+[   27.552] case 0133 tev       constant_rgb 0 pixels=0 h=37949DC5
+[   27.762] case 0134 tev       constant_rgb 1 pixels=36864 h=E74BDDC5
+[   27.975] case 0135 tev       constant_rgb 2 pixels=36864 h=27839DC5
+[   28.184] case 0136 tev       constant_rgb 3 pixels=36864 h=8793DDC5
+[   28.397] case 0137 tev       constant_rgb 4 pixels=36864 h=09A49DC5
+[   28.608] case 0138 tev       constant_rgb 5 pixels=36864 h=AA3BDDC5
+[   28.818] case 0139 tev       constant_rgb 6 pixels=36864 h=88539DC5
+[   29.030] case 0140 tev       constant_rgb 7 pixels=36864 h=6D23DDC5
+[   29.259] case 0141 tev       constant_rgb 8 pixels=36864 h=E4B49DC5
+[   29.489] case 0142 tev       constant_rgb 9 pixels=36864 h=C8EBDDC5
+[   29.706] case 0143 tev       constant_rgb 10 pixels=36864 h=30239DC5
+[   29.918] case 0144 tev       constant_rgb 11 pixels=36864 h=DEB3DDC5
+[   30.135] case 0145 tev       constant_rgb 12 pixels=36864 h=D3C49DC5
+[   30.352] case 0146 tev       constant_rgb 13 pixels=36864 h=9EDBDDC5
+[   30.567] case 0147 tev       constant_rgb 14 pixels=36864 h=79739DC5
+[   30.801] case 0148 tev       constant_rgb 15 pixels=36864 h=5103DDC5
+[   31.018] case 0149 tev       constant_rgb 16 pixels=36864 h=B3D49DC5
+[   31.036] [3/6] tev         done: 17 cases, 3.7s
+[   31.046] [4/6] blend       start
+[   31.257] case 0150 blend     alpha 0 pixels=36864 h=47261DC5
+[   31.472] case 0151 blend     alpha 1 pixels=36864 h=394F1DC5
+[   31.693] case 0152 blend     alpha 2 pixels=36864 h=8BAF1DC5
+[   31.912] case 0153 blend     alpha 3 pixels=36864 h=B6041DC5
+[   32.129] case 0154 blend     alpha 4 pixels=36864 h=91861DC5
+[   32.346] case 0155 blend     alpha 5 pixels=36864 h=BE5D1DC5
+[   32.568] case 0156 blend     alpha 6 pixels=36864 h=FABD1DC5
+[   32.790] case 0157 blend     alpha 7 pixels=36864 h=7EC41DC5
+[   33.011] case 0158 blend     alpha 8 pixels=36864 h=D5E61DC5
+[   33.231] case 0159 blend     alpha 9 pixels=36864 h=D7CF1DC5
+[   33.451] case 0160 blend     alpha 10 pixels=36864 h=1B4D1DC5
+[   33.671] case 0161 blend     alpha 11 pixels=36864 h=57DFDDC5
+[   33.892] case 0162 blend     alpha 12 pixels=36864 h=3C009DC5
+[   34.116] case 0163 blend     alpha 13 pixels=36864 h=58A7DDC5
+[   34.354] case 0164 blend     alpha 14 pixels=36864 h=2BA89DC5
+[   34.577] case 0165 blend     alpha 15 pixels=36864 h=580FDDC5
+[   34.801] case 0166 blend     alpha 16 pixels=36864 h=33D49DC5
+[   34.814] [4/6] blend       done: 17 cases, 3.8s
+[   34.824] [5/6] perf        start
+[   34.844] case 0167 perf      1_draw 0 gpu_ms=0.442793
+[   34.866] case 0168 perf      64_draws 1 gpu_ms=0.413216
+[   34.886] case 0169 perf      64_draws 2 gpu_ms=0.412403
+[   34.906] case 0170 perf      1_draw 3 gpu_ms=0.413410
+[   34.932] case 0171 perf      1_draw 4 gpu_ms=0.437153
+[   34.957] case 0172 perf      64_draws 5 gpu_ms=0.412887
+[   34.978] case 0173 perf      64_draws 6 gpu_ms=0.415192
+[   34.998] case 0174 perf      1_draw 7 gpu_ms=0.409866
+[   35.019] case 0175 perf      1_draw 8 gpu_ms=0.418325
+[   35.040] case 0176 perf      64_draws 9 gpu_ms=0.437884
+[   35.061] case 0177 perf      64_draws 10 gpu_ms=0.432648
+[   35.081] case 0178 perf      1_draw 11 gpu_ms=0.411336
+[   35.101] case 0179 perf      1_draw 12 gpu_ms=0.424629
+[   35.126] case 0180 perf      64_draws 13 gpu_ms=0.410769
+[   35.147] case 0181 perf      64_draws 14 gpu_ms=0.418534
+[   35.172] case 0182 perf      1_draw 15 gpu_ms=0.413976
+[   35.192] case 0183 perf      1_draw 16 gpu_ms=0.409202
+[   35.211] case 0184 perf      64_draws 17 gpu_ms=0.411187
+[   35.241] case 0185 perf      64_draws 18 gpu_ms=0.404115
+[   35.260] case 0186 perf      1_draw 19 gpu_ms=0.411045
+[   35.281] case 0187 perf      1_draw 20 gpu_ms=0.412037
+[   35.302] case 0188 perf      64_draws 21 gpu_ms=0.406606
+[   35.328] case 0189 perf      64_draws 22 gpu_ms=0.409322
+[   35.348] case 0190 perf      1_draw 23 gpu_ms=0.444024
+[   35.369] case 0191 perf      1_draw 24 gpu_ms=0.409008
+[   35.390] case 0192 perf      64_draws 25 gpu_ms=0.455593
+[   35.415] case 0193 perf      64_draws 26 gpu_ms=0.417244
+[   35.436] case 0194 perf      1_draw 27 gpu_ms=0.415700
+[   35.456] case 0195 perf      1_draw 28 gpu_ms=0.411686
+[   35.476] case 0196 perf      64_draws 29 gpu_ms=0.429731
+[   35.501] case 0197 perf      64_draws 30 gpu_ms=0.441577
+[   35.522] case 0198 perf      1_draw 31 gpu_ms=0.417453
+[   35.542] case 0199 perf      1_draw 32 gpu_ms=0.412276
+[   35.563] case 0200 perf      64_draws 33 gpu_ms=0.412455
+[   35.584] case 0201 perf      64_draws 34 gpu_ms=0.413984
+[   35.605] case 0202 perf      1_draw 35 gpu_ms=0.436020
+[   35.631] case 0203 perf      1_draw 36 gpu_ms=0.413768
+[   35.652] case 0204 perf      64_draws 37 gpu_ms=0.415043
+[   35.674] case 0205 perf      64_draws 38 gpu_ms=0.407390
+[   35.700] case 0206 perf      1_draw 39 gpu_ms=0.419504
+[   35.720] case 0207 perf      1_draw 40 gpu_ms=0.416401
+[   35.741] case 0208 perf      64_draws 41 gpu_ms=0.441942
+[   35.762] case 0209 perf      64_draws 42 gpu_ms=0.410821
+[   35.782] case 0210 perf      1_draw 43 gpu_ms=0.420384
+[   35.802] case 0211 perf      1_draw 44 gpu_ms=0.413499
+[   35.823] case 0212 perf      64_draws 45 gpu_ms=0.435393
+[   35.844] case 0213 perf      64_draws 46 gpu_ms=0.409710
+[   35.869] case 0214 perf      1_draw 47 gpu_ms=0.410575
+[   35.893] case 0215 perf      1_draw 48 gpu_ms=0.411455
+[   35.914] case 0216 perf      64_draws 49 gpu_ms=0.414715
+[   35.934] case 0217 perf      64_draws 50 gpu_ms=0.436460
+[   35.954] case 0218 perf      1_draw 51 gpu_ms=0.413231
+[   35.975] case 0219 perf      1_draw 52 gpu_ms=0.412171
+[   35.995] case 0220 perf      64_draws 53 gpu_ms=0.417333
+[   36.016] case 0221 perf      64_draws 54 gpu_ms=0.453094
+[   36.037] case 0222 perf      1_draw 55 gpu_ms=0.418967
+[   36.063] case 0223 perf      1_draw 56 gpu_ms=0.412664
+[   36.089] case 0224 perf      64_draws 57 gpu_ms=0.414834
+[   36.109] case 0225 perf      64_draws 58 gpu_ms=0.396029
+[   36.131] case 0226 perf      1_draw 59 gpu_ms=0.424360
+[   36.151] case 0227 perf      1_draw 60 gpu_ms=0.438884
+[   36.172] case 0228 perf      64_draws 61 gpu_ms=0.417162
+[   36.193] case 0229 perf      64_draws 62 gpu_ms=0.488513
+[   36.213] case 0230 perf      1_draw 63 gpu_ms=0.408501
+[   36.234] case 0231 perf      1_draw 64 gpu_ms=0.434729
+[   36.259] case 0232 perf      64_draws 65 gpu_ms=0.554627
+[   36.280] case 0233 perf      64_draws 66 gpu_ms=0.415103
+[   36.300] case 0234 perf      1_draw 67 gpu_ms=0.415446
+[   36.325] case 0235 perf      1_draw 68 gpu_ms=0.415819
+[   36.345] case 0236 perf      64_draws 69 gpu_ms=0.413417
+[   36.367] case 0237 perf      64_draws 70 gpu_ms=0.412291
+[   36.388] case 0238 perf      1_draw 71 gpu_ms=0.420332
+[   36.408] case 0239 perf      1_draw 72 gpu_ms=0.442830
+[   36.428] case 0240 perf      64_draws 73 gpu_ms=0.413976
+[   36.454] case 0241 perf      64_draws 74 gpu_ms=0.459719
+[   36.474] case 0242 perf      1_draw 75 gpu_ms=0.417281
+[   36.494] case 0243 perf      1_draw 76 gpu_ms=0.412604
+[   36.514] case 0244 perf      64_draws 77 gpu_ms=0.425524
+[   36.543] case 0245 perf      64_draws 78 gpu_ms=0.411567
+[   36.596] case 0246 perf      1_draw 79 gpu_ms=0.414752
+[   36.605] [5/6] perf        done: 80 cases, 1.8s
+[   36.616] [6/6] probe       start
+[   36.626] HWID rc=00000000 value=00010002
+[   36.641] BUSY rc=00000000 value=80000000
+[   36.833] [6/6] probe       done: 0 cases, 0.2s
+[   36.846] === COMPLETE: 6/6 families, 247 cases ===
+[   47.781] exit error_flag=0

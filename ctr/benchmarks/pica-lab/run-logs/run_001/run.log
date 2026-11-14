@@ -1,0 +1,72 @@
+[    0.823] Output: sdmc:/3ds/pica-lab/run_001 (+ .zip)
+[    1.835] === RUN ALL: 6 families ===
+[    1.849] [1/6] selftest    start
+[    2.073] case 0000 selftest  clear 0 pixels=0 h=37949DC5
+[    2.381] case 0001 selftest  rect 1 pixels=11000 h=542C0625
+[    2.621] case 0002 selftest  rect 2 pixels=11000 h=542C0625
+[    2.652] Self-test: PASS
+[    2.665] [1/6] selftest    done: 3 cases, 0.8s
+[    2.714] [2/6] raster+edge start
+[   14.022] case 0003 raster    forward 0 pixels=6144 h=2CF9DCC5
+[   14.290] case 0004 raster    forward 1 pixels=6144 h=2CF9DCC5
+[   25.601] case 0005 raster    forward 2 pixels=6144 h=2CF9DCC5
+[   25.891] case 0006 raster    forward 3 pixels=6144 h=2CF9DCC5
+[   37.457] case 0007 raster    forward 4 pixels=6144 h=2CF9DCC5
+[   37.735] case 0008 raster    forward 5 pixels=6144 h=2CF9DCC5
+[   47.765] case 0009 raster    forward 6 pixels=6144 h=2CF9DCC5
+[   47.961] case 0010 raster    forward 7 pixels=6144 h=2CF9DCC5
+[   58.405] case 0011 raster    forward 8 pixels=6144 h=2CF9DCC5
+[   58.696] case 0012 raster    forward 9 pixels=6176 h=BE477AC5
+[   68.677] case 0013 raster    forward 10 pixels=6176 h=BE477AC5
+[   68.924] case 0014 raster    forward 11 pixels=6176 h=BE477AC5
+[   79.644] case 0015 raster    forward 12 pixels=6176 h=BE477AC5
+[   79.919] case 0016 raster    forward 13 pixels=6176 h=BE477AC5
+[   90.773] case 0017 raster    forward 14 pixels=6176 h=BE477AC5
+[   91.067] case 0018 raster    forward 15 pixels=6176 h=BE477AC5
+[  102.157] case 0019 raster    forward 16 pixels=6176 h=BE477AC5
+[  102.450] case 0020 raster    forward 17 pixels=6176 h=BE477AC5
+[  113.727] case 0021 raster    forward 18 pixels=6176 h=BE477AC5
+[  114.051] case 0022 raster    forward 19 pixels=6176 h=BE477AC5
+[  124.661] case 0023 raster    forward 20 pixels=6176 h=BE477AC5
+[  124.882] case 0024 raster    forward 21 pixels=6176 h=BE477AC5
+[  135.125] case 0025 raster    forward 22 pixels=6176 h=BE477AC5
+[  135.421] case 0026 raster    forward 23 pixels=6176 h=BE477AC5
+[  146.832] case 0027 raster    forward 24 pixels=6176 h=BE477AC5
+[  147.218] case 0028 raster    forward 25 pixels=6208 h=4F9227C5
+[  158.091] case 0029 raster    forward 26 pixels=6208 h=4F9227C5
+[  158.394] case 0030 raster    forward 27 pixels=6208 h=4F9227C5
+[  169.138] case 0031 raster    forward 28 pixels=6208 h=4F9227C5
+[  169.448] case 0032 raster    forward 29 pixels=6208 h=4F9227C5
+[  179.724] case 0033 raster    forward 30 pixels=6208 h=4F9227C5
+[  179.972] case 0034 raster    forward 31 pixels=6208 h=4F9227C5
+[  190.278] case 0035 raster    forward 32 pixels=6080 h=288E09C5
+[  190.590] case 0036 raster    forward 33 pixels=6080 h=288E09C5
+[  202.102] case 0037 raster    forward 34 pixels=6080 h=288E09C5
+[  202.424] case 0038 raster    forward 35 pixels=6080 h=288E09C5
+[  212.617] case 0039 raster    forward 36 pixels=6080 h=288E09C5
+[  212.939] case 0040 raster    forward 37 pixels=6080 h=288E09C5
+[  224.202] case 0041 raster    forward 38 pixels=6080 h=288E09C5
+[  224.521] case 0042 raster    forward 39 pixels=6080 h=288E09C5
+[  234.896] case 0043 raster    forward 40 pixels=6080 h=288E09C5
+[  235.183] case 0044 raster    forward 41 pixels=6112 h=5AD584C5
+[  246.170] case 0045 raster    forward 42 pixels=6112 h=5AD584C5
+[  246.501] case 0046 raster    forward 43 pixels=6112 h=5AD584C5
+[  256.687] case 0047 raster    forward 44 pixels=6112 h=5AD584C5
+[  257.054] case 0048 raster    forward 45 pixels=6112 h=5AD584C5
+[  268.366] case 0049 raster    forward 46 pixels=6112 h=5AD584C5
+[  268.699] case 0050 raster    forward 47 pixels=6112 h=5AD584C5
+[  279.000] case 0051 raster    forward 48 pixels=6112 h=5AD584C5
+[  279.254] case 0052 raster    forward 49 pixels=6112 h=5AD584C5
+[  289.870] case 0053 raster    forward 50 pixels=6112 h=5AD584C5
+[  290.227] case 0054 raster    forward 51 pixels=6112 h=5AD584C5
+[  300.739] case 0055 raster    forward 52 pixels=6112 h=5AD584C5
+[  301.005] case 0056 raster    forward 53 pixels=6112 h=5AD584C5
+[  311.332] case 0057 raster    forward 54 pixels=6112 h=5AD584C5
+[  311.719] case 0058 raster    forward 55 pixels=6112 h=5AD584C5
+[  322.724] case 0059 raster    forward 56 pixels=6112 h=5AD584C5
+[  323.188] case 0060 raster    forward 57 pixels=6144 h=7789DCC5
+[  334.609] case 0061 raster    forward 58 pixels=6144 h=7789DCC5
+[  334.975] case 0062 raster    forward 59 pixels=6144 h=7789DCC5
+[  345.193] case 0063 raster    forward 60 pixels=6144 h=7789DCC5
+[  345.591] case 0064 raster    forward 61 pixels=6144 h=7789DCC5
+[  361.349] case 0065 raster    forward 62 pixels=6144 h=7789DCC5
