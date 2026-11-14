@@ -93,16 +93,18 @@ The practical rule: **one draw per material, not per object**. Put many objects 
 
 The vertex shader units do 4-wide math on 24-bit floats in parallel with the CPU. Transforming vertices on the CPU and uploading screen positions every frame wastes the 268 MHz CPU on what the GPU does for free; upload object-space vertices once and pass the matrix as a uniform. A geometry shader can expand one point into a quad (sprites, particles — see `graphics/gpu/geoshader`, `particles`, `gpusprites`), trading vertex-buffer size for shader time.
 
-### Measured GPU cost of triangles and fill
+### Measured GPU cost of triangles and fill (provisional, one configuration)
 
-From [PICA Lab](../benchmarks/pica-lab/README.md), Old 3DS, 256x256 RGBA8 target, depth, blend and texture off `[measured]` (P3D from the GSP perf log, medians within ±2 µs over runs 003-005):
+From [PICA Lab](../../benchmarks/pica-lab/README.md), one Old 3DS, firmware 023A0000 `[measured]`, **provisional**: these P3D times were read with the harness's pre-v0.7 synchronisation, which did not check that a sample belonged to its frame ([timer caveats](../performance.md#reliability-of-gpu-timers-measured)); they stand until PICA Lab v0.7 re-runs them. Medians within ±2 µs over runs 003-005.
+
+The configuration is narrow, and the figures describe only it: a 256x256 RGBA8 offscreen target, a 9-instruction vertex shader (a 4x4 position transform and a colour pass-through), float positions only (12-byte vertices) with the colour as a fixed attribute, white through one combiner stage (`GPU_REPLACE`), no texture, depth test off, blending off (`GPU_ONE`, `GPU_ZERO`), no stereo, non-overlapping 9x9-pixel right triangles or full-target quads.
 
 | Workload | P3D |
 | -------- | --- |
 | 192 / 768 / 3072 triangles (9x9 px) | 92 / 422 / 1746 µs |
 | 1 / 16 full-target quads (65,536 px each) | 301 µs / 5.06 ms |
 
-About 0.575 µs per 9x9-px triangle and about 4.8 ns per pixel (roughly 207 Mpixel/s) for large primitives. Triangle cost is not simply per-triangle: 3-4 pixel-leg triangles measured about 0.14 µs each and 47.6 ns per pixel, falling to 4.4 ns per pixel at 64-pixel legs; a linear `p3d = c + a*tris + b*pixels` fit left residuals up to ±100 µs. The split of the 0.575 µs into fill and setup is an estimate. Depth-test, blending and texturing were off, so game workloads will cost more. See the [timer caveats](../performance.md#reliability-of-gpu-timers-measured).
+In that configuration: about 0.575 µs per 9x9-pixel triangle, and about 4.8 ns per pixel for full-target quads (equivalent to roughly 207 Mpixel/s). **This is not a general PICA200 fill rate.** Texturing, blending, depth and stencil tests, more combiner stages, other colour formats and a full-screen target were not measured, and each may change it. Triangle cost is not simply per-triangle either: 3-4 pixel-leg triangles measured about 0.14 µs each and 47.6 ns per pixel, falling to 4.4 ns per pixel at 64-pixel legs, and a linear `p3d = c + a*tris + b*pixels` fit (runs 009-011, reproduced in 015) left residuals up to ±100 µs. The split of the 0.575 µs into fill and setup is an estimate.
 
 ## Textures
 
@@ -235,7 +237,7 @@ To compare two strategies on the same scene, record for each: draw calls per fra
 ## Open questions
 
 - Draw-call CPU cost in citro3d per state change: measured on an Old 3DS and a New 2DS XL at 268 MHz over 125-4096 quads ([above](#what-a-draw-call-costs)); **New 3DS at 804 MHz:** not measured, and the dependence on quad size and shader is not established.
-- Fill-rate figures for RGBA8 vs RGB565 targets and for each texture format, with and without the texture cache warm.
+- Fill-rate figures for RGBA8 vs RGB565 targets and for each texture format, with and without the texture cache warm. The only hardware fill figure so far is the untextured, unblended [PICA Lab estimate](#measured-gpu-cost-of-triangles-and-fill-provisional-one-configuration), pending its v0.7 re-run.
 - Whether placing static textures in VRAM gives a measurable speed-up over linear FCRAM for typical scenes.
 
 ## Sources

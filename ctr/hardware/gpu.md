@@ -112,14 +112,16 @@ DMP's CEDEC 2012 talk gives the reasoning: the PICA200 was announced in 2006 as 
 
 ### Rasterisation behaviour measured on hardware
 
-From [PICA Lab](../benchmarks/pica-lab/README.md) (Old 3DS, firmware 023A0000, v0.5 runs 009-014, 2026-11; new to the wiki, the 3dbrew pages do not describe these). All of it is `[measured]` on one Old 3DS; the first two items are `[measured]` and reproduced, the tie rule is a fit.
+From [PICA Lab](../benchmarks/pica-lab/README.md) (one Old 3DS, firmware 023A0000, runs 003-017 with harness v0.3-v0.6, 2026-11; new to the wiki, the 3dbrew pages do not describe these). All of it is `[measured]` on that one console, with a 256x256 RGBA8 offscreen target, citro3d's tilted orthographic projection, and depth, blending and texturing off. These are image results, which the harness reads back only after the GPU has finished; they do not depend on the timing fault fixed in PICA Lab v0.7. The captures of run 015 are [published](../benchmarks/pica-lab/README.md#published-captures) so each item can be checked pixel by pixel.
 
-- **Pixel centres, no coarse snap.** Coverage in 1/64-pixel translation sweeps matches an exact pixel-centre rasteriser; the earlier "1/4-pixel snap grid" idea was retracted. Finer quantisation is not ruled out, and 1/256-pixel steps are the finest tested.
-- **Deterministic.** 451 of 451 non-timing images were bit-identical across three launches, forward and reverse sweep order gave identical images, and shared-edge triangle fans (including slanted edges, 40 additive-coverage cases) had no gaps or overlaps.
-- **Tie rule (pixel centre exactly on an edge).** Not "ties outside". Keyed on the edge's inward normal (independent of winding, in program coordinates), ny>0 is covered, ny<0 is not covered and (+,0) is not covered. `[hypothesis]` candidate: covered iff ny>0, or ny==0 and nx<0. The (-,0), (0,-) and (+,+) cases had no data yet; PICA Lab v0.6 windows C1-C6 target them and have not been run.
-- **Readback layout.** With citro3d's tilted ortho projection, program x maps to the framebuffer's raw row axis; raw word index is `y*256+x`, words are `0xRRGGBBAA` (R byte at `raw[i*4+3]`).
+- **Pixel centres, no coarse snap.** Coverage in 1/64-pixel translation sweeps matches an exact pixel-centre rasteriser, and so do 1/256-pixel sweeps in 21 windows around predicted transitions. The earlier "1/4-pixel snap grid" idea was retracted. Quantisation finer than 1/256 pixel is not ruled out.
+- **Deterministic.** All 753 captures of runs 015, 016 and 017 are byte-identical; forward and reverse sweep order give identical images; shared-edge triangle fans (including slanted edges, 40 additive-coverage cases) have no gaps or overlaps.
+- **Tie rule (pixel centre exactly on an edge).** Not "ties outside". Keyed on the edge's inward normal (in program coordinates, independent of vertex order and winding): a tie pixel is covered iff ny>0, or ny==0 and nx<0. The rule was fitted to runs 009-012, which had no data for normals (-,0), (0,-) and (+,+); it predicted those three, and runs 015-017 then measured them as predicted ((-,0) 256 covered / 0 not, (0,-) 0 / 192, (+,+) 128 / 0). All eight normal classes now have data and none is mixed. Not yet checked on a second console, a New 3DS, another firmware, another render-target size or format, or against an emulator.
+- **Readback layout.** With citro3d's tilted ortho projection, program x is the framebuffer's raw row and program y its raw column, so the raw word index of program pixel (x, y) is `x*256+y`; words are `0xRRGGBBAA` (R byte at `raw[i*4+3]`). Checked with an asymmetric right triangle (96-pixel x leg along raw rows 80-175, 128-pixel y leg along raw columns 48-174, no flip).
 - **TEV and blend** matched the expected arithmetic to about 1 LSB (red steps by 8 per step in the constant-multiplier test); not yet compared with an emulator.
 - **Registers.** `GSPGPU_ReadHWRegs` is readable from homebrew. GSP HWID read `0x00010002` and busy register `0x80000000`; meaning of both unknown.
+
+GPU *timing* figures from the same project (triangle and fill cost, the P3D anomaly) are provisional until PICA Lab v0.7 re-runs them; see [performance](../engineering/performance.md#reliability-of-gpu-timers-measured).
 
 ## Homebrew notes
 
@@ -128,7 +130,7 @@ Homebrew normally uses `citro3d` (state-tracking wrapper; the call-to-register m
 ## Open questions
 
 - Primitive Engine and variable-size primitives are only partly reverse-engineered; how they are enabled is unknown.
-- Rasteriser tie rule for the (-,0), (0,-) and (+,+) edge directions, and sub-1/256-pixel vertex quantisation, are untested ([PICA Lab](../benchmarks/pica-lab/STATE-LOG-2026-11-13.md)).
+- Sub-1/256-pixel vertex quantisation is untested, and the rasteriser tie rule has been measured on one Old 3DS only ([PICA Lab state log](../benchmarks/pica-lab/STATE-LOG-2026-11-13.md)). A second console, a New 3DS and a full-screen target would show whether it generalises.
 - Unknown registers in the external map ("writes `0x22221200` on init", etc.) are undocumented.
 
 ## Sources
@@ -136,7 +138,7 @@ Homebrew normally uses `citro3d` (state-tracking wrapper; the call-to-register m
 - [3dbrew: GPU](https://www.3dbrew.org/wiki/GPU) and subpages: [External Registers](https://www.3dbrew.org/wiki/GPU/External_Registers), [Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers), [Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide), [Pitfalls](https://www.3dbrew.org/wiki/GPU/Pitfalls), [Primitive Engine](https://www.3dbrew.org/wiki/GPU/Primitive_Engine), [Shader Instruction Set](https://www.3dbrew.org/wiki/GPU/Shader_Instruction_Set), [Fragment Lighting](https://www.3dbrew.org/wiki/GPU/Fragment_Lighting), [Procedural Texture Generation](https://www.3dbrew.org/wiki/GPU/Procedural_Texture_Generation) — registers, shaders, lighting, pitfalls.
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — chip identification and Maestro feature list.
 - [4Gamer.net: CEDEC 2012 PICA200 report](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's design rationale, cycle counts, secondary vertex cache, power saving (Japanese).
-- [PICA Lab](../benchmarks/pica-lab/README.md) — this wiki's own real-hardware rasteriser, timing and blend measurements (Old 3DS).
+- [PICA Lab](../benchmarks/pica-lab/README.md) — this wiki's own real-hardware rasteriser, blend and (provisional) timing measurements, Old 3DS, with published captures.
 - [picasso manual](https://github.com/devkitPro/picasso) — shader register file and caveats.
 - [fincs, "Random PICA200 RE Notes"](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) — texture-unit restrictions and other quirks.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Graphics](https://www.copetti.org/writings/consoles/nintendo-3ds/) — pipeline walk-through, cache and combiner counts, SDK graphics layers.

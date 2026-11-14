@@ -22,6 +22,7 @@ Small, self-contained 3DS programs that measure costs the wiki's engineering pag
 | [`coffeebench`](#building-and-running) (micro suite) | yes (r68) | not run | 3 sessions | 3 sessions, 268 MHz mode |
 | [tile suite](#tile-renderer-suite) (20 chained binaries) | yes (r68) | not run | 1 session; the chain ran all 20 | 1 session; the chain ran all 20 |
 | [New 3DS full-speed suites and `corebench`](#new-3ds-full-speed-suites) | yes (r68) | not run | n/a | not run |
+| [PICA Lab](pica-lab/README.md) (GPU rasteriser, blend and timing experiments) | v0.7 yes (r68, `-Wall -Wextra`) | not run | v0.3-v0.6: runs 003-017 (run 008 recorded no cases), images identical across runs; timing taken with pre-v0.7 synchronisation (provisional); v0.7 not run | not run |
 
 All New 3DS runs so far are a New 2DS XL at the default 268 MHz clock, which a program gets unless it calls `osSetSpeedupEnable(true)`. They show how the New 3DS behaves in compatibility mode, not its full speed.
 
@@ -404,7 +405,7 @@ Not written, not run; listed so that the question is recorded, not because any r
 | Scheduling | Frame time with a worker on core 1 at several `APT_SetAppCpuTimeLimit` percentages, versus no worker | Protocol in [threading](../engineering/threading.md#proving-a-worker-improves-frame-time) |
 | Real scene | A fixed 2D tilemap scene (for example the [2D tile renderer](../engineering/PICA200/2d-tile-renderer.md) variants) with frame-time percentiles and missed frames | Needs the frame-time helper from the [profiling cookbook](../engineering/performance.md#frame-time-distribution-and-missed-frames) |
 | Indirect dispatch | Per-element function-pointer dispatch versus grouping by operation type | Companion to `icachebench`; would use the same counters |
-| GPU throughput | Vertex rate, fill rate and texture bandwidth with large primitives | `drawbench` uses 4x4-pixel quads, so it characterises submission, not the GPU. Needs large triangles, many vertices, and textures of several sizes and formats |
+| GPU throughput | Vertex rate, fill rate and texture bandwidth with large primitives | `drawbench` uses 4x4-pixel quads, so it characterises submission, not the GPU. [PICA Lab](pica-lab/README.md) `perf`/`perf2` cover untextured, unblended triangles and full-target quads only (provisional). Still needed: many vertices, textures of several sizes and formats, blending and depth |
 | GPU stages | Geometry, pixel processing, display transfer and queue stalls separately | Uses the GSP performance log, where it is readable |
 | CPU memory | Data-cache and FCRAM latency, random versus sequential reads, branch behaviour, instruction mixes | `membench` measures library-call bandwidth, not latency or read bandwidth; extend it with pointer-chasing and a read loop |
 | Threads and services | Core-1 scheduling, synchronisation, and the cost of an IPC call to a system service | Protocol in [threading](../engineering/threading.md) and [IPC](../engineering/ipc-and-services.md) |

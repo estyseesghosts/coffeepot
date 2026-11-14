@@ -7,7 +7,7 @@ Related pages: [memory and cache](memory-and-cache.md) (where buffers live and w
 ## Before you start
 
 - Checked against libctru 2.7.1, citro3d 1.7.1, devkitARM r68 and Luma3DS v13.5 source.
-- Claims carry the [evidence labels](../../AGENTS.md#evidence-labels) used across the wiki. Nothing on this page is `[measured]` by the wiki itself yet; where a number comes from someone else's measurement, it is labelled with its origin.
+- Claims carry the [evidence labels](../../AGENTS.md#evidence-labels) used across the wiki. A `[measured]` figure here comes from the wiki's own benchmark programs and links to the run that produced it; a number from someone else's measurement is labelled with its origin.
 - Decide your target hardware first. An [Old 3DS](../glossary.md#old-new-3ds) has two slow cores and no L2 cache. **New 3DS:** the CPU can run 3× faster with a 2 MB L2 cache, and a third core is open to `.3dsx` homebrew. A program tuned on a New 3DS tells you nothing about an Old 3DS.
 
 ## The budget
@@ -84,11 +84,18 @@ Since libctru 2.5.0, `GSPGPU_SetPerfLogMode(true)` and `GSPGPU_GetPerfLog(&log)`
 
 ### Reliability of GPU timers (measured)
 
-From [PICA Lab](../benchmarks/pica-lab/README.md), Old 3DS, firmware 023A0000, citro3d tilted ortho, 9x9-px triangles, depth/blend/texture off `[measured]`:
+**Tie a GPU sample to its frame before reading it** [documented: citro3d `renderqueue.c` and `base.c` at `9f21cf7`, libctru `gxqueue.c` at `62b7c42`]:
 
-- **`C3D_GetDrawingTime()` has a floor of about 235 µs** (an empty frame reads 0.235 ms). Above it, it reads P3D plus about 145 µs, so work under about 90 µs of P3D is invisible to it. Use `GSPGPU_GetPerfLog` P3D deltas for small workloads. Call `C3D_FrameSync()` before reading timers; `C3D_FrameBegin` without `SYNCDRAW` does not guarantee alignment.
-- **P3D can be quantised to display frames.** For 3- and 4-pixel-leg triangles in batches of 64-256, P3D read 50-117 ms (3-7 x 16.67 ms) while `C3D_GetDrawingTime()` read 154-207 µs; 512 triangles and 8-pixel legs read about 55-62 µs with no anomaly. Cause unknown, `[hypothesis]` it stretches to vblank boundaries. Do not treat one P3D reading as a per-draw GPU time without checking it against drawing time and wall time; an empty frame can also retain the previous drawing-time value.
-- **GPU cost per draw call is not measurable.** 768 triangles took 420-423 µs in 1, 16, 64 or 256 draws; the 9.6 µs per draw is CPU ([above](#citro3ds-two-timers)).
+- `C3D_FrameSync()` waits for V-blank counters, not for the GPU. The wait for the GPU queue is inside the next `C3D_FrameBegin`. A timer read straight after `C3D_FrameEnd` plus `C3D_FrameSync` is from this frame only if the GPU happened to finish before that V-blank, and nothing tells you whether it did.
+- To sample one submission, wait until its queue is idle, then read `C3D_GetDrawingTime()` and the perf log. citro3d has no public call for that; `gxCmdQueueWait` (libctru) waits for the running GX queue, or read the timers after the next `C3D_FrameBegin` returns and attribute them to the previous frame. A drawing time longer than the wall time from `C3D_FrameEnd` to queue idle cannot belong to that submission.
+- A frame in which nothing writes a GPU command submits **no** command list (`C3Di_SplitFrame` returns "nothing was drawn"), so P3D does not advance and `C3D_GetDrawingTime()` keeps the previous frame's value.
+- `C3D_GetCmdBufUsage()` is updated inside `C3D_FrameEnd`; read before it, it describes the previous frame.
+
+From [PICA Lab](../benchmarks/pica-lab/README.md), one Old 3DS, firmware 023A0000, 256x256 RGBA8 target, depth/blend/texture off. **Provisional:** the harness up to v0.6 read the timers after `C3D_FrameSync()` (the first bullet above), so no sample was checked against its submission. Frames as small as these very likely finished before the V-blank, but that was not verified; v0.7 waits for the queue and has not run yet.
+
+- **No measured drawing-time floor.** For every non-empty workload in runs 003-005, `C3D_GetDrawingTime()` read the P3D time plus 143-149 µs (92 µs P3D → 0.235 ms; 1746 µs → 1.895 ms). An earlier reading of a 235 µs "floor" came from the empty variant, which submitted nothing and re-read the previous frame's value (39 of 40 empty readings bit-identical to the preceding frame's). The constant 143-149 µs is consistent with completion latency on top of command-list time `[hypothesis]`.
+- **P3D can report display-frame multiples.** For 3-pixel-leg triangles in batches of 1 to 256 (and 4-pixel legs in a batch of 256), P3D read 50-184 ms (3 to 11 × 16.67 ms) while `C3D_GetDrawingTime()` read 0.15-0.2 ms. Larger batches (512), 8-pixel legs and the same triangles drawn 4 or 16 times in one frame read 28-1284 µs with almost no anomaly. The anomalous frames did take extra wall time, about 16-44 ms per case in the run log, but less than P3D claimed. Cause unknown; whether P3D or the frame is stretched, and where, is what PICA Lab v0.7 is built to show. Do not treat one P3D reading as a per-draw GPU time without checking it against the drawing time and the wall time to queue idle.
+- **GPU cost per draw call was not measurable.** 768 triangles took 420-423 µs of P3D in 1, 16, 64 or 256 draws; the 9.6 µs per draw is CPU ([above](#citro3ds-two-timers)).
 
 ### A frame-level breakdown
 
@@ -159,6 +166,7 @@ A checklist for getting numbers from an Old 3DS that someone else can trust. Eve
 ### Reliable GPU timing
 
 - `C3D_GetDrawingTime()` and the GSP performance log give GPU-side durations ([above](#per-operation-gpu-times-the-gsp-performance-log)). Neither separates GPU execution from the latency of the completion interrupt reaching your process; treat small differences as noise until a baseline run shows the spread.
+- Read them only after the frame's GPU queue has finished, not after `C3D_FrameSync()`, and keep the V-blank wait out of every GPU interval ([tie a sample to its frame](#reliability-of-gpu-timers-measured)). Give the baseline ("empty") frame at least one GPU command, or it submits nothing.
 - GPU work is asynchronous: timing the CPU call that *submits* a draw tells you about recording, not rendering. To time the GPU, measure frame interval with the CPU deliberately idle (an empty logic loop) so the GPU is the bottleneck, then vary only the GPU workload.
 - Isolate by elimination: render at a smaller target, skip the draw, or draw the same geometry twice, and see which change moves the frame interval ([finding the bottleneck](#finding-the-bottleneck)).
 
@@ -265,6 +273,7 @@ None of the eleven ports reviewed in the [case studies](case-studies/case-study-
 - Measured on an Old 3DS (system 11.17.0-50U, Luma3DS 13.0.2): CPU write bandwidth to heap versus linear memory, the cost of `C3D_FrameEnd`'s full linear-heap flush (about 90 µs per frame) and of the kernel and GSP flush calls ([memory and cache](memory-and-cache.md#measured-costs-old-3ds)); the draw-call costs ([GPU rendering](PICA200/gpu-rendering.md#what-a-draw-call-costs)); and the I-cache cliff ([CPU optimisation](cpu-optimization.md#icachebench-on-an-old-3ds)). Measured on a New 2DS XL at the default 268 MHz clock too (higher flush costs, dearer I-cache miss, [suite runs](../benchmarks/README.md#suite-runs-old-3ds-and-new-3ds)). Not measured: anything at 804 MHz with L2, VRAM write bandwidth, `GSPGPU_FlushDataCache` latency versus core-1 time limit, benefit of LTO. See the [benchmark suite](../benchmarks/README.md#hardware-runs).
 - The cookbook's helpers (frame-time percentiles, missed-slot count) compile but have not run on any console; the nominal refresh period used for the missed-slot count (16.7 ms) is close to the loop period measured on an Old 3DS, 16.71 ms or 59.83 Hz, with the tile renderer under `C3D_FRAME_SYNCDRAW` ([benchmark README](../benchmarks/README.md#lessons-for-running-and-reading-these-benchmarks)); a New 2DS XL gives the same 16.71 ms. The `[reported]` G-Diffuser figures quoted here are for its own game on an Old 3DS and are not reproduced.
 - The CP15 cycle counter and the system tick advance 1:1 on an Old 3DS `[measured]` ([CPU optimisation](cpu-optimization.md#counters-versus-the-system-tick)); the 3:1 ratio in New 3DS 804 MHz mode is still unmeasured. The tick is the only one this page relies on.
+- GPU-side timing on hardware: the PICA Lab triangle, fill and P3D figures above were taken with the pre-v0.7 synchronisation and await a v0.7 re-run; the cause of the P3D frame-multiple readings is unknown.
 - The 25 ms slice model of core-1 scheduling comes from untested notes; a hardware measurement (a core-1 thread recording `svcGetSystemTick` gaps at several percentages) would settle it.
 
 ## Sources

@@ -4,7 +4,7 @@ The Nintendo 3DS is a handheld console sold from 2011, the successor to the Nint
 
 It plays 3DS cartridges and (mostly) DS cartridges, and runs a Nintendo operating system the company calls [Horizon](../glossary.md#horizon). The family has two groups. This wiki treats the **Old 3DS** (3DS, 3DS XL, 2DS) as the default; the faster **New 3DS** group (New 3DS, New 3DS XL, New 2DS XL) is covered in explicit **New 3DS:** notes. This wiki uses **CTR** ([glossary](glossary.md#ctr)) as the platform name for the whole family. Online play ended on 8 April 2024; the eShop closed in March 2023.
 
-Unusually for a console, it contains **three** generations of ARM processor: a dual-core ARM11 that runs games (**New 3DS:** quad-core), an ARM9 that acts as a security and storage processor, and an ARM7 kept only for Game Boy Advance/DS compatibility. A single boot ROM, unchanged across all models, is the root of its security — and, once found flawed, the root of its homebrew scene.
+Unusually for a console, it contains **three** generations of ARM processor: a dual-core ARM11 that runs games (**New 3DS:** quad-core), an ARM9 that acts as a security and storage processor, and an ARM7 kept only for Game Boy Advance/DS compatibility. Two boot ROMs, one for the ARM9 and one for the ARM11 ([boot process](software/boot-process.md)), unchanged across all retail models, are the root of its security — and, once found flawed, the root of its homebrew scene.
 
 ## At a glance
 
@@ -90,7 +90,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Frame pacing](engineering/PICA200/frame-pacing.md) — the CPU/GPU/display timing model, locking to 60 or 30, fixed-step simulation, missed frames.
 - [Audio](engineering/audio.md) — ndsp setup and the DSP firmware file, formats, buffer sizing, streaming, diagnosing crackles.
 - [2D rendering](engineering/PICA200/rendering-2d.md) — end-to-end guide to 2D on the PICA200: setup and frame loop, screens and depth, textures and memory, citro2d beyond sprites, performance decisions and troubleshooting.
-- [2D tile renderer](engineering/PICA200/2d-tile-renderer.md) — a compile-checked scrolling tilemap with sprites and cached text, four tile-submission strategies, and a scripted mode that writes per-phase timings to the SD card for the crossover experiments (all unrun).
+- [2D tile renderer](engineering/PICA200/2d-tile-renderer.md) — a compile-checked scrolling tilemap with sprites and cached text, four tile-submission strategies, and a scripted mode that writes per-phase timings to the SD card for the crossover experiments (the 20-variant suite has run on an Old 3DS and a New 3DS at 268 MHz; pictures compared in an emulator).
 - [Porting](engineering/porting.md) — planning a port, desktop-to-PICA200 concept mapping, SDL and portlibs, what published ports chose.
 - [Application lifecycle](engineering/application-lifecycle.md) — how a program handles HOME, sleep, resume, the software keyboard and exit, with a complete logging example.
 - [Files and saves](engineering/filesystem-and-saves.md) — SD card, RomFS, save data and extdata, commit rules, write errors, and a two-copy checksummed save manager.
@@ -107,7 +107,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Local wireless](engineering/local-wireless.md) — UDS host, join, send and receive.
 - [libctru service groups](engineering/service-groups.md) — init/exit pattern, every remaining service group, utilities, and a probe for which services your build can open.
 - [citro3d fixed-function API](engineering/citro3d-fixed-function-api.md) — which citro3d call sets lighting, fog, procedural textures, gas and render state.
-- [Renderer architecture](engineering/PICA200/renderer-architecture.md) — decision guide for retained vs immediate rendering, batching, state caching, flush ranges and effect reformulation, with planned (not yet run) GPU benchmarks.
+- [Renderer architecture](engineering/PICA200/renderer-architecture.md) — decision guide for retained vs immediate rendering, batching, state caching, flush ranges and effect reformulation, with the planned GPU workload benchmarks and which of them have hardware results.
 - [Stereo engineering](engineering/PICA200/stereo-engineering.md) — cost of the second eye, camera separation and convergence, the 3D slider, depth plane, HUD depth and comfort testing on an Old 3DS.
 - [3D scene optimisation](engineering/PICA200/3d-scene-optimisation.md) — visibility culling, draw ordering and the early-depth evidence, LOD, baked lighting and 2D quads in 3D scenes.
 - [Case study: HGSS port](engineering/case-studies/case-study-hgss-port.md) — hardware profiling, renderer-state failures, cache validation, audio and shutdown pitfalls.
@@ -116,6 +116,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - [Case studies: large 3DS ports](engineering/case-studies/case-studies-ports.md) — reported techniques and results from three N64 ports (F-Zero X, Super Mario 64, Ocarina of Time), with model and conditions.
 - [Source versions and verification](engineering/source-versions.md) — pinned upstream commits, toolchain versions and the verification status of every code example.
 - [Benchmark suite](benchmarks/README.md) — buildable programs measuring memory, cache-flush, instruction-cache and draw-call costs (`membench`, `flushbench`, `icachebench`, `drawbench`) and the result-recording format (run on an Old 3DS and a New 3DS in 268 MHz mode; results in the README).
+- [PICA Lab](benchmarks/pica-lab/README.md) — real-hardware PICA200 experiments: rasteriser coverage and tie rule, determinism, blend and combiner arithmetic (Old 3DS, captures published), and GPU timing (provisional).
 
 ## Notes and open questions
 
@@ -123,7 +124,7 @@ Practical guides for writing working, fast homebrew. They build on the reference
 - Source data differ in places (XDMA channel count, DSP sample rate, 176 vs 178 MB maximum application memory, MCU instruction set naming); each hardware page records the disagreement.
 - Not yet covered: individual system applications (Home Menu internals, browser), the StreetPass wire protocol (only the mailbox side is documented), the camera and NFC subsystems in detail, the Teak DSP architecture, gas rendering.
 - Kernel11 and Process9 internals beyond what 3dbrew publishes are not in the source set.
-- Measurements exist for an Old 3DS and a New 2DS XL at its default 268 MHz clock: the whole-linear-heap flush, draw-call overhead, heap-versus-linear write bandwidth and the instruction-cache cliff are in the [benchmark README](benchmarks/README.md#suite-runs-old-3ds-and-new-3ds). Not yet measured: the New 3DS at 804 MHz with its L2 cache and cores 2 and 3 (the suites are built, see [New 3DS full-speed suites](benchmarks/README.md#new-3ds-full-speed-suites)), GPU fill-rate, vertex and texture throughput, SD and RomFS latency, and IPC cost. Most code examples on the engineering pages are compiled but not run; the [source-version ledger](engineering/source-versions.md#verification-status-of-code-on-the-wiki) lists each one's status.
+- Measurements exist for an Old 3DS and a New 2DS XL at its default 268 MHz clock: the whole-linear-heap flush, draw-call overhead, heap-versus-linear write bandwidth and the instruction-cache cliff are in the [benchmark README](benchmarks/README.md#suite-runs-old-3ds-and-new-3ds). GPU rasteriser behaviour (coverage, tie rule, determinism) is measured on an Old 3DS by [PICA Lab](benchmarks/pica-lab/README.md); its triangle and fill-rate figures are preliminary, for one untextured, unblended configuration, and await a re-run with corrected timing synchronisation. Not yet measured: the New 3DS at 804 MHz with its L2 cache and cores 2 and 3 (the suites are built, see [New 3DS full-speed suites](benchmarks/README.md#new-3ds-full-speed-suites)), GPU fill rate in general (texturing, blending, depth), vertex and texture throughput, SD and RomFS latency, and IPC cost. Most code examples on the engineering pages are compiled but not run; the [source-version ledger](engineering/source-versions.md#verification-status-of-code-on-the-wiki) lists each one's status.
 
 ## Sources
 

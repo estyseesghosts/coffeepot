@@ -46,6 +46,16 @@ STALE_PHRASES = [
     (r"compile-check program", "the program is now examples/api-check, and only checks signatures"),
     (r"crash-safe sequence from", "the save design is now two checksummed slots; see storage-and-saves.md"),
     (r"(membench|flushbench|drawbench|icachebench)[^.\n]{0,100}\b(not run on hardware|no results recorded)", "these have Old 3DS and New 3DS results"),
+    (r"wiki has run no benchmarks", "the benchmark programs and PICA Lab have Old 3DS results"),
+    # Inline code is stripped before matching, so these patterns use the prose around it.
+    (r"nothing on this page is \W{0,4}(\[measured\])?\W{0,4} ?by the wiki itself", "the page links measured results from the wiki's benchmarks"),
+    (r"planned \(not yet run\) GPU benchmarks", "G1 and G6 have hardware results; G3 has a provisional PICA Lab result"),
+    (r"crossover experiments \(all unrun\)", "the tile-renderer suite has run on an Old 3DS and a New 3DS"),
+    (r"has run at 804 MHz or in an emulator", "the tile renderer's pictures were compared in an emulator"),
+    (r"\binitial\b[^\n]{0,80}not hardware-tested", "PICA Lab v0.3-v0.6 ran on an Old 3DS"),
+    (r"floor of about 235", "the 235 us drawing-time floor was an empty frame re-reading the previous frame's value"),
+    (r"a single boot ROM", "the 3DS has two boot ROMs (ARM9 and ARM11)"),
+    (r"windows C1-C6 target them and have not been run", "runs 015-017 measured C1-C6"),
 ]
 
 
