@@ -1,0 +1,6 @@
+pica-lab v0.4
+started_unix=1794668533
+model=Old3DS
+firm_version=023A0000
+shader_fnv1a32=A641243A
+size=256

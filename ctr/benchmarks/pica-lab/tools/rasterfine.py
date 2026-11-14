@@ -24,6 +24,9 @@ GEOMS = {   # vertices in program pixels (integer base; offset is added on top)
     'B': [(100, 40), (212, 61), (124, 181)],    # three slanted edges, no 3:4 slope
     'Ar': [(80, 48), (80, 176), (176, 48)],     # A with reversed vertex order (opposite winding)
     'Br': [(100, 40), (124, 181), (212, 61)],   # B with reversed vertex order
+    # v0.6 probes: right angle at bottom-right -> inward normals (0,-) bottom, (-,0) right, (+,+) hyp.
+    'C': [(176, 176), (80, 176), (176, 48)],
+    'Cr': [(176, 176), (176, 48), (80, 176)],   # C reversed winding
 }
 # (window name, geometry, axis, lo, hi) in 1/256-pixel offset units, inclusive; hi-lo+1 steps.
 WINS = [
@@ -35,13 +38,19 @@ WINS = [
     ('R1', 'Ar', 'x', 26, 38), ('R2', 'Ar', 'x', 90, 102), ('R3', 'Ar', 'x', 122, 134),
     ('R4', 'Ar', 'y', 122, 134),
     ('R5', 'Br', 'x', 118, 130), ('R6', 'Br', 'y', 112, 124),
+    # v0.6 tie probes for the normal classes with no data: (-,0) right edge (x tie at 128),
+    # (0,-) bottom edge (y tie at 128), (+,+) hypotenuse (x ties at 96).
+    ('C1', 'C', 'x', 122, 134), ('C2', 'C', 'y', 122, 134), ('C3', 'C', 'x', 90, 102),
+    ('C4', 'Cr', 'x', 122, 134), ('C5', 'Cr', 'y', 122, 134), ('C6', 'Cr', 'x', 90, 102),
 ]
 WINS_V04 = WINS[:9]   # windows present in v0.4 runs (009-011)
+WINS_V05 = WINS[:15]  # windows present in v0.5 runs (012-014)
 
-def tie_rule(dx, dy):
-    """Provisional: a tie on an edge with direction (dx,dy) is covered iff dx>0 (or dx==0, dy>0
-    -- no data yet for that case). Fit to 4 direction classes only; see evidence table."""
-    return dx > 0 or (dx == 0 and dy > 0)
+def tie_rule(nx, ny):
+    """Tie rule keyed on the edge's INWARD NORMAL (nx,ny), independent of winding/vertex order
+    (runs 012-014: forward/reverse winding of the same edge gives the same coverage, which
+    direction-keyed rules cannot explain). Candidate: covered iff ny>0 or (ny==0 and nx<0)."""
+    return ny > 0 or (ny == 0 and nx < 0)
 
 def covered(geom, ox256=0, oy256=0, ties=tie_rule):
     """Set of (px,py) program pixels covered, offsets in 1/256 px. Exact integers, unit 1/512 px.
@@ -52,7 +61,9 @@ def covered(geom, ox256=0, oy256=0, ties=tie_rule):
     y0, y1 = max(0, min(ys) // 512 - 1), min(SIZE - 1, max(ys) // 512 + 1)
     def e(a, b, p): return (b[0]-a[0])*(p[1]-a[1]) - (b[1]-a[1])*(p[0]-a[0])
     area2 = e(v[0], v[1], v[2])
-    edir = [(v[(i+1) % 3][0]-v[i][0], v[(i+1) % 3][1]-v[i][1]) for i in range(3)]
+    w0 = 1 if area2 > 0 else -1
+    # inward normal = w * grad(edge fn) = w * (-dy, dx)
+    edir = [(-w0*(v[(i+1) % 3][1]-v[i][1]), w0*(v[(i+1) % 3][0]-v[i][0])) for i in range(3)]
     out = set()
     for py in range(y0, y1 + 1):
         for px in range(x0, x1 + 1):
@@ -76,7 +87,8 @@ def tie_pixels(geom, ox256, oy256):
             for i in range(3):
                 a, b = v[i], v[(i + 1) % 3]
                 if (b[0]-a[0])*(q[1]-a[1]) - (b[1]-a[1])*(q[0]-a[0]) == 0:
-                    out.append(((px, py), (b[0]-a[0], b[1]-a[1])))
+                    w0 = 1 if (v[1][0]-v[0][0])*(v[2][1]-v[0][1]) - (v[1][1]-v[0][1])*(v[2][0]-v[0][0]) > 0 else -1
+                    out.append(((px, py), (-w0*(b[1]-a[1]), w0*(b[0]-a[0]))))
     return out
 
 def observed(raw):
@@ -166,7 +178,7 @@ def analyze(path):
             bad += len(diff)
         if len(ptr) == 0 and (fwd or rev):
             print('  NOTE: window contains no model transition; only "no change" is tested here.')
-    print('Tie evidence by edge direction (dx,dy signs, vertex order): covered / not covered pixels')
+    print('Tie evidence by inward normal (nx,ny signs): covered / not covered pixels')
     for dx in '-0+':
         for dy in '-0+':
             if (dx, dy) == ('0', '0'): continue

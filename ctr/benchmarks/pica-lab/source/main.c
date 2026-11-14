@@ -292,11 +292,13 @@ static void run_raster(void) {
  * Offsets are multiples of 1/256, exactly representable as float. Each window runs
  * forward (lo..hi) then, in a second pass, reverse (hi..lo, windows in reverse order). */
 typedef struct { const char *name; int geom; char axis; int lo, hi; } FineWin;
-static const float fine_geoms[4][3][2] = {
+static const float fine_geoms[6][3][2] = {
     {{80,48},{176,48},{80,176}},      /* A: 3:4 hypotenuse */
     {{100,40},{212,61},{124,181}},    /* B: three slanted edges */
     {{80,48},{80,176},{176,48}},      /* Ar: A, reversed vertex order (opposite winding) */
     {{100,40},{124,181},{212,61}},    /* Br: B, reversed vertex order */
+    {{176,176},{80,176},{176,48}},    /* C: right angle bottom-right; normals (0,-),(-,0),(+,+) */
+    {{176,176},{176,48},{80,176}},    /* Cr: C, reversed vertex order */
 };
 static const FineWin fine_wins[] = {
     {"A1",0,'x',26,38},  {"A2",0,'x',90,102}, {"A3",0,'x',122,134},
@@ -307,6 +309,9 @@ static const FineWin fine_wins[] = {
     {"R1",2,'x',26,38},  {"R2",2,'x',90,102}, {"R3",2,'x',122,134},
     {"R4",2,'y',122,134},
     {"R5",3,'x',118,130},{"R6",3,'y',112,124},
+    /* v0.6 tie probes for normal classes with no data (see tools/rasterfine.py) */
+    {"C1",4,'x',122,134},{"C2",4,'y',122,134},{"C3",4,'x',90,102},
+    {"C4",5,'x',122,134},{"C5",5,'y',122,134},{"C6",5,'x',90,102},
 };
 #define FINE_NWINS ((int)(sizeof(fine_wins)/sizeof(fine_wins[0])))
 static void run_raster_fine(void) {
@@ -569,7 +574,8 @@ out:
 #define P2_PIXELS 24000
 #define P2_COUNT 256
 #define P2_MAX 24
-typedef struct { char name[24]; int s, n, quads, pitch; } P2Var;   /* pitch 0 = s */
+typedef struct { char name[24]; int s, n, quads, pitch, draws; } P2Var;   /* pitch 0 = s; draws 0 = 1 */
+static double last_wall_us;   /* svcGetSystemTick wall time of FrameEnd..FrameSync in the last p2_frame */
 static P2Var p2vars[P2_MAX];
 static int p2n;
 static int p2_pxest(int s) { return s*(s-1)/2; }   /* only used to choose counts */
@@ -627,13 +633,16 @@ static bool p2_frame(const P2Var *pv, double *gpu_ms, long *p3d_us, float *cmd_u
         Vertex *v=vtx_alloc(nv);
         if(!v) { C3D_FrameEnd(0); return false; }
         p2_fill(pv,v);
-        C3D_DrawArrays(GPU_TRIANGLES,(int)(v-vertices),nv);
+        for(int d=0; d<(pv->draws?pv->draws:1); d++)
+            C3D_DrawArrays(GPU_TRIANGLES,(int)(v-vertices),nv);
     }
     *cmd_use=C3D_GetCmdBufUsage();
     GSPGPU_PerfLog p0, p1;
     bool have = R_SUCCEEDED(GSPGPU_GetPerfLog(&p0));
+    u64 t0=svcGetSystemTick();
     C3D_FrameEnd(0);
     C3D_FrameSync();
+    last_wall_us=(double)(svcGetSystemTick()-t0)*1e6/SYSCLOCK_ARM11;
     have = have && R_SUCCEEDED(GSPGPU_GetPerfLog(&p1));
     *gpu_ms=C3D_GetDrawingTime();
     *p3d_us = have ? (long)(u32)(p1.entries[GSPGPU_EVENT_P3D].totalDurationUs -
@@ -660,7 +669,7 @@ static void run_perf2(void) {
         for(int j=0;j<nseen;j++) if(seen[j]==s) dup=true;
         if(dup) continue;
         seen[nseen++]=s;
-        P2Var one={{0},s,1,0,0};
+        P2Var one={{0},s,1,0,0,0};
         if(!begin_case()) return;
         C3D_FixedAttribSet(1,1,1,1,1);
         Vertex *v=vtx_alloc(3); if(!v) return;
@@ -701,26 +710,34 @@ out:
     GSPGPU_SetPerfLogMode(false);
 }
 /* ---- timing_iso: isolate the perf2 P3D anomaly --------------------------------
- * Runs 009-011: tri_s3_n256 and tri_s4_n256 reported P3D of ~50/67/83 ms (near 3/4/5 x 16.67 ms)
- * while drawing time was ~0.17 ms. Hypothesis (unproven): P3D is stretched to vblank boundaries.
- * This family varies count, placement pitch and what precedes the frame:
+ * Runs 012-014 (v0.5): P3D for s3/s4 n<=256 sat at 3..7 x 16.67 ms (vblank multiples) while
+ * C3D_GetDrawingTime was ~0.17 ms; s3_n512 and s8_n256 gave P3D ~55 us with no anomaly. P3D is
+ * therefore not a reliable per-draw GPU time. v0.6 adds an independent clock and scaling tests:
+ *   timing_iso  rows: p3d_us (perflog) and gpu_queue_ms (C3D_GetDrawingTime), as before
+ *   timing_wall rows: same variant/rep, gpu_queue_ms = svcGetSystemTick wall time (ms) of
+ *                     FrameEnd..FrameSync; p3d_us repeats the perflog value
+ * Variants: 0/1 triangle baselines, count series, and 1/4/16 repeated draws of one batch in the
+ * same frame (does time scale with GPU work or stay at frame multiples?).
  *   _blk : all reps of one variant back to back
  *   _gap : an empty frame before every measured frame
- * Not a fix: it only records. Compare p3d_us to gpu_queue_ms per row. */
+ * Not a fix: it only records. */
 #define ISO_REPS 20
 #define ISO_WARMUP 3
 static void run_timing_iso(void) {
-    static const struct { const char *name; int s, n, pitch; } iv[] = {
-        {"s3_n64",3,64,0},{"s3_n128",3,128,0},{"s3_n192",3,192,0},{"s3_n256",3,256,0},
-        {"s3_n512",3,512,0},{"s3_n256_p8",3,256,8},{"s4_n256",4,256,0},{"s8_n256",8,256,0},
+    static const struct { const char *name; int s, n, pitch, draws; } iv[] = {
+        {"s3_n1",3,1,0,0},{"s3_n16",3,16,0,0},
+        {"s3_n64",3,64,0,0},{"s3_n256",3,256,0,0},{"s3_n512",3,512,0,0},
+        {"s3_n256_p8",3,256,8,0},{"s8_n256",8,256,0,0},
+        {"s3_n256_x4",3,256,0,4},{"s3_n256_x16",3,256,0,16},
+        {"s3_n64_x16",3,64,0,16},{"s8_n256_x16",8,256,0,16},
     };
     static const char *modes[2]={"blk","gap"};
-    P2Var empty={{"empty"},0,0,0,0};
+    P2Var empty={{"empty"},0,0,0,0,0};
     bool perflog=R_SUCCEEDED(GSPGPU_SetPerfLogMode(true));
     logmsg(true,"timing_iso: %d variants x 2 modes x %d reps, perflog %s",
            (int)(sizeof(iv)/sizeof(iv[0])),ISO_REPS,perflog?"on":"UNAVAILABLE");
     for(unsigned vi=0;vi<sizeof(iv)/sizeof(iv[0]);vi++) {
-        P2Var pv={{0},iv[vi].s,iv[vi].n,0,iv[vi].pitch};
+        P2Var pv={{0},iv[vi].s,iv[vi].n,0,iv[vi].pitch,iv[vi].draws};
         for(int m=0;m<2;m++) {
             char name[24]; snprintf(name,sizeof(name),"%s_%s",iv[vi].name,modes[m]);
             for(int rep=-ISO_WARMUP;rep<ISO_REPS;rep++) {
@@ -729,7 +746,9 @@ static void run_timing_iso(void) {
                 if(!p2_frame(&pv,&g,&p,&cu)) goto out;
                 if(rep<0) continue;
                 log_case("timing_iso",name,rep,0,0,0,g,p);
-                logmsg(false,"case %04u timing_iso %s %d gpu_ms=%.6f p3d_us=%ld",case_id,name,rep,g,p);
+                log_case("timing_wall",name,rep,0,0,0,last_wall_us/1000.0,p);
+                logmsg(false,"case %04u timing_iso %s %d gpu_ms=%.6f wall_us=%.1f p3d_us=%ld",
+                       case_id,name,rep,g,last_wall_us,p);
                 case_id++;
             }
         }
@@ -810,7 +829,7 @@ static void write_manifest(void) {
     char path[128]; snprintf(path,sizeof(path),"%s/manifest.txt",run_dir);
     FILE *f = fopen(path,"w"); if(!f) return;
     bool n3ds = false; APT_CheckNew3DS(&n3ds);
-    fprintf(f,"pica-lab v0.4\nstarted_unix=%lld\nmodel=%s\nfirm_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",
+    fprintf(f,"pica-lab v0.6\nstarted_unix=%lld\nmodel=%s\nfirm_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",
         (long long)time(NULL), n3ds?"New3DS":"Old3DS", (unsigned long)osGetFirmVersion(),
         (unsigned long)hash32((const u8*)vshader_shbin,vshader_shbin_size), SIZE);
     fclose(f);

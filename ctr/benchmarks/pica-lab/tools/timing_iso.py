@@ -16,10 +16,13 @@ FRAME = 1_000_000 / 60
 def run(path):
     rows = [r for r in csv.DictReader(open(resolve_csv(path), newline='', encoding='utf-8'))
             if r['family'] == 'timing_iso']
-    if not rows: print('no timing_iso rows (run v0.5 on hardware)'); return 1
+    if not rows: print('no timing_iso rows (run v0.5+ on hardware)'); return 1
+    wall = {}   # v0.6+: timing_wall rows carry svcGetSystemTick FrameEnd..FrameSync time in gpu_queue_ms
+    for r in csv.DictReader(open(resolve_csv(path), newline='', encoding='utf-8')):
+        if r['family'] == 'timing_wall': wall.setdefault(r['variant'], []).append(float(r['gpu_queue_ms']) * 1000)
     g = {}
     for r in rows: g.setdefault(r['variant'], []).append((float(r['p3d_us']), float(r['gpu_queue_ms']) * 1000))
-    print(f'{"variant":<16}{"n":>3}{"p3d med":>9}{"min":>8}{"max":>8}{"draw med":>9}{"anom":>6}{"frames(anom)":>16}')
+    print(f'{"variant":<16}{"n":>3}{"p3d med":>9}{"min":>8}{"max":>8}{"draw med":>9}{"wall med":>9}{"anom":>6}{"frames(anom)":>16}')
     for name, v in g.items():
         p = [a for a, _ in v]; d = [b for _, b in v]
         an = [a for a, b in v if a > 5000 and a > b + 5000]
