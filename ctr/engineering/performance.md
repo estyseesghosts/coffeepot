@@ -82,6 +82,14 @@ Since libctru 2.5.0, `GSPGPU_SetPerfLogMode(true)` and `GSPGPU_GetPerfLog(&log)`
 - The first frame after enabling the log has nonsense VBlank entries; very short fills may finish before the system records their start.
 - Enable it while no GPU operation is in progress.
 
+### Reliability of GPU timers (measured)
+
+From [PICA Lab](../benchmarks/pica-lab/README.md), Old 3DS, firmware 023A0000, citro3d tilted ortho, 9x9-px triangles, depth/blend/texture off `[measured]`:
+
+- **`C3D_GetDrawingTime()` has a floor of about 235 µs** (an empty frame reads 0.235 ms). Above it, it reads P3D plus about 145 µs, so work under about 90 µs of P3D is invisible to it. Use `GSPGPU_GetPerfLog` P3D deltas for small workloads. Call `C3D_FrameSync()` before reading timers; `C3D_FrameBegin` without `SYNCDRAW` does not guarantee alignment.
+- **P3D can be quantised to display frames.** For 3- and 4-pixel-leg triangles in batches of 64-256, P3D read 50-117 ms (3-7 x 16.67 ms) while `C3D_GetDrawingTime()` read 154-207 µs; 512 triangles and 8-pixel legs read about 55-62 µs with no anomaly. Cause unknown, `[hypothesis]` it stretches to vblank boundaries. Do not treat one P3D reading as a per-draw GPU time without checking it against drawing time and wall time; an empty frame can also retain the previous drawing-time value.
+- **GPU cost per draw call is not measurable.** 768 triangles took 420-423 µs in 1, 16, 64 or 256 draws; the 9.6 µs per draw is CPU ([above](#citro3ds-two-timers)).
+
 ### A frame-level breakdown
 
 With those three sources you can fill in this table for any frame; it is the starting point for every optimisation decision on this page:

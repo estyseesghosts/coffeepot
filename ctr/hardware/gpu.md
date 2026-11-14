@@ -110,6 +110,17 @@ DMP's CEDEC 2012 talk gives the reasoning: the PICA200 was announced in 2006 as 
 - Every shader output component that is configured must be written exactly once, or the GPU freezes.
 - After changing a shader program, the attribute-buffer and vertex-input registers must be configured again, and a draw-elements sequence must end with two dummy writes to `GPUREG_PRIMITIVE_CONFIG`, otherwise the GPU can crash ([shading features](gpu-shading-features.md#behaviours-and-quirks-found-while-reverse-engineering)).
 
+### Rasterisation behaviour measured on hardware
+
+From [PICA Lab](../benchmarks/pica-lab/README.md) (Old 3DS, firmware 023A0000, v0.5 runs 009-014, 2026-11; new to the wiki, the 3dbrew pages do not describe these). All of it is `[measured]` on one Old 3DS; the first two items are `[measured]` and reproduced, the tie rule is a fit.
+
+- **Pixel centres, no coarse snap.** Coverage in 1/64-pixel translation sweeps matches an exact pixel-centre rasteriser; the earlier "1/4-pixel snap grid" idea was retracted. Finer quantisation is not ruled out, and 1/256-pixel steps are the finest tested.
+- **Deterministic.** 451 of 451 non-timing images were bit-identical across three launches, forward and reverse sweep order gave identical images, and shared-edge triangle fans (including slanted edges, 40 additive-coverage cases) had no gaps or overlaps.
+- **Tie rule (pixel centre exactly on an edge).** Not "ties outside". Keyed on the edge's inward normal (independent of winding, in program coordinates), ny>0 is covered, ny<0 is not covered and (+,0) is not covered. `[hypothesis]` candidate: covered iff ny>0, or ny==0 and nx<0. The (-,0), (0,-) and (+,+) cases had no data yet; PICA Lab v0.6 windows C1-C6 target them and have not been run.
+- **Readback layout.** With citro3d's tilted ortho projection, program x maps to the framebuffer's raw row axis; raw word index is `y*256+x`, words are `0xRRGGBBAA` (R byte at `raw[i*4+3]`).
+- **TEV and blend** matched the expected arithmetic to about 1 LSB (red steps by 8 per step in the constant-multiplier test); not yet compared with an emulator.
+- **Registers.** `GSPGPU_ReadHWRegs` is readable from homebrew. GSP HWID read `0x00010002` and busy register `0x80000000`; meaning of both unknown.
+
 ## Homebrew notes
 
 Homebrew normally uses `citro3d` (state-tracking wrapper; the call-to-register mapping for lighting, fog and render state is on [citro3d fixed-function API](../engineering/citro3d-fixed-function-api.md)) and `citro2d`, with shaders written in `picasso` assembly ([picasso and citro3d](../homebrew/picasso-and-citro3d.md), [development workflow](../homebrew/development-workflow.md)). How to use it efficiently — frame structure, draw-call costs, batching, texture formats, combiner recipes, stereo — is on [GPU rendering](../engineering/PICA200/gpu-rendering.md); measuring GPU time and diagnosing hangs on [performance](../engineering/performance.md) and [debugging](../engineering/debugging.md#gpu-hangs). The `3ds-examples` repository contains ready GPU samples (cube map, fragment lighting, geometry shader, loop subdivision, procedural texture, toon shading, normal mapping, particles, stereoscopic 2D, wide mode 3D and more). Emulator work needs the register-level pages on 3dbrew.
@@ -117,6 +128,7 @@ Homebrew normally uses `citro3d` (state-tracking wrapper; the call-to-register m
 ## Open questions
 
 - Primitive Engine and variable-size primitives are only partly reverse-engineered; how they are enabled is unknown.
+- Rasteriser tie rule for the (-,0), (0,-) and (+,+) edge directions, and sub-1/256-pixel vertex quantisation, are untested ([PICA Lab](../benchmarks/pica-lab/STATE-LOG-2026-11-13.md)).
 - Unknown registers in the external map ("writes `0x22221200` on init", etc.) are undocumented.
 
 ## Sources
@@ -124,6 +136,7 @@ Homebrew normally uses `citro3d` (state-tracking wrapper; the call-to-register m
 - [3dbrew: GPU](https://www.3dbrew.org/wiki/GPU) and subpages: [External Registers](https://www.3dbrew.org/wiki/GPU/External_Registers), [Internal Registers](https://www.3dbrew.org/wiki/GPU/Internal_Registers), [Programming Guide](https://www.3dbrew.org/wiki/GPU/Programming_Guide), [Pitfalls](https://www.3dbrew.org/wiki/GPU/Pitfalls), [Primitive Engine](https://www.3dbrew.org/wiki/GPU/Primitive_Engine), [Shader Instruction Set](https://www.3dbrew.org/wiki/GPU/Shader_Instruction_Set), [Fragment Lighting](https://www.3dbrew.org/wiki/GPU/Fragment_Lighting), [Procedural Texture Generation](https://www.3dbrew.org/wiki/GPU/Procedural_Texture_Generation) — registers, shaders, lighting, pitfalls.
 - [3dbrew: Hardware](https://www.3dbrew.org/wiki/Hardware) — chip identification and Maestro feature list.
 - [4Gamer.net: CEDEC 2012 PICA200 report](https://www.4gamer.net/games/017/G001762/20120822007/) — DMP's design rationale, cycle counts, secondary vertex cache, power saving (Japanese).
+- [PICA Lab](../benchmarks/pica-lab/README.md) — this wiki's own real-hardware rasteriser, timing and blend measurements (Old 3DS).
 - [picasso manual](https://github.com/devkitPro/picasso) — shader register file and caveats.
 - [fincs, "Random PICA200 RE Notes"](https://gist.github.com/fincs/543f7e1375815f495f10020a053f14e9) — texture-unit restrictions and other quirks.
 - [Rodrigo Copetti, Nintendo 3DS Architecture: Graphics](https://www.copetti.org/writings/consoles/nintendo-3ds/) — pipeline walk-through, cache and combiner counts, SDK graphics layers.

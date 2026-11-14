@@ -161,6 +161,13 @@ These came out of running the suite on an Old 3DS and apply to any microbenchmar
 - **Do not read `begin_ms` or `period` as cost.** Both are display waits; the loop period was 16.71 ms (59.83 Hz) for every tile strategy ([frame pacing](PICA200/frame-pacing.md#open-questions)).
 - **Check the counters work before relying on them.** `icachebench` falls back to timing only if the kernel refuses; look for `note,perf` against `note,perf_unavailable`.
 
+Further lessons from [PICA Lab](../benchmarks/pica-lab/README.md) (GPU-correctness harness, Old 3DS) `[measured]`:
+
+- **Align capture writes to the SD card.** 262,198-byte zip entries put every second entry's data at an offset not divisible by 4, and each such write took about 10 s; padding so data starts on a 512-byte boundary cut a raster run to 28-32 s. Inferred from the alternating pattern and the fix, not isolated further.
+- **Do not use FNV-1a32 as an image identity.** Two images differing in 768 bytes collided; use CRC-32 or a longer hash.
+- **Reuse of vertex slots in one command list made a triangle draw twice** (half coverage); the fault was the harness, not the GPU. Give each triangle its own slots.
+- **Gate GPU results on a self-test** (clear is all one value, two identical draws give identical images) before interpreting any difference.
+
 When you have results, add them to the relevant page with the console model, system and Luma3DS versions, and the build details.
 
 ## Lessons from ported games

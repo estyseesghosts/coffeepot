@@ -93,6 +93,17 @@ The practical rule: **one draw per material, not per object**. Put many objects 
 
 The vertex shader units do 4-wide math on 24-bit floats in parallel with the CPU. Transforming vertices on the CPU and uploading screen positions every frame wastes the 268 MHz CPU on what the GPU does for free; upload object-space vertices once and pass the matrix as a uniform. A geometry shader can expand one point into a quad (sprites, particles — see `graphics/gpu/geoshader`, `particles`, `gpusprites`), trading vertex-buffer size for shader time.
 
+### Measured GPU cost of triangles and fill
+
+From [PICA Lab](../benchmarks/pica-lab/README.md), Old 3DS, 256x256 RGBA8 target, depth, blend and texture off `[measured]` (P3D from the GSP perf log, medians within ±2 µs over runs 003-005):
+
+| Workload | P3D |
+| -------- | --- |
+| 192 / 768 / 3072 triangles (9x9 px) | 92 / 422 / 1746 µs |
+| 1 / 16 full-target quads (65,536 px each) | 301 µs / 5.06 ms |
+
+About 0.575 µs per 9x9-px triangle and about 4.8 ns per pixel (roughly 207 Mpixel/s) for large primitives. Triangle cost is not simply per-triangle: 3-4 pixel-leg triangles measured about 0.14 µs each and 47.6 ns per pixel, falling to 4.4 ns per pixel at 64-pixel legs; a linear `p3d = c + a*tris + b*pixels` fit left residuals up to ±100 µs. The split of the 0.575 µs into fill and setup is an estimate. Depth-test, blending and texturing were off, so game workloads will cost more. See the [timer caveats](../performance.md#reliability-of-gpu-timers-measured).
+
 ## Textures
 
 - Dimensions are powers of two from 8 to 1024 per side ([picasso and citro3d](../../homebrew/picasso-and-citro3d.md#citro3d-gpu-library)); data is stored **tiled** in 8×8 blocks, not in rows — use `tex3ds` to convert at build time ([asset pipeline](asset-pipeline.md)).
