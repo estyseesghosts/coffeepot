@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 """Portable host analysis for PICA Lab outputs; no dependencies."""
-import argparse, csv, json, statistics, zlib
+import argparse, csv, hashlib, json, statistics, zlib
 from collections import defaultdict
 from pathlib import Path
 SIZE=256; BYTES=SIZE*SIZE*4; CLEAR=0x000000FF
 
 def crc32(data):
-    '''Image identity: CRC-32, the value the zip stores and the CSV crc32 column holds.'''
+    '''CRC-32, the value the zip stores and the CSV crc32 column holds. A corruption check and
+    quick index only: equal CRCs do not prove equal images. Use sha256() to identify a capture
+    and byte comparison (compare command) to establish equality.'''
     return zlib.crc32(data)&0xffffffff
+
+def sha256(data):
+    '''Durable identity of a capture (hex digest).'''
+    return hashlib.sha256(data).hexdigest()
+
+TIMED_FAMILIES=('perf','perf2','timing_iso','timing_wall')
+def has_image(row):
+    '''Rows with a dumped .rgba capture. Timed families and perf2_cov (dump=false) have none.'''
+    return not (row['family'] in TIMED_FAMILIES or row['family']=='perf2_cov')
 
 def row_crc(row):
     '''CSV image identity, or None for old CSVs (fnv1a32 column): FNV-1a is not an identity.'''
@@ -59,11 +70,10 @@ def diff(a,b,output=None):
     return changed
 
 def image_id(row,base,images=None):
-    '''CRC-32 of the image: from the CSV (new runs) or computed from the .rgba (old runs).'''
-    c=row_crc(row)
-    if c: return c
+    '''SHA-256 of the capture when the .rgba is present; otherwise the CSV CRC-32 (weaker).'''
     f=(images or base)/f"{row['family']}_{int(row['case_id']):04d}.rgba"
-    return f'{crc32(f.read_bytes()):08X}' if f.exists() else None
+    if f.exists(): return sha256(f.read_bytes())
+    return row_crc(row)
 
 def summarize(path,images=None):
     path=resolve_csv(path)
@@ -71,7 +81,7 @@ def summarize(path,images=None):
     groups=defaultdict(list); issues=[]
     for r in rows:
         groups[(r['family'],r['variant'])].append(r)
-        if r['family'].startswith('perf'): continue
+        if not has_image(r): continue
         image=(images or path.parent)/f"{r['family']}_{int(r['case_id']):04d}.rgba"
         if not image.exists(): issues.append(f'Missing {image}');continue
         raw=load(image); n,c=counts(raw)
@@ -81,11 +91,16 @@ def summarize(path,images=None):
     stats={}
     for (family,variant),rs in groups.items():
         result={'count':len(rs)}
-        if family.startswith('perf') and family!='perf2_cov':
+        if family in TIMED_FAMILIES:
             values=[float(r['gpu_queue_ms']) for r in rs]
             result.update(median_ms=statistics.median(values),minimum_ms=min(values),maximum_ms=max(values))
             p3d=[float(r['p3d_us']) for r in rs if r.get('p3d_us') not in (None,'','-1')]
             if p3d: result.update(median_p3d_us=statistics.median(p3d))
+            drain=[float(r['drain_us']) for r in rs if r.get('drain_us') not in (None,'','-1')]
+            if drain: result.update(median_drain_us=statistics.median(drain))
+            if any(r.get('assoc')=='0' for r in rs): result.update(unassociated=sum(r.get('assoc')=='0' for r in rs))
+        elif family=='perf2_cov':
+            result.update(pixels=[int(r['nonclear_pixels']) for r in rs])
         else:
             result.update(unique_images=len(set(image_id(r,path.parent,images) for r in rs)),min_pixels=min(int(r['nonclear_pixels']) for r in rs),max_pixels=max(int(r['nonclear_pixels']) for r in rs))
         stats[f'{family}/{variant}']=result
@@ -99,15 +114,59 @@ def summarize(path,images=None):
     print(json.dumps({'rows':len(rows),'issues':issues,'groups':stats},indent=2))
     return int(bool(issues))
 
+def captures(path):
+    '''{(family,variant,parameter): bytes-loader} for every capture of a run (zip or directory).'''
+    import io, zipfile
+    p=Path(path); out={}
+    if p.suffix=='.zip':
+        z=zipfile.ZipFile(p)
+        name=next(n for n in z.namelist() if n.endswith('results.csv'))
+        base=name[:-len('results.csv')]
+        rows=list(csv.DictReader(io.TextIOWrapper(z.open(name),encoding='utf-8')))
+        for r in rows:
+            if has_image(r):
+                n=f"{base}{r['family']}_{int(r['case_id']):04d}.rgba"
+                out[(r['family'],r['variant'],r['parameter'])]=(lambda n=n: z.read(n))
+    else:
+        csvp=p/'results.csv' if p.is_dir() else p
+        for r in csv.DictReader(csvp.open(newline='',encoding='utf-8')):
+            if has_image(r):
+                f=csvp.parent/f"{r['family']}_{int(r['case_id']):04d}.rgba"
+                out[(r['family'],r['variant'],r['parameter'])]=(lambda f=f: f.read_bytes())
+    return out
+
+def compare(paths):
+    '''Byte-compare every capture with the same (family, variant, parameter) across runs.'''
+    runs=[captures(p) for p in paths]
+    keys=set(runs[0]).intersection(*runs[1:])
+    differ=[]; missing=0
+    for k in sorted(keys):
+        ref=runs[0][k]()
+        if len(ref)!=BYTES: missing+=1; continue
+        for p,r in zip(paths[1:],runs[1:]):
+            if r[k]()!=ref: differ.append((p,)+k)
+    print(json.dumps({'runs':[str(p) for p in paths],'common_captures':len(keys),
+                      'only_in_some_run':len(set().union(*runs)-keys),'byte_differences':len(differ),
+                      'first_differences':[list(map(str,d)) for d in differ[:20]]},indent=2))
+    return int(bool(differ) or missing)
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     sub=p.add_subparsers(dest='command',required=True)
     q=sub.add_parser('summary');q.add_argument('csv');q.add_argument('--image-dir',type=Path)
     q=sub.add_parser('diff');q.add_argument('a');q.add_argument('b');q.add_argument('--out')
     q=sub.add_parser('ppm');q.add_argument('rgba');q.add_argument('out');q.add_argument('--rotate',action='store_true')
+    q=sub.add_parser('compare',help='byte-compare captures across runs');q.add_argument('runs',nargs='+')
+    q=sub.add_parser('sha256',help='SHA-256 of every capture in a run');q.add_argument('run')
     a=p.parse_args()
     if a.command=='summary': return summarize(a.csv,a.image_dir)
     if a.command=='diff':print(json.dumps({'changed_pixels':diff(a.a,a.b,a.out)}));return 0
     if a.command=='ppm':ppm(load(a.rgba),a.out,a.rotate);return 0
+    if a.command=='compare':
+        if len(a.runs)<2: print('compare needs two or more runs');return 2
+        return compare(a.runs)
+    if a.command=='sha256':
+        for k,get in sorted(captures(a.run).items()): print(sha256(get()),*k)
+        return 0
     return 1
 if __name__=='__main__':raise SystemExit(main())

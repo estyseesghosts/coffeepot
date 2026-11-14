@@ -2,8 +2,10 @@
  * PICA Lab phase-1 hardware suite.
  * No arbitrary register writes. Offscreen RGBA8 readback through GX PPF.
  * Reference API use: devkitPro/3ds-examples/graphics/gpu/simple_tri.
- * WARNING: Build and on-device execution have not yet been validated.
+ * v0.3-v0.6 ran on an Old 3DS (runs 003-017). v0.7 changes the timing synchronisation
+ * (see "Timed frames" below) and has not run on hardware yet.
  */
+#define PICA_LAB_VERSION "v0.7"
 #include <3ds.h>
 #include <citro3d.h>
 #include <stdio.h>
@@ -68,19 +70,34 @@ static void make_run_dir(void) {
 }
 
 /* FNV-1a: used ONLY for the shader-binary id in manifest.txt. Never for image
- * identity (it collided on two different images); images use crc32_buf. */
+ * identity (it collided on two different images). Images carry a CRC-32 (a quick
+ * index and corruption check, also not proof of equality); host tools establish
+ * equality by byte comparison and identify captures by SHA-256. */
 static u32 hash32(const u8 *data, size_t n) {
     u32 h = 2166136261u;
     for (size_t i = 0; i < n; i++) { h ^= data[i]; h *= 16777619u; }
     return h;
 }
-/* p3d_us: GSP-measured command-list time in microseconds, -1 when not measured. */
+/* One timed frame (perf, perf2, timing_iso). All durations in microseconds unless named _ms.
+ *   gpu_ms      C3D_GetDrawingTime() read after the queue drained (this submission)
+ *   p3d_us      GSP perf-log P3D totalDurationUs delta across FrameEnd..drain, -1 if unavailable
+ *   begin_us    C3D_FrameBegin(SYNCDRAW): VBlank wait + previous-queue wait (not GPU time)
+ *   frameend_us C3D_FrameEnd(0) call: split, whole-linear-heap flush, queue start
+ *   drain_us    C3D_FrameEnd return .. GX queue observed idle (GPU + completion latency)
+ *   perflog_us  the second GSPGPU_GetPerfLog IPC
+ *   assoc       1 if gpu_ms fits inside frameend_us + drain_us (the drawing time can only
+ *               belong to this submission), 0 if not */
+typedef struct { double gpu_ms, begin_us, frameend_us, drain_us, perflog_us; long p3d_us; float cmd_use; int assoc; } Sample;
+#define CSV_HEADER "case_id,family,variant,parameter,crc32,nonclear_pixels,center_abgr_u32,gpu_queue_ms,p3d_us,begin_us,frameend_us,drain_us,perflog_us,assoc\n"
+/* s == NULL for image rows: timing columns are 0 / -1. */
 static void log_case(const char *family, const char *variant, int parameter,
-                     u32 hash, int marked, u32 center, double gpu_ms, long p3d_us) {
+                     u32 hash, int marked, u32 center, const Sample *s) {
     if (!logfile) return;
-    fprintf(logfile, "%u,%s,%s,%d,%08lX,%d,%08lX,%.6f,%ld\n",
-            case_id, family, variant, parameter, (unsigned long)hash,
-            marked, (unsigned long)center, gpu_ms, p3d_us);
+    fprintf(logfile, "%u,%s,%s,%d,%08lX,%d,%08lX,", case_id, family, variant, parameter,
+            (unsigned long)hash, marked, (unsigned long)center);
+    if (s) fprintf(logfile, "%.6f,%ld,%.1f,%.1f,%.1f,%.1f,%d\n", s->gpu_ms, s->p3d_us,
+                   s->begin_us, s->frameend_us, s->drain_us, s->perflog_us, s->assoc);
+    else fprintf(logfile, "0.000000,-1,-1,-1,-1,-1,-1\n");
     fflush(logfile);
 }
 
@@ -231,14 +248,14 @@ static void save_capture(const char *family, unsigned id) {
     snprintf(name,sizeof(name),"%s_%04u.rgba",family,id);
     if (!zip_add(name,staging,BYTES)) { logmsg(true,"Zip write error: %s",name); error_flag=true; }
 }
-static void record(const char *family,const char *variant,int parameter,bool dump,double gpu_ms) {
+static void record(const char *family,const char *variant,int parameter,bool dump) {
     if (!capture()) return;
     const u32 *p = (const u32*)staging;
     int marked=0;
     for (int i=0;i<PIXELS;i++) if (p[i]!=CLEAR) marked++;
     u32 h=crc32_buf((const u8*)staging,BYTES);
     u32 center=p[(SIZE/2)*SIZE + SIZE/2];
-    log_case(family,variant,parameter,h,marked,center,gpu_ms,-1);
+    log_case(family,variant,parameter,h,marked,center,NULL);
     if (dump) save_capture(family,case_id);
     logmsg(false,"case %04u %-9s %s %d pixels=%d h=%08lX",
         case_id,family,variant,parameter,marked,(unsigned long)h);
@@ -255,7 +272,7 @@ static void run_selftest(void) {
         // Explicit documented PICA framebuffer cache flush before PPF readback.
         GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
         C3D_FrameEnd(0);
-        record("selftest",i?"rect":"clear",i,true,0.0);
+        record("selftest",i?"rect":"clear",i,true);
         if(error_flag) return;
         const u32 *pixel=(const u32*)staging;
         int count=0;
@@ -283,7 +300,7 @@ static void run_raster(void) {
             triangle(x,48.0f,x+96.0f,48.0f,x,176.0f);
             GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
             C3D_FrameEnd(0);
-            record("raster",pass?"reverse":"forward",step,true,0.0);
+            record("raster",pass?"reverse":"forward",step,true);
         }
     }
 }
@@ -330,7 +347,7 @@ static void run_raster_fine(void) {
                 C3D_FrameEnd(0);
                 char var[24];
                 snprintf(var,sizeof(var),"%s_%s",w->name,pass?"reverse":"forward");
-                record("raster_fine",var,k,true,0.0);
+                record("raster_fine",var,k,true);
                 if(error_flag) return;
             }
         }
@@ -370,7 +387,7 @@ static void run_edge(void) {
         edge_quad(diagonal,0,0);
         GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
         C3D_FrameEnd(0);
-        record("edge",diagonal?"reverse_diag":"normal_diag",diagonal,true,0.0);
+        record("edge",diagonal?"reverse_diag":"normal_diag",diagonal,true);
         if(error_flag) return;
     }
     // Part 2: additive watertightness at fractional quad positions.
@@ -390,7 +407,7 @@ static void run_edge(void) {
                 char var[48];
                 snprintf(var,sizeof(var),"%s_%s_%.6f",mode==2?"fan":(mode?"diagB":"diagA"),axis?"x":"xy",ox);
                 unsigned id=case_id;
-                record("edge_cov",var,idx++,true,0.0);
+                record("edge_cov",var,idx++,true);
                 if(error_flag) return;
                 int gaps,overlaps; cover_stats(&gaps,&overlaps);
                 logmsg(false,"cover %04u %s gaps=%d overlaps=%d",id,var,gaps,overlaps);
@@ -415,7 +432,7 @@ static void run_tev(void) {
         rect(32,32,224,224,0.5f);
         GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
         C3D_FrameEnd(0);
-        record("tev","constant_rgb",i,true,0.0);
+        record("tev","constant_rgb",i,true);
     }
 }
 static void run_blend(void) {
@@ -429,7 +446,7 @@ static void run_blend(void) {
         rect(32,32,224,224,0.5f);
         GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
         C3D_FrameEnd(0);
-        record("blend","alpha",i,true,0.0);
+        record("blend","alpha",i,true);
     }
 }
 static void run_readonly_probe(void) {
@@ -478,15 +495,96 @@ static double median_of(double *v, int n) {
     qsort(v,n,sizeof(double),cmp_double);
     return (n&1)? v[n/2] : 0.5*(v[n/2-1]+v[n/2]);
 }
-/* One timed frame. No clear and no readback: only the GPU work is timed.
- * C3D_FrameSync() makes the drawing time belong to *this* frame, and the GSP
- * perf log gives command-list (P3D) time without the completion latency. */
-static bool perf_frame(const PerfVar *pv, double *gpu_ms, long *p3d_us, float *cmd_use) {
+/* ---- Timed frames ------------------------------------------------------------------
+ * v0.7 synchronisation. v0.4-v0.6 read the GSP perf log and C3D_GetDrawingTime() after
+ * C3D_FrameSync(). That call waits for VBlank counters, not for the GPU: citro3d's queue
+ * wait is inside C3D_FrameBegin (renderqueue.c lines 75-85 and 163-176 at the pinned
+ * commit 9f21cf7). So the samples were not guaranteed to belong to the submitted frame,
+ * and v0.6's timing_wall rows (FrameEnd..FrameSync) timed a VBlank wait (16.3-16.6 ms in
+ * every variant of runs 015-017). Two more faults: C3D_GetCmdBufUsage() was read before
+ * C3D_FrameEnd, so it described the previous frame; and an "empty" frame recorded no
+ * command, so C3Di_SplitFrame submitted nothing (base.c 313-314), P3D read 0 and the
+ * drawing time was left over from the previous frame.
+ *
+ * Now every timed frame is: timed_begin (C3D_FrameBegin with SYNCDRAW for VBlank phase
+ * alignment, timed as begin_us and kept out of every GPU interval) -> draws -> timed_end:
+ * perf log p0, C3D_FrameEnd (frameend_us), wait for the GX queue to drain (drain_us), perf
+ * log p1 (perflog_us), then C3D_GetDrawingTime() and C3D_GetCmdBufUsage() for this frame. */
+static double ticks_us(u64 t) { return (double)t * 1e6 / SYSCLOCK_ARM11; }
+
+/* Block until the GX command queue started by C3D_FrameEnd is idle. citro3d has no public
+ * call for this. libctru keeps the running-queue state in gxqueue.c globals and
+ * gxCmdQueueWait() polls it without using its queue argument (gxqueue.c 107-119 at the
+ * pinned commit 62b7c42), so NULL is passed instead of citro3d's private context queue.
+ * citro3d's completion callback (which stops its drawing timer) runs in the GSP event
+ * thread before that thread signals waiters (gspgpu.c 381-395), and that thread has a
+ * higher priority on the same core (threadCreate prio 0x1A, core -2), so once this returns
+ * C3D_GetDrawingTime() describes this submission; timed_end checks that anyway.
+ * Timeout 1e9: 1 s if nanoseconds as gx.h documents, about 3.7 s if system ticks as
+ * gxqueue.c implements; either way a hang guard, not a measurement. */
+static bool gpu_drain(void) { return gxCmdQueueWait(NULL, 1000000000LL); }
+
+static bool timed_begin(Sample *s) {
     vcur=0;
+    u64 t=svcGetSystemTick();
     if(!C3D_FrameBegin(C3D_FRAME_SYNCDRAW)) { error_flag=true; return false; }
+    s->begin_us=ticks_us(svcGetSystemTick()-t);
     if(!C3D_FrameDrawOn(target)) { error_flag=true; C3D_FrameEnd(0); return false; }
     basic_state();
     C3D_FixedAttribSet(1,1,1,1,1);
+    return true;
+}
+static bool timed_end(Sample *s, const char *name) {
+    /* A frame with no draw records no command and citro3d would submit nothing; one
+     * harmless framebuffer-flush write makes "empty" a real minimal P3D submission. */
+    if(vcur==0) GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
+    GSPGPU_PerfLog p0, p1;
+    bool have = R_SUCCEEDED(GSPGPU_GetPerfLog(&p0));
+    u64 t0=svcGetSystemTick();
+    C3D_FrameEnd(0);
+    u64 t1=svcGetSystemTick();
+    bool drained=gpu_drain();
+    u64 t2=svcGetSystemTick();
+    have = have && R_SUCCEEDED(GSPGPU_GetPerfLog(&p1));
+    u64 t3=svcGetSystemTick();
+    s->gpu_ms=C3D_GetDrawingTime();
+    s->cmd_use=C3D_GetCmdBufUsage();
+    s->frameend_us=ticks_us(t1-t0);
+    s->drain_us=ticks_us(t2-t1);
+    s->perflog_us=ticks_us(t3-t2);
+    s->p3d_us = have ? (long)(u32)(p1.entries[GSPGPU_EVENT_P3D].totalDurationUs -
+                                   p0.entries[GSPGPU_EVENT_P3D].totalDurationUs) : -1;
+    if(!drained) {
+        logmsg(true,"ERROR %s: GPU queue did not drain (hang?)",name);
+        error_flag=true; return false;
+    }
+    /* citro3d starts its drawing timer inside C3D_FrameEnd (after the heap flush) and stops
+     * it in the completion callback, so this frame's value is at most frameend+drain. */
+    s->assoc = s->gpu_ms*1000.0 <= s->frameend_us + s->drain_us + 1.0;
+    if(!s->assoc)
+        logmsg(true,"WARN %s: drawing %.3f ms > FrameEnd+drain %.1f us: not this submission",
+               name,s->gpu_ms,s->frameend_us+s->drain_us);
+    /* Keep anomalous observations; record raw counters for investigation. */
+    if(have && s->p3d_us > 5000 && s->p3d_us > s->drain_us + 5000.0)
+        logmsg(true,"WARN %s: p3d=%ldus > drain=%.0fus drawing=%.3fms total=%lu->%lu last=%lu->%lu",
+               name,s->p3d_us,s->drain_us,s->gpu_ms,
+               (unsigned long)p0.entries[GSPGPU_EVENT_P3D].totalDurationUs,
+               (unsigned long)p1.entries[GSPGPU_EVENT_P3D].totalDurationUs,
+               (unsigned long)p0.entries[GSPGPU_EVENT_P3D].lastDurationUs,
+               (unsigned long)p1.entries[GSPGPU_EVENT_P3D].lastDurationUs);
+    if(s->cmd_use>0.9f) logmsg(true,"WARN cmdbuf %.0f%% in %s",s->cmd_use*100.0,name);
+    return true;
+}
+static void log_timed(const char *family, const char *name, int rep, const Sample *s) {
+    log_case(family,name,rep,0,0,0,s);
+    logmsg(false,"case %04u %-10s %s %d gpu_ms=%.6f p3d_us=%ld begin=%.0f end=%.0f drain=%.1f log=%.0f assoc=%d cmdbuf=%.0f%%",
+           case_id,family,name,rep,s->gpu_ms,s->p3d_us,s->begin_us,s->frameend_us,
+           s->drain_us,s->perflog_us,s->assoc,s->cmd_use*100.0);
+    case_id++;
+}
+/* One timed frame of the perf family. No clear and no readback: only the GPU work. */
+static bool perf_frame(const PerfVar *pv, Sample *s) {
+    if(!timed_begin(s)) return false;
     if(pv->tris) {
         Vertex *v=vtx_alloc(pv->tris*3);
         if(!v) { C3D_FrameEnd(0); return false; }
@@ -510,31 +608,13 @@ static bool perf_frame(const PerfVar *pv, double *gpu_ms, long *p3d_us, float *c
         int per=pv->quads*6/pv->draws, first=(int)(v-vertices);
         for(int d=0;d<pv->draws;d++) C3D_DrawArrays(GPU_TRIANGLES,first+d*per,per);
     }
-    *cmd_use=C3D_GetCmdBufUsage();
-    GSPGPU_PerfLog p0, p1;
-    bool have = R_SUCCEEDED(GSPGPU_GetPerfLog(&p0));
-    C3D_FrameEnd(0);
-    C3D_FrameSync();
-    have = have && R_SUCCEEDED(GSPGPU_GetPerfLog(&p1));
-    *gpu_ms=C3D_GetDrawingTime();
-    *p3d_us = have ? (long)(u32)(p1.entries[GSPGPU_EVENT_P3D].totalDurationUs -
-                              p0.entries[GSPGPU_EVENT_P3D].totalDurationUs) : -1;
-    /* Keep anomalous observations; record raw counters for investigation.
-       DrawingTime is an independent, imperfect cross-check, not a GPU oracle. */
-    if (have && *p3d_us > 5000 && *p3d_us > *gpu_ms * 1000.0 + 5000.0)
-        logmsg(true,"WARN timing mismatch p3d=%ldus drawing=%.3fms total=%lu->%lu last=%lu->%lu",
-               *p3d_us,*gpu_ms,
-               (unsigned long)p0.entries[GSPGPU_EVENT_P3D].totalDurationUs,
-               (unsigned long)p1.entries[GSPGPU_EVENT_P3D].totalDurationUs,
-               (unsigned long)p0.entries[GSPGPU_EVENT_P3D].lastDurationUs,
-               (unsigned long)p1.entries[GSPGPU_EVENT_P3D].lastDurationUs);
-    return true;
+    return timed_end(s,pv->name);
 }
 static void run_perf(void) {
     // Interleaved design: every rep visits every variant once, alternating
     // forward/reverse order, so drift hits all variants equally. The "empty"
-    // variant is the per-frame floor; compare others against it.
-    static double gpu[PERF_NVARS][PERF_REPS], p3d[PERF_NVARS][PERF_REPS];
+    // variant (one minimal submission) is the per-frame floor; compare others against it.
+    static double drain[PERF_NVARS][PERF_REPS], p3d[PERF_NVARS][PERF_REPS];
     int n[PERF_NVARS]={0};
     bool perflog=R_SUCCEEDED(GSPGPU_SetPerfLogMode(true));
     logmsg(true,"perf: %d variants x %d reps (+%d warmup), perflog %s",
@@ -542,24 +622,19 @@ static void run_perf(void) {
     for(int rep=-PERF_WARMUP; rep<PERF_REPS; rep++) {
         for(int i=0;i<PERF_NVARS;i++) {
             int vi=(rep&1)? PERF_NVARS-1-i : i;
-            double g; long p; float cu;
-            if(!perf_frame(&perf_vars[vi],&g,&p,&cu)) goto out;
-            if(cu>0.9f) logmsg(true,"WARN cmdbuf %.0f%% in %s",cu*100.0,perf_vars[vi].name);
+            Sample s;
+            if(!perf_frame(&perf_vars[vi],&s)) goto out;
             if(rep<0) continue;
-            log_case("perf",perf_vars[vi].name,rep,0,0,0,g,p);
-            logmsg(false,"case %04u perf      %s %d gpu_ms=%.6f p3d_us=%ld cmdbuf=%.0f%%",
-                   case_id,perf_vars[vi].name,rep,g,p,cu*100.0);
-            case_id++;
-            gpu[vi][n[vi]]=g; p3d[vi][n[vi]]=(double)p; n[vi]++;
+            log_timed("perf",perf_vars[vi].name,rep,&s);
+            drain[vi][n[vi]]=s.drain_us; p3d[vi][n[vi]]=(double)s.p3d_us; n[vi]++;
         }
     }
-    double base_g=0, base_p=0;
+    double base_d=0, base_p=0;
     for(int vi=0;vi<PERF_NVARS;vi++) {
-        double mg=median_of(gpu[vi],n[vi]), mp=median_of(p3d[vi],n[vi]);
-        if(vi==0) { base_g=mg; base_p=mp; }
-        logmsg(true,"%-11s g=%.3fms p3d=%.0fus (+%.0f)",perf_vars[vi].name,mg,mp,mp-base_p);
+        double md=median_of(drain[vi],n[vi]), mp=median_of(p3d[vi],n[vi]);
+        if(vi==0) { base_d=md; base_p=mp; }
+        logmsg(true,"%-11s drain=%.0fus (+%.0f) p3d=%.0fus (+%.0f)",perf_vars[vi].name,md,md-base_d,mp,mp-base_p);
     }
-    (void)base_g;
 out:
     GSPGPU_SetPerfLogMode(false);
 }
@@ -575,7 +650,6 @@ out:
 #define P2_COUNT 256
 #define P2_MAX 24
 typedef struct { char name[24]; int s, n, quads, pitch, draws; } P2Var;   /* pitch 0 = s; draws 0 = 1 */
-static double last_wall_us;   /* svcGetSystemTick wall time of FrameEnd..FrameSync in the last p2_frame */
 static P2Var p2vars[P2_MAX];
 static int p2n;
 static int p2_pxest(int s) { return s*(s-1)/2; }   /* only used to choose counts */
@@ -622,12 +696,8 @@ static void p2_fill(const P2Var *pv, Vertex *v) {
         v[n*3+2]=(Vertex){x,y+pv->s,0.5f};
     }
 }
-static bool p2_frame(const P2Var *pv, double *gpu_ms, long *p3d_us, float *cmd_use) {
-    vcur=0;
-    if(!C3D_FrameBegin(C3D_FRAME_SYNCDRAW)) { error_flag=true; return false; }
-    if(!C3D_FrameDrawOn(target)) { error_flag=true; C3D_FrameEnd(0); return false; }
-    basic_state();
-    C3D_FixedAttribSet(1,1,1,1,1);
+static bool p2_frame(const P2Var *pv, Sample *s) {
+    if(!timed_begin(s)) return false;
     int nv=pv->quads? pv->quads*6 : pv->n*3;
     if(nv) {
         Vertex *v=vtx_alloc(nv);
@@ -636,30 +706,10 @@ static bool p2_frame(const P2Var *pv, double *gpu_ms, long *p3d_us, float *cmd_u
         for(int d=0; d<(pv->draws?pv->draws:1); d++)
             C3D_DrawArrays(GPU_TRIANGLES,(int)(v-vertices),nv);
     }
-    *cmd_use=C3D_GetCmdBufUsage();
-    GSPGPU_PerfLog p0, p1;
-    bool have = R_SUCCEEDED(GSPGPU_GetPerfLog(&p0));
-    u64 t0=svcGetSystemTick();
-    C3D_FrameEnd(0);
-    C3D_FrameSync();
-    last_wall_us=(double)(svcGetSystemTick()-t0)*1e6/SYSCLOCK_ARM11;
-    have = have && R_SUCCEEDED(GSPGPU_GetPerfLog(&p1));
-    *gpu_ms=C3D_GetDrawingTime();
-    *p3d_us = have ? (long)(u32)(p1.entries[GSPGPU_EVENT_P3D].totalDurationUs -
-                              p0.entries[GSPGPU_EVENT_P3D].totalDurationUs) : -1;
-    /* Keep anomalous observations; record raw counters for investigation.
-       DrawingTime is an independent, imperfect cross-check, not a GPU oracle. */
-    if (have && *p3d_us > 5000 && *p3d_us > *gpu_ms * 1000.0 + 5000.0)
-        logmsg(true,"WARN timing mismatch p3d=%ldus drawing=%.3fms total=%lu->%lu last=%lu->%lu",
-               *p3d_us,*gpu_ms,
-               (unsigned long)p0.entries[GSPGPU_EVENT_P3D].totalDurationUs,
-               (unsigned long)p1.entries[GSPGPU_EVENT_P3D].totalDurationUs,
-               (unsigned long)p0.entries[GSPGPU_EVENT_P3D].lastDurationUs,
-               (unsigned long)p1.entries[GSPGPU_EVENT_P3D].lastDurationUs);
-    return true;
+    return timed_end(s,pv->name[0]?pv->name:"timing_iso");
 }
 static void run_perf2(void) {
-    static double p3d[P2_MAX][PERF_REPS];
+    static double drain[P2_MAX][PERF_REPS], p3d[P2_MAX][PERF_REPS];
     int n[P2_MAX]={0};
     p2_build();
     /* Measured pixel coverage of ONE triangle per distinct size (cell 0). */
@@ -678,7 +728,7 @@ static void run_perf2(void) {
         GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
         C3D_FrameEnd(0);
         char var[16]; snprintf(var,sizeof(var),"s%d",s);
-        record("perf2_cov",var,s,false,0.0);
+        record("perf2_cov",var,s,false);
         if(error_flag) return;
     }
     bool perflog=R_SUCCEEDED(GSPGPU_SetPerfLogMode(true));
@@ -687,39 +737,36 @@ static void run_perf2(void) {
     for(int rep=-PERF_WARMUP; rep<PERF_REPS; rep++) {
         for(int i=0;i<p2n;i++) {
             int vi=(rep&1)? p2n-1-i : i;
-            double g; long p; float cu;
-            if(!p2_frame(&p2vars[vi],&g,&p,&cu)) goto out;
-            if(cu>0.9f) logmsg(true,"WARN cmdbuf %.0f%% in %s",cu*100.0,p2vars[vi].name);
+            Sample s;
+            if(!p2_frame(&p2vars[vi],&s)) goto out;
             if(rep<0) continue;
-            log_case("perf2",p2vars[vi].name,rep,0,0,0,g,p);
-            logmsg(false,"case %04u perf2     %s %d gpu_ms=%.6f p3d_us=%ld cmdbuf=%.0f%%",
-                   case_id,p2vars[vi].name,rep,g,p,cu*100.0);
-            case_id++;
-            p3d[vi][n[vi]]=(double)p; n[vi]++;
+            log_timed("perf2",p2vars[vi].name,rep,&s);
+            drain[vi][n[vi]]=s.drain_us; p3d[vi][n[vi]]=(double)s.p3d_us; n[vi]++;
         }
     }
     {
-        double base_p=0;
+        double base_d=0, base_p=0;
         for(int vi=0;vi<p2n;vi++) {
-            double mp=median_of(p3d[vi],n[vi]);
-            if(vi==0) base_p=mp;
-            logmsg(true,"%-14s p3d=%.0fus (+%.0f)",p2vars[vi].name,mp,mp-base_p);
+            double md=median_of(drain[vi],n[vi]), mp=median_of(p3d[vi],n[vi]);
+            if(vi==0) { base_d=md; base_p=mp; }
+            logmsg(true,"%-14s drain=%.0fus (+%.0f) p3d=%.0fus (+%.0f)",p2vars[vi].name,md,md-base_d,mp,mp-base_p);
         }
     }
 out:
     GSPGPU_SetPerfLogMode(false);
 }
 /* ---- timing_iso: isolate the perf2 P3D anomaly --------------------------------
- * Runs 012-014 (v0.5): P3D for s3/s4 n<=256 sat at 3..7 x 16.67 ms (vblank multiples) while
- * C3D_GetDrawingTime was ~0.17 ms; s3_n512 and s8_n256 gave P3D ~55 us with no anomaly. P3D is
- * therefore not a reliable per-draw GPU time. v0.6 adds an independent clock and scaling tests:
- *   timing_iso  rows: p3d_us (perflog) and gpu_queue_ms (C3D_GetDrawingTime), as before
- *   timing_wall rows: same variant/rep, gpu_queue_ms = svcGetSystemTick wall time (ms) of
- *                     FrameEnd..FrameSync; p3d_us repeats the perflog value
- * Variants: 0/1 triangle baselines, count series, and 1/4/16 repeated draws of one batch in the
+ * Runs 012-017 (v0.5, v0.6): P3D for s3 n<=256 (even n=1) sat at 3..8 x 16.67 ms while
+ * C3D_GetDrawingTime read ~0.15-0.2 ms; s3_n512, s8_n256 and every repeated-draw variant gave
+ * P3D 54-1272 us with no anomaly. Those runs used the v0.4-v0.6 synchronisation (see "Timed
+ * frames"), so they cannot say which interval the P3D figure or the stall belongs to; v0.6's
+ * timing_wall rows timed a VBlank wait. v0.7 logs every segment of the frame in its own
+ * column (begin_us, frameend_us, drain_us, perflog_us) on the timing_iso rows and writes no
+ * timing_wall rows.
+ * Variants: 1-triangle baseline, count series, and 1/4/16 repeated draws of one batch in the
  * same frame (does time scale with GPU work or stay at frame multiples?).
  *   _blk : all reps of one variant back to back
- *   _gap : an empty frame before every measured frame
+ *   _gap : an empty frame (one minimal submission) before every measured frame
  * Not a fix: it only records. */
 #define ISO_REPS 20
 #define ISO_WARMUP 3
@@ -740,16 +787,13 @@ static void run_timing_iso(void) {
         P2Var pv={{0},iv[vi].s,iv[vi].n,0,iv[vi].pitch,iv[vi].draws};
         for(int m=0;m<2;m++) {
             char name[24]; snprintf(name,sizeof(name),"%s_%s",iv[vi].name,modes[m]);
+            snprintf(pv.name,sizeof(pv.name),"%s",name);
             for(int rep=-ISO_WARMUP;rep<ISO_REPS;rep++) {
-                double g; long p; float cu;
-                if(m==1 && !p2_frame(&empty,&g,&p,&cu)) goto out;
-                if(!p2_frame(&pv,&g,&p,&cu)) goto out;
+                Sample s;
+                if(m==1 && !p2_frame(&empty,&s)) goto out;
+                if(!p2_frame(&pv,&s)) goto out;
                 if(rep<0) continue;
-                log_case("timing_iso",name,rep,0,0,0,g,p);
-                log_case("timing_wall",name,rep,0,0,0,last_wall_us/1000.0,p);
-                logmsg(false,"case %04u timing_iso %s %d gpu_ms=%.6f wall_us=%.1f p3d_us=%ld",
-                       case_id,name,rep,g,last_wall_us,p);
-                case_id++;
+                log_timed("timing_iso",name,rep,&s);
             }
         }
     }
@@ -829,7 +873,7 @@ static void write_manifest(void) {
     char path[128]; snprintf(path,sizeof(path),"%s/manifest.txt",run_dir);
     FILE *f = fopen(path,"w"); if(!f) return;
     bool n3ds = false; APT_CheckNew3DS(&n3ds);
-    fprintf(f,"pica-lab v0.6\nstarted_unix=%lld\nmodel=%s\nfirm_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",
+    fprintf(f,"pica-lab " PICA_LAB_VERSION "\nstarted_unix=%lld\nmodel=%s\nfirm_version=%08lX\nshader_fnv1a32=%08lX\nsize=%d\n",
         (long long)time(NULL), n3ds?"New3DS":"Old3DS", (unsigned long)osGetFirmVersion(),
         (unsigned long)hash32((const u8*)vshader_shbin,vshader_shbin_size), SIZE);
     fclose(f);
@@ -859,7 +903,7 @@ static void finish_zip(void) {
 int main(void) {
     gfxInitDefault();
     consoleInit(GFX_BOTTOM,NULL);
-    printf("PICA Lab v0.4 | Original 3DS focus\n");
+    printf("PICA Lab " PICA_LAB_VERSION " | Old 3DS focus\n");
     printf("Offscreen RGBA8 / controlled 256x256\n");
     if(!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) {printf("C3D_Init failed\n");gfxExit();return 1;}
     if(!initialize()) {
@@ -881,7 +925,7 @@ int main(void) {
         printf("Cannot create %s\n",path);
         shutdown_renderer(); C3D_Fini(); gfxExit(); return 1;
     }
-    fprintf(logfile,"case_id,family,variant,parameter,crc32,nonclear_pixels,center_abgr_u32,gpu_queue_ms,p3d_us\n");
+    fputs(CSV_HEADER,logfile);
     fflush(logfile);
     write_manifest();
     crc_init();

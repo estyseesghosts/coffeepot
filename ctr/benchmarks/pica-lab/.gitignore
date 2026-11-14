@@ -1,6 +1,7 @@
-# Raw captures are 50-230 MB per run; keep the zips locally, commit only run.log/results.csv/manifest/probe.
+# Raw captures are 50-230 MB per run; keep the device zips locally, commit only run.log/results.csv/manifest/probe.
+# captures/ holds the published, deflated capture set(s).
 run-logs/*.zip
-run-logs/*.unzipped/
+*.unzipped/
 *.rgba
 *.bak-*
 build/
