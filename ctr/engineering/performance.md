@@ -95,7 +95,7 @@ From [PICA Lab](../benchmarks/pica-lab/README.md), one Old 3DS, firmware 023A000
 
 - **No measured drawing-time floor.** For every non-empty workload in runs 003-005, `C3D_GetDrawingTime()` read the P3D time plus 143-149 µs (92 µs P3D → 0.235 ms; 1746 µs → 1.895 ms). An earlier reading of a 235 µs "floor" came from the empty variant, which submitted nothing and re-read the previous frame's value (39 of 40 empty readings bit-identical to the preceding frame's). The constant 143-149 µs is consistent with completion latency on top of command-list time `[hypothesis]`.
 - **P3D can report display-frame multiples.** For 3-pixel-leg triangles in batches of 1 to 256 (and 4-pixel legs in a batch of 256), P3D read 50-184 ms (3 to 11 × 16.67 ms) while `C3D_GetDrawingTime()` read 0.15-0.2 ms. Larger batches (512), 8-pixel legs and the same triangles drawn 4 or 16 times in one frame read 28-1284 µs with almost no anomaly. The anomalous frames did take extra wall time, about 16-44 ms per case in the run log, but less than P3D claimed. Cause unknown; whether P3D or the frame is stretched, and where, is what PICA Lab v0.7 is built to show. Do not treat one P3D reading as a per-draw GPU time without checking it against the drawing time and the wall time to queue idle.
-- **GPU cost per draw call was not measurable.** 768 triangles took 420-423 µs of P3D in 1, 16, 64 or 256 draws; the 9.6 µs per draw is CPU ([above](#citro3ds-two-timers)).
+- **This experiment resolved no additional GPU cost per draw call.** 768 triangles took 420-423 µs of P3D in 1, 16, 64 or 256 draws; the 9.6 µs per draw is CPU ([above](#citro3ds-two-timers)). The provisional timing method does not establish that GPU draw overhead is zero or unmeasurable in other workloads.
 
 ### A frame-level breakdown
 
@@ -104,8 +104,9 @@ With those three sources you can fill in this table for any frame; it is the sta
 | Column | How |
 | ------ | --- |
 | Logic (CPU) | ticks around your update code |
-| Record (CPU) | `C3D_GetProcessingTime()` |
-| Wait for GPU | ticks around `C3D_FrameBegin` |
+| Record (CPU) | independent ticks around command recording, excluding update code |
+| CPU frame interval (nested) | `C3D_GetProcessingTime()`; includes logic if it runs inside the frame; do not add it to Logic or Record |
+| Frame-begin wait | ticks around `C3D_FrameBegin`; includes VBlank when `C3D_FRAME_SYNCDRAW` is set |
 | GPU draw | P3D delta from the perf log, or `C3D_GetDrawingTime()` minus transfers |
 | Transfers / clears | PPF and PSC deltas |
 | Frame interval | ticks between successive `C3D_FrameBegin` returns |
@@ -279,7 +280,7 @@ None of the eleven ports reviewed in the [case studies](case-studies/case-study-
 ## Sources
 
 - kohjoh project notes (private repository, no public revision yet; `docs/lessons.md`, `docs/testing.md`, read 2026-11-13) — probe costs, opt-in probes, counter denominators, cache coverage measurement.
-- [citro3d](https://github.com/devkitPro/citro3d) — `source/renderqueue.c` (frame begin/end, timers, V-blank counters, frame-rate limiter, linear-heap flush), `include/c3d/renderqueue.h`.
+- [citro3d `source/renderqueue.c` at `9f21cf7`](https://github.com/devkitPro/citro3d/blob/9f21cf7b380ce6f9e01a0420f19f0763e5443ca7/source/renderqueue.c) — frame begin/end, nested CPU interval, queue wait, safe readback, timers, V-blank counters, frame-rate limiter and linear-heap flush; rechecked against the local source copy for the November audit.
 - [libctru](https://github.com/devkitPro/libctru) — `os.h` (clocks, `TickCounter`), `services/gspgpu.h` (perf log), `thread.h` (cores, priorities), `services/apt.h`, `source/system/syscalls.c` (FPSCR), `source/services/gspgpu.c`, `svc.h`.
 - [Luma3DS](https://github.com/LumaTeam/Luma3DS) — `sysmodules/loader/source/hbldr.c` (3DSX exheader: clock/L2 flags off, core-1 limit 89, core 2 access), `sysmodules/pm/source/reslimit.c` (scheduler and CPU-time notes).
 - [libctru issue #556: Document performance issues of DSP_FlushDataCache](https://github.com/devkitPro/libctru/issues/556) — third-party flush-time measurements versus core-1 time limit.

@@ -1,6 +1,6 @@
 # PICA Lab: real-hardware PICA200 research
 
-**Status:** v0.7 research harness. v0.3 to v0.6 have run on one Old 3DS (firmware `023A0000`, runs 003-017; v0.6 is runs 015-017). v0.7 fixes the timing synchronisation (below) and builds without warnings, but has **not run on hardware**. Host tools pass their self-test, which checks the tools only. See [`STATE-LOG-2026-11-13.md`](STATE-LOG-2026-11-13.md) for what has been measured and what was wrong.
+**Status:** v0.7 research harness. v0.3 to v0.6 have run on one Old 3DS (firmware `023A0000`, runs 003-017; v0.6 is runs 015-017). v0.7 fixes the timing synchronisation (below) and builds without warnings, but has **not run on hardware**. Host tools have synthetic and committed-CSV regression checks, which check the tools only. The revised primary-color self-test and growing ZIP directory have not run on hardware. See [`STATE-LOG-2026-11-13.md`](STATE-LOG-2026-11-13.md) for what has been measured and what was wrong.
 
 > **Timing results before v0.7 are provisional.** Up to v0.6 the timed frames read the GSP perf log and `C3D_GetDrawingTime()` after `C3D_FrameSync()`. In citro3d that call waits for VBlank counters, not for the GPU; the queue wait is inside `C3D_FrameBegin` (`renderqueue.c` lines 75-85 and 163-176 at the [pinned commit](../../engineering/source-versions.md#pinned-source-commits)). So a timing sample was not guaranteed to belong to the frame it was logged with, v0.6's `timing_wall` rows timed a VBlank wait (16.3-16.6 ms in every variant of runs 015-017), and the "empty" variant submitted no command list at all (P3D 0, drawing time left over from an earlier frame). Image results (raster, edge, TEV, blend) do not depend on this: their readback waits for the queue. v0.7 waits for the GX queue to drain before sampling, times each segment of the frame separately and flags any drawing-time sample that cannot belong to its submission. The P3D anomaly, the triangle/fill estimates and the drawing-time "floor" must be re-measured with v0.7 before they are treated as hardware characteristics.
 
@@ -46,13 +46,15 @@ Each launch creates a new `sdmc:/3ds/pica-lab/run_NNN/` (never overwrites) holdi
 ### Validation gates (mandatory before interpreting results)
 
 1. The `selftest/clear` image contains only 0x000000FF pixels. If not, investigate format conversion and transfer orientation, initial clear semantics, and framebuffer flush ordering.
-2. Both `selftest/rect` captures are identical and have sensible nonclear coverage. The app compares their CRC-32 on the console (a fast gate); on the host, confirm byte equality. If not, there is a coherency or state-control problem.
+2. Each self-test invocation appends `clear`, two `rect` captures, then (in the revised v0.7 harness) `red`, `green`, and `blue`. Repeated invocations in one launch are allowed. Both `selftest/rect` captures are identical and have sensible nonclear coverage. The app compares their CRC-32 on the console (a fast gate); on the host, confirm byte equality. If not, there is a coherency or state-control problem.
 3. `edge` captures should be compared *pixel-for-pixel*, not solely by hash; gaps/differences can be legitimate clues only after gate 1–2 pass.
 4. Repeat test families in separate clean sessions. Reverse order and compare: divergence between the two raster sweep directions invalidates a simple static coverage interpretation.
 5. `perf` samples must be treated as **GPU queue time**. They include command processing and state setup and may not isolate rasterization. Inspect medians and spread before declaring a difference. From v0.7, discard any row with `assoc=0` and report how many there were.
-6. Confirm readback byte/channel order using contrasting solid-color probes before making channel-specific numeric claims. The host tool assumes 32-bit words packed `0xRRGGBBAA` (`[AA,BB,GG,RR]` in little-endian raw memory) as expected for the GX RGBA8 format. **Orientation:** with `Mtx_OrthoTilt` and this transfer, program x is the raw row and program y the raw column, so the raw word index of program pixel (x, y) is `x*256 + y`. Checked on run 015's `raster` step 0, an asymmetric right triangle: its 96-pixel x leg spans raw rows 80-175 and its 128-pixel y leg spans raw columns 48-174, with the right angle at the lowest row and column (no flip).
+6. Confirm readback byte/channel order using contrasting solid-color probes before making channel-specific numeric claims. The revised v0.7 self-test renders red, green and blue rectangles and checks interior words `0xFF0000FF`, `0x00FF00FF`, `0x0000FFFF`; the host tools check the captures too. This revision has not run on hardware. Older clear/white controls alone do not establish channel order, so older channel-specific TEV/blend interpretations remain conditional. The host tool assumes 32-bit words packed `0xRRGGBBAA` (`[AA,BB,GG,RR]` in little-endian raw memory) as expected for the GX RGBA8 format. **Orientation:** with `Mtx_OrthoTilt` and this transfer, program x is the raw row and program y the raw column, so the raw word index of program pixel (x, y) is `x*256 + y`. Checked on run 015's `raster` step 0, an asymmetric right triangle: its 96-pixel x leg spans raw rows 80-175 and its 128-pixel y leg spans raw columns 48-174, with the right angle at the lowest row and column (no flip).
 
 ### Host analysis
+
+Run the audit regressions from the repository root with `python -m unittest discover -s tests -p test_pica_lab.py`. These use committed CSVs from runs 010, 014 and 015 plus synthetic channel controls. `python ctr/benchmarks/pica-lab/tools/selftest.py` also exercises synthetic v0.7 timing columns and raster-model plumbing. Neither validates the GPU timing method on hardware.
 
 ```sh
 python tools/selftest.py
@@ -91,11 +93,13 @@ A proper future test interface should have `init → calibrate → run one param
 - The `.3dsx` is **not prebuilt** in the repository and is **not a definitive timing profiler**. v0.3-v0.6 have run on one Old 3DS only; nothing has run on a New 3DS; v0.7 has not run at all.
 - Hardware-float exact-value serialization, low-level register sweeps, hotspot sampling, shader instruction timing, actual texture-cache probing, and GAS mode are **specified but not implemented** in phase 1.
 - The initial 256×256 mode may differ from top-screen configuration. Later repeat critical findings at 240×400 and other supported sizes.
-- Each launch writes a new run folder and zip. Keep the whole zip with model, firmware, libctru/citro3d version, shader binary SHA256, clock mode, test order, ambient conditions, date, and any CFW changes.
+- Each launch writes a new run folder and zip. Repeated families append to it; the ZIP directory now grows beyond 1024 entries instead of failing during a second RUN ALL. Classic ZIP limits (65535 entries and a 4 GiB archive) and allocation/write failures still stop capture; start a fresh launch for long campaigns. Keep the whole zip with model, firmware, libctru/citro3d version, shader binary SHA256, clock mode, test order, ambient conditions, date, and any CFW changes.
 - Never run known GPU-freezing configurations in unattended sweeps. Consult `docs/04-sources-and-knowns.md`.
 
 ## Starting sources
 
+- [citro3d `renderqueue.c` at `9f21cf7`](https://github.com/devkitPro/citro3d/blob/9f21cf7b380ce6f9e01a0420f19f0763e5443ca7/source/renderqueue.c) — `FrameSync` observes display counters; `FrameBegin` waits for the queue; the safe display-transfer path waits before readback.
+- [libctru `gxqueue.c` at `62b7c42`](https://github.com/devkitPro/libctru/blob/62b7c42c88b1ee837f513358409d2e5c8f9001a9/libctru/source/gpu/gxqueue.c) — the queue-drain implementation used by the revised timing path. Both source files were rechecked in the local clones.
 - https://www.3dbrew.org/wiki/GPU/External_Registers
 - https://www.3dbrew.org/wiki/GPU/Internal_Registers
 - https://www.3dbrew.org/wiki/GPU/Shader_Instruction_Set
@@ -117,7 +121,7 @@ The raster_fine tool now fails on missing windows or steps. Its strict-inside mo
 
 ## Runs 009-011 update (2026-11-14)
 
-All 451 image CRCs agree across runs 009, 010 and 011 (010 holds two complete runs). `raster_fine` rejects the "ties outside" model: a pixel center exactly on an edge is covered when the edge direction (vertex order, program coordinates) has dx>0 (A4 step 128: 96 px; B2 step 128 and B4 step 120: 7 px each) and not covered for (-,+), (0,-), (-,-). `tools/rasterfine.py` now uses a provisional direction-based tie rule that reproduces all three runs with 0 differing steps; it was fitted to the data it explains, so it is not yet a discriminated claim. Directions (-,0), (0,+) and (+,-) have no data; windows R1-R6 (reversed winding) target them. The perf2 anomaly persists (tri_s3_n256, tri_s4_n256: P3D 50-83 ms vs drawing 0.17 ms, values near 3/4/5 x 16.67 ms) and is the subject of `timing_iso`. `perf2.py --exclude` allows a fit that skips named variants and prints the exclusion.
+All 451 image-hash cases (441 saved captures and ten undumped `perf2_cov` rows) have matching CRCs across runs 009, 010 and 011 (010 holds two complete runs). `raster_fine` rejects the "ties outside" model: a pixel center exactly on an edge is covered when the edge direction (vertex order, program coordinates) has dx>0 (A4 step 128: 96 px; B2 step 128 and B4 step 120: 7 px each) and not covered for (-,+), (0,-), (-,-). `tools/rasterfine.py` now uses a provisional direction-based tie rule that reproduces all three runs with 0 differing steps; it was fitted to the data it explains, so it is not yet a discriminated claim. Directions (-,0), (0,+) and (+,-) have no data; windows R1-R6 (reversed winding) target them. The perf2 anomaly persists (tri_s3_n256, tri_s4_n256: P3D 50-83 ms vs drawing 0.17 ms, values near 3/4/5 x 16.67 ms) and is the subject of `timing_iso`. `perf2.py --exclude` allows a fit that skips named variants and prints the exclusion.
 
 ## Runs 012-014 update (2026-11-14)
 

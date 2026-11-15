@@ -95,7 +95,7 @@ The vertex shader units do 4-wide math on 24-bit floats in parallel with the CPU
 
 ### Measured GPU cost of triangles and fill (provisional, one configuration)
 
-From [PICA Lab](../../benchmarks/pica-lab/README.md), one Old 3DS, firmware 023A0000 `[measured]`, **provisional**: these P3D times were read with the harness's pre-v0.7 synchronisation, which did not check that a sample belonged to its frame ([timer caveats](../performance.md#reliability-of-gpu-timers-measured)); they stand until PICA Lab v0.7 re-runs them. Medians within ±2 µs over runs 003-005.
+From [PICA Lab](../../benchmarks/pica-lab/README.md), one Old 3DS, firmware 023A0000 `[measured]`, **provisional**: these P3D times were read with the harness's pre-v0.7 synchronisation, which did not check that a sample belonged to its frame ([timer caveats](../performance.md#reliability-of-gpu-timers-measured)); they are historical observations pending a corrected hardware rerun. Medians within ±2 µs over runs 003-005.
 
 The configuration is narrow, and the figures describe only it: a 256x256 RGBA8 offscreen target, a 9-instruction vertex shader (a 4x4 position transform and a colour pass-through), float positions only (12-byte vertices) with the colour as a fixed attribute, white through one combiner stage (`GPU_REPLACE`), no texture, depth test off, blending off (`GPU_ONE`, `GPU_ZERO`), no stereo, non-overlapping 9x9-pixel right triangles or full-target quads.
 
@@ -104,7 +104,7 @@ The configuration is narrow, and the figures describe only it: a 256x256 RGBA8 o
 | 192 / 768 / 3072 triangles (9x9 px) | 92 / 422 / 1746 µs |
 | 1 / 16 full-target quads (65,536 px each) | 301 µs / 5.06 ms |
 
-In that configuration: about 0.575 µs per 9x9-pixel triangle, and about 4.8 ns per pixel for full-target quads (equivalent to roughly 207 Mpixel/s). **This is not a general PICA200 fill rate.** Texturing, blending, depth and stencil tests, more combiner stages, other colour formats and a full-screen target were not measured, and each may change it. Triangle cost is not simply per-triangle either: 3-4 pixel-leg triangles measured about 0.14 µs each and 47.6 ns per pixel, falling to 4.4 ns per pixel at 64-pixel legs, and a linear `p3d = c + a*tris + b*pixels` fit (runs 009-011, reproduced in 015) left residuals up to ±100 µs. The split of the 0.575 µs into fill and setup is an estimate.
+The provisional estimate in that configuration was about 0.575 µs per 9x9-pixel triangle, and about 4.8 ns per pixel for full-target quads (equivalent to roughly 207 Mpixel/s). **This is not a general PICA200 fill rate.** Texturing, blending, depth and stencil tests, more combiner stages, other colour formats and a full-screen target were not measured, and each may change it. Triangle cost is not simply per-triangle either: 3-4 pixel-leg triangles measured about 0.14 µs each and 47.6 ns per pixel, falling to 4.4 ns per pixel at 64-pixel legs, and a linear `p3d = c + a*tris + b*pixels` fit (runs 009-011, reproduced in 015) left residuals up to ±100 µs. The split of the 0.575 µs into fill and setup is an estimate.
 
 ## Textures
 

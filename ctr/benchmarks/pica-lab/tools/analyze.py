@@ -77,7 +77,8 @@ def image_id(row,base,images=None):
 
 def summarize(path,images=None):
     path=resolve_csv(path)
-    rows=list(csv.DictReader(path.open(newline='',encoding='utf-8')))
+    with path.open(newline='',encoding='utf-8') as stream:
+        rows=list(csv.DictReader(stream))
     groups=defaultdict(list); issues=[]
     for r in rows:
         groups[(r['family'],r['variant'])].append(r)
@@ -88,6 +89,11 @@ def summarize(path,images=None):
         if row_crc(r) and f'{crc32(raw):08X}'!=row_crc(r): issues.append(f'{image}: crc32 mismatch')
         if n!=int(r['nonclear_pixels']): issues.append(f'{image}: pixel count mismatch')
         if f'{c:08X}'!=r['center_abgr_u32'].upper(): issues.append(f'{image}: center mismatch')
+        primary={'red':0xFF0000FF,'green':0x00FF00FF,'blue':0x0000FFFF}
+        if r['family']=='selftest' and r['variant'] in primary:
+            offset=(100*SIZE+100)*4
+            if int.from_bytes(raw[offset:offset+4],'little')!=primary[r['variant']]:
+                issues.append(f'{image}: channel order mismatch')
     stats={}
     for (family,variant),rs in groups.items():
         result={'count':len(rs)}
@@ -109,8 +115,11 @@ def summarize(path,images=None):
     if clear and any(int(r['nonclear_pixels']) for r in clear): issues.append('Selftest: clear contained changed pixels')
     if rect and any(int(r['nonclear_pixels']) < 100 or int(r['nonclear_pixels']) >= SIZE*SIZE for r in rect):
         issues.append('Selftest: rectangle coverage invalid or image blank')
-    if len(rect)>1 and len(set(image_id(r,path.parent,images) for r in rect))!=1:
-        issues.append('Selftest: repeated rectangle differs')
+    rect_paths=[(images or path.parent)/f"selftest_{int(r['case_id']):04d}.rgba" for r in rect]
+    if len(rect_paths)>1 and all(p.exists() for p in rect_paths):
+        reference=load(rect_paths[0])
+        if any(load(p)!=reference for p in rect_paths[1:]):
+            issues.append('Selftest: repeated rectangle differs')
     print(json.dumps({'rows':len(rows),'issues':issues,'groups':stats},indent=2))
     return int(bool(issues))
 

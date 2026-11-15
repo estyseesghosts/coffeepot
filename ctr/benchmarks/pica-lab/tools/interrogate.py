@@ -26,7 +26,7 @@ def case_image(row, base):
 def run(path):
     rows = load_rows(path)
     root = path.parent
-    ident = lambda r: image_id(r, root)   # CRC-32 (CSV column, or computed for old CSVs)
+    ident = lambda r: image_id(r, root)   # SHA-256 when captured; CSV CRC-32 otherwise
     families = defaultdict(list)
     for row in rows:
         families[row['family']].append(row)
@@ -34,13 +34,30 @@ def run(path):
     controls = families['selftest']
     clears = [r for r in controls if r['variant'] == 'clear']
     rects = [r for r in controls if r['variant'] == 'rect']
-    valid = len(clears) == 1 and len(rects) == 2
+    # Each invocation appends clear, rect, rect; RUN ALL may be repeated in one launch.
+    baseline = [r for r in controls if r['variant'] in ('clear', 'rect')]
+    valid = bool(clears) and len(rects) == 2 * len(clears)
+    valid = valid and [r['variant'] for r in baseline] == ['clear', 'rect', 'rect'] * len(clears)
     if valid:
-        valid = (int(clears[0]['nonclear_pixels']) == 0 and
+        valid = (all(int(r['nonclear_pixels']) == 0 for r in clears) and
+                 all(ident(r) is not None for r in rects) and
                  len({ident(r) for r in rects}) == 1 and
                  all(100 < int(r['nonclear_pixels']) < 256 * 256 for r in rects))
     # The hardware and image channel order still need physical checks.
     report['observations']['selftest'] = {'completed': len(controls), 'pass': valid}
+    primaries = {'red': 0xFF0000FF, 'green': 0x00FF00FF, 'blue': 0x0000FFFF}
+    color_rows = [r for r in controls if r['variant'] in primaries]
+    channels = len(color_rows) == 3 * len(clears) and bool(clears)
+    channels = channels and all(sum(r['variant'] == name for r in color_rows) == len(clears)
+                                for name in primaries)
+    for r in color_rows:
+        raw = case_image(r, root)
+        offset = (100 * 256 + 100) * 4
+        channels = channels and raw is not None and len(raw) == 256*256*4
+        channels = channels and int.from_bytes(raw[offset:offset+4], 'little') == primaries[r['variant']]
+    report['observations']['selftest']['channel_order_verified'] = bool(channels)
+    if not channels:
+        report['caveats'].append('Primary-color captures absent or invalid; channel order is unverified.')
     if not valid:
         report['caveats'].append('Baseline failed or absent; do not infer GPU behavior.')
 
@@ -132,7 +149,7 @@ def run(path):
             table[name] = row
         report['observations']['perf'] = {
             'variants': table,
-            'note': 'Compare against "empty" (per-frame floor). p3d_us is GSP command-list time; gpu_ms adds completion latency.'}
+            'note': 'Compare against the minimal-submission baseline, not a universal timing floor. Pre-v0.7 timing lacks guaranteed frame association; rerun before inferring GPU costs.'}
         if 'empty' not in by:
             report['caveats'].append('Perf run has no "empty" floor variant; deltas are not interpretable.')
     if raster and len(shared) != 64:

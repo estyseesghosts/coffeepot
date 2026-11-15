@@ -28,7 +28,8 @@ def frames(an):
     return ','.join(f'{a/FRAME:.2f}' for a in sorted(set(round(x, -2) for x in an))[:4])
 
 def run(path):
-    allrows = list(csv.DictReader(open(resolve_csv(path), newline='', encoding='utf-8')))
+    with open(resolve_csv(path), newline='', encoding='utf-8') as stream:
+        allrows = list(csv.DictReader(stream))
     rows = [r for r in allrows if r['family'] == 'timing_iso']
     if not rows: print('no timing_iso rows (run v0.5+ on hardware)'); return 1
     v07 = 'drain_us' in rows[0]

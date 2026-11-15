@@ -90,6 +90,8 @@ The devkitPro packages used to build every code example and benchmark (from `pac
 
 Fragments that are not complete programs were compiled inside a minimal `main` with stub functions.
 
+The November 15 CTR audit rechecked timing and readback against the pinned citro3d `source/renderqueue.c` and libctru `libctru/source/gpu/gxqueue.c`, and the separate boot ROMs against the local 3dbrew Bootloader mirror. The revised PICA Lab v0.7 also adds primary-color self-test captures and a dynamically growing ZIP directory. It builds with the toolchain above but remains unrun on Old 3DS and New 3DS. `tests/test_pica_lab.py` covers committed run 010 repeated controls, run 014 timing-only rows, run 015's legacy VBlank column, synthetic v0.6 timing/wall rows, and synthetic channel corruption; these are host-tool checks, not hardware verification.
+
 ## Accuracy spot-checks
 
 Facts re-checked against primary sources in this pass (November 2026), all consistent with the wiki:

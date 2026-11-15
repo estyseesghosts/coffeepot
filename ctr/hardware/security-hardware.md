@@ -1,6 +1,6 @@
 # CTR security hardware
 
-Besides general-purpose processors, the 3DS SoC contains a small set of dedicated security blocks that only the [ARM9](cpu.md) can use: an encryption engine, a signature-checking engine, a hashing engine, a random-number generator and a block of one-time-programmable secrets. Together with the unchangeable [boot ROM](../../glossary.md#boot-rom), they make up the foundation that the rest of the 3DS's [security architecture](../software/security-architecture.md) builds on.
+Besides general-purpose processors, the 3DS SoC contains a small set of dedicated security blocks that only the [ARM9](cpu.md) can use: an encryption engine, a signature-checking engine, a hashing engine, a random-number generator and a block of one-time-programmable secrets. Together with the separate, unchangeable ARM9 and ARM11 [boot ROMs](../../glossary.md#boot-rom), Boot9 and Boot11, they make up the foundation that the rest of the 3DS's [security architecture](../software/security-architecture.md) builds on.
 
 Nearly every public attack on the console started by finding a flaw in how these blocks are used — not in the cryptography itself.
 

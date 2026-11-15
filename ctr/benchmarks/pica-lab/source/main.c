@@ -136,10 +136,11 @@ static void triangle(float x0, float y0, float x1, float y1, float x2, float y2)
  * copy. The central directory is rewritten every ZIP_SYNC_EVERY entries and after
  * each family, so the archive stays readable if the program dies mid-run. Timestamps are fixed
  * (1980-01-01) so identical runs give identical archives. */
-#define ZIP_MAX 1024
 typedef struct { char name[64]; u32 crc, size, off; } ZipEnt;
 static FILE *zipf;
-static ZipEnt zents[ZIP_MAX];
+/* Grow the directory for repeated sessions; classic ZIP still has 16-bit counts. */
+static ZipEnt *zents;
+static int zcapacity;
 static int znent;
 static u32 zend;
 static char zprefix[32];
@@ -181,7 +182,16 @@ static bool zip_sync(void) {
     return !ferror(zipf);
 }
 static bool zip_add(const char *name, const void *data, size_t len) {
-    if (!zipf || znent >= ZIP_MAX) return false;
+    if (!zipf || znent >= 65535 ||
+        (u64)zend + len + 1024u + (u64)(znent+1)*110u + 22u > 0xFFFFFFFFu) return false;
+    if (znent == zcapacity) {
+        int capacity = zcapacity ? zcapacity * 2 : 1024;
+        if (capacity > 65535) capacity = 65535;
+        ZipEnt *entries = realloc(zents, (size_t)capacity * sizeof(*entries));
+        if (!entries) return false;
+        zents = entries;
+        zcapacity = capacity;
+    }
     ZipEnt *e = &zents[znent];
     snprintf(e->name, sizeof(e->name), "%s/%s", zprefix, name);
     e->crc = crc32_buf((const u8*)data, len);
@@ -284,6 +294,20 @@ static void run_selftest(void) {
             baseline_hash=h;
         }
         if(i==2 && (count<100 || h!=baseline_hash)) pass=false;
+    }
+    /* White rectangles cannot establish channel order. Test distinct primaries at
+     * an interior pixel; expected GX RGBA8 words are 0xRRGGBBAA. */
+    static const char *names[] = {"red", "green", "blue"};
+    static const u32 words[] = {0xFF0000FF, 0x00FF00FF, 0x0000FFFF};
+    for (int i=0;i<3;i++) {
+        if(!begin_case()) return;
+        C3D_FixedAttribSet(1,i==0,i==1,i==2,1);
+        rect(50,60,150,170,0.5f);
+        GPUCMD_AddWrite(GPUREG_FRAMEBUFFER_FLUSH,1);
+        C3D_FrameEnd(0);
+        record("selftest",names[i],i,true);
+        if(error_flag) return;
+        if(((const u32*)staging)[100*SIZE+100]!=words[i]) pass=false;
     }
     calibrated=pass;
     logmsg(true,"Self-test: %s",pass?"PASS":"FAIL: no other tests permitted");
@@ -899,6 +923,9 @@ static void finish_zip(void) {
     zip_sync();
     fclose(zipf);
     zipf=NULL;
+    free(zents);
+    zents=NULL;
+    zcapacity=0;
 }
 int main(void) {
     gfxInitDefault();
